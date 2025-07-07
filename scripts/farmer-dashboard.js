@@ -15,7 +15,7 @@ let products = [
         category: 'vegetables',
         description: 'Farm fresh red tomatoes',
         quantity: '50 kg',
-        price: '₹40/kg',
+        price: 'Ksh40/kg',
         image: '🍅',
         status: 'active'
     },
@@ -25,7 +25,7 @@ let products = [
         category: 'vegetables',
         description: 'Sweet and tender corn',
         quantity: '30 kg',
-        price: '₹35/kg',
+        price: 'Ksh35/kg',
         image: '🌽',
         status: 'active'
     }

@@ -24,10 +24,10 @@ function updateKeyMetrics() {
         avgOrderValue: generateRandomValue(300, 350)
     };
     
-    document.getElementById('totalSales').textContent = `₹${metrics.totalSales.toLocaleString()}`;
+    document.getElementById('totalSales').textContent = `Ksh${metrics.totalSales.toLocaleString()}`;
     document.getElementById('totalOrders').textContent = metrics.totalOrders.toLocaleString();
     document.getElementById('activeUsers').textContent = metrics.activeUsers.toLocaleString();
-    document.getElementById('avgOrderValue').textContent = `₹${metrics.avgOrderValue}`;
+    document.getElementById('avgOrderValue').textContent = `Ksh${metrics.avgOrderValue}`;
 }
 
 // Generate random value within range (for demo purposes)
@@ -103,25 +103,25 @@ function exportAnalytics() {
 Generated on: ${new Date().toLocaleDateString()}
 
 Key Metrics:
-Total Sales,₹4,25,680
+Total Sales,Ksh4,25,680
 Total Orders,1,347
 Active Users,2,156
-Average Order Value,₹316
+Average Order Value,Ksh316
 
 Top Products:
 Product,Category,Units Sold,Revenue
-Fresh Tomatoes,Vegetables,2456 kg,₹98240
-Red Apples,Fruits,1890 kg,₹226800
-Basmati Rice,Grains,1200 kg,₹96000
-Fresh Milk,Dairy,3400 L,₹85000
-Sweet Corn,Vegetables,980 kg,₹34300
+Fresh Tomatoes,Vegetables,2456 kg,Ksh98240
+Red Apples,Fruits,1890 kg,Ksh226800
+Basmati Rice,Grains,1200 kg,Ksh96000
+Fresh Milk,Dairy,3400 L,Ksh85000
+Sweet Corn,Vegetables,980 kg,Ksh34300
 
 Regional Performance:
 Region,Active Users,Total Orders,Revenue
-North India,856,2340,₹185600
-South India,743,1980,₹142800
-West India,512,1456,₹98400
-East India,345,890,₹67200
+North India,856,2340,Ksh185600
+South India,743,1980,Ksh142800
+West India,512,1456,Ksh98400
+East India,345,890,Ksh67200
 `;
     
     // Create and download file
@@ -166,7 +166,7 @@ function updateMarketPrices() {
         const newPrice = Math.round(product.basePrice * (1 + fluctuation));
         
         // In a real app, you would update the DOM elements showing prices
-        console.log(`${product.name} price updated to ₹${newPrice}`);
+        console.log(`${product.name} price updated to Ksh${newPrice}`);
     });
 }
 

@@ -31,9 +31,9 @@ let users = [
 function loadSystemStats() {
     // In a real app, these would come from backend API
     document.getElementById('totalUsers').textContent = users.length + 1246; // Adding base count
-    document.getElementById('totalTransactions').textContent = '₹2,45,680';
+    document.getElementById('totalTransactions').textContent = 'Ksh2,45,680';
     document.getElementById('activeOrders').textContent = '67';
-    document.getElementById('platformRevenue').textContent = '₹12,284';
+    document.getElementById('platformRevenue').textContent = 'Ksh12,284';
 }
 
 // Show add user modal
