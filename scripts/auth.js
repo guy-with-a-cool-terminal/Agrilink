@@ -3,36 +3,48 @@
 
 // Show/Hide forms
 function showLogin() {
+    console.log('Switching to login form');
     document.getElementById('loginForm').classList.add('active');
     document.getElementById('registerForm').classList.remove('active');
-    document.querySelectorAll('.tab-btn')[0].classList.add('active');
-    document.querySelectorAll('.tab-btn')[1].classList.remove('active');
+    document.getElementById('loginTab').classList.add('active');
+    document.getElementById('registerTab').classList.remove('active');
 }
 
 function showRegister() {
+    console.log('Switching to register form');
     document.getElementById('registerForm').classList.add('active');
     document.getElementById('loginForm').classList.remove('active');
-    document.querySelectorAll('.tab-btn')[1].classList.add('active');
-    document.querySelectorAll('.tab-btn')[0].classList.remove('active');
+    document.getElementById('registerTab').classList.add('active');
+    document.getElementById('loginTab').classList.remove('active');
 }
 
 // Handle Login
 function handleLogin(event) {
     event.preventDefault();
+    console.log('Login form submitted');
     
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
     const role = document.getElementById('loginRole').value;
     
+    console.log('Login details:', { email, role });
+    
+    // Basic validation
+    if (!email || !password || !role) {
+        alert('Please fill in all fields');
+        return;
+    }
+    
     // Store user info (in real app, this would be handled by backend)
     const userData = {
         email: email,
         role: role,
-        name: 'User', // This would come from backend
+        name: email.split('@')[0], // Use email prefix as name
         loginTime: new Date().toISOString()
     };
     
     localStorage.setItem('currentUser', JSON.stringify(userData));
+    console.log('User data stored:', userData);
     
     // Redirect based on role
     redirectToDashboard(role);
@@ -41,12 +53,21 @@ function handleLogin(event) {
 // Handle Registration
 function handleRegister(event) {
     event.preventDefault();
+    console.log('Register form submitted');
     
     const name = document.getElementById('registerName').value;
     const email = document.getElementById('registerEmail').value;
     const phone = document.getElementById('registerPhone').value;
     const password = document.getElementById('registerPassword').value;
     const role = document.getElementById('registerRole').value;
+    
+    console.log('Registration details:', { name, email, role });
+    
+    // Basic validation
+    if (!name || !email || !phone || !password || !role) {
+        alert('Please fill in all fields');
+        return;
+    }
     
     // Store user info (in real app, this would be handled by backend)
     const userData = {
@@ -58,6 +79,7 @@ function handleRegister(event) {
     };
     
     localStorage.setItem('currentUser', JSON.stringify(userData));
+    console.log('User registered and data stored:', userData);
     
     alert('Registration successful! Redirecting to dashboard...');
     
@@ -67,6 +89,8 @@ function handleRegister(event) {
 
 // Redirect to appropriate dashboard
 function redirectToDashboard(role) {
+    console.log('Redirecting user with role:', role);
+    
     const dashboardMap = {
         'farmer': 'farmer-dashboard.html',
         'consumer': 'consumer-dashboard.html',
@@ -76,10 +100,14 @@ function redirectToDashboard(role) {
     };
     
     const dashboardUrl = dashboardMap[role];
+    console.log('Dashboard URL:', dashboardUrl);
+    
     if (dashboardUrl) {
+        console.log('Redirecting to:', dashboardUrl);
         window.location.href = dashboardUrl;
     } else {
-        alert('Invalid role selected');
+        alert('Invalid role selected: ' + role);
+        console.error('Invalid role:', role);
     }
 }
 
@@ -114,6 +142,8 @@ function initDashboard() {
 
 // Initialize page when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing authentication');
+    
     // If we're on a dashboard page, initialize it
     if (window.location.pathname.includes('dashboard')) {
         initDashboard();
@@ -125,16 +155,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('loginFormElement');
     const registerForm = document.getElementById('registerFormElement');
     
+    console.log('Elements found:', {
+        loginTab: !!loginTab,
+        registerTab: !!registerTab,
+        loginForm: !!loginForm,
+        registerForm: !!registerForm
+    });
+    
     if (loginTab) {
         loginTab.addEventListener('click', showLogin);
+        console.log('Login tab listener added');
     }
     if (registerTab) {
         registerTab.addEventListener('click', showRegister);
+        console.log('Register tab listener added');
     }
     if (loginForm) {
         loginForm.addEventListener('submit', handleLogin);
+        console.log('Login form listener added');
     }
     if (registerForm) {
         registerForm.addEventListener('submit', handleRegister);
+        console.log('Register form listener added');
     }
 });
