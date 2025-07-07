@@ -119,14 +119,22 @@ document.addEventListener('DOMContentLoaded', function() {
         initDashboard();
     }
     
-    // Add event listeners for login/register tabs if they exist
-    const loginTab = document.querySelector('.tab-btn[onclick="showLogin()"]');
-    const registerTab = document.querySelector('.tab-btn[onclick="showRegister()"]');
+    // Add event listeners for login/register tabs and forms if they exist
+    const loginTab = document.getElementById('loginTab');
+    const registerTab = document.getElementById('registerTab');
+    const loginForm = document.getElementById('loginFormElement');
+    const registerForm = document.getElementById('registerFormElement');
     
     if (loginTab) {
         loginTab.addEventListener('click', showLogin);
     }
     if (registerTab) {
         registerTab.addEventListener('click', showRegister);
+    }
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+    if (registerForm) {
+        registerForm.addEventListener('submit', handleRegister);
     }
 });
