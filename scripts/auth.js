@@ -111,3 +111,22 @@ function initDashboard() {
         if (userRoleElement) userRoleElement.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
     }
 }
+
+// Initialize page when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // If we're on a dashboard page, initialize it
+    if (window.location.pathname.includes('dashboard')) {
+        initDashboard();
+    }
+    
+    // Add event listeners for login/register tabs if they exist
+    const loginTab = document.querySelector('.tab-btn[onclick="showLogin()"]');
+    const registerTab = document.querySelector('.tab-btn[onclick="showRegister()"]');
+    
+    if (loginTab) {
+        loginTab.addEventListener('click', showLogin);
+    }
+    if (registerTab) {
+        registerTab.addEventListener('click', showRegister);
+    }
+});
