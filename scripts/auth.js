@@ -1,21 +1,33 @@
 
-// Authentication and Navigation Logic
+// Authentication and Navigation Logic for AgriLink Platform
+
+console.log('Auth script loaded successfully');
 
 // Show/Hide forms
 function showLogin() {
     console.log('Switching to login form');
-    document.getElementById('loginForm').classList.add('active');
-    document.getElementById('registerForm').classList.remove('active');
-    document.getElementById('loginTab').classList.add('active');
-    document.getElementById('registerTab').classList.remove('active');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const loginTab = document.getElementById('loginTab');
+    const registerTab = document.getElementById('registerTab');
+    
+    if (loginForm) loginForm.classList.add('active');
+    if (registerForm) registerForm.classList.remove('active');
+    if (loginTab) loginTab.classList.add('active');
+    if (registerTab) registerTab.classList.remove('active');
 }
 
 function showRegister() {
     console.log('Switching to register form');
-    document.getElementById('registerForm').classList.add('active');
-    document.getElementById('loginForm').classList.remove('active');
-    document.getElementById('registerTab').classList.add('active');
-    document.getElementById('loginTab').classList.remove('active');
+    const registerForm = document.getElementById('registerForm');
+    const loginForm = document.getElementById('loginForm');
+    const registerTab = document.getElementById('registerTab');
+    const loginTab = document.getElementById('loginTab');
+    
+    if (registerForm) registerForm.classList.add('active');
+    if (loginForm) loginForm.classList.remove('active');
+    if (registerTab) registerTab.classList.add('active');
+    if (loginTab) loginTab.classList.remove('active');
 }
 
 // Handle Login
@@ -23,9 +35,9 @@ function handleLogin(event) {
     event.preventDefault();
     console.log('Login form submitted');
     
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-    const role = document.getElementById('loginRole').value;
+    const email = document.getElementById('loginEmail')?.value;
+    const password = document.getElementById('loginPassword')?.value;
+    const role = document.getElementById('loginRole')?.value;
     
     console.log('Login details:', { email, role });
     
@@ -43,11 +55,16 @@ function handleLogin(event) {
         loginTime: new Date().toISOString()
     };
     
-    localStorage.setItem('currentUser', JSON.stringify(userData));
-    console.log('User data stored:', userData);
-    
-    // Redirect based on role
-    redirectToDashboard(role);
+    try {
+        localStorage.setItem('currentUser', JSON.stringify(userData));
+        console.log('User data stored successfully:', userData);
+        
+        // Redirect based on role
+        redirectToDashboard(role);
+    } catch (error) {
+        console.error('Error storing user data:', error);
+        alert('Login failed. Please try again.');
+    }
 }
 
 // Handle Registration
@@ -55,11 +72,11 @@ function handleRegister(event) {
     event.preventDefault();
     console.log('Register form submitted');
     
-    const name = document.getElementById('registerName').value;
-    const email = document.getElementById('registerEmail').value;
-    const phone = document.getElementById('registerPhone').value;
-    const password = document.getElementById('registerPassword').value;
-    const role = document.getElementById('registerRole').value;
+    const name = document.getElementById('registerName')?.value;
+    const email = document.getElementById('registerEmail')?.value;
+    const phone = document.getElementById('registerPhone')?.value;
+    const password = document.getElementById('registerPassword')?.value;
+    const role = document.getElementById('registerRole')?.value;
     
     console.log('Registration details:', { name, email, role });
     
@@ -78,13 +95,18 @@ function handleRegister(event) {
         loginTime: new Date().toISOString()
     };
     
-    localStorage.setItem('currentUser', JSON.stringify(userData));
-    console.log('User registered and data stored:', userData);
-    
-    alert('Registration successful! Redirecting to dashboard...');
-    
-    // Redirect based on role
-    redirectToDashboard(role);
+    try {
+        localStorage.setItem('currentUser', JSON.stringify(userData));
+        console.log('User registered and data stored successfully:', userData);
+        
+        alert('Registration successful! Redirecting to dashboard...');
+        
+        // Redirect based on role
+        redirectToDashboard(role);
+    } catch (error) {
+        console.error('Error storing user data:', error);
+        alert('Registration failed. Please try again.');
+    }
 }
 
 // Redirect to appropriate dashboard
@@ -104,7 +126,10 @@ function redirectToDashboard(role) {
     
     if (dashboardUrl) {
         console.log('Redirecting to:', dashboardUrl);
-        window.location.href = dashboardUrl;
+        // Add a small delay to ensure localStorage is saved
+        setTimeout(() => {
+            window.location.href = dashboardUrl;
+        }, 100);
     } else {
         alert('Invalid role selected: ' + role);
         console.error('Invalid role:', role);
@@ -113,40 +138,63 @@ function redirectToDashboard(role) {
 
 // Check if user is logged in
 function checkAuth() {
-    const user = localStorage.getItem('currentUser');
-    if (!user) {
+    try {
+        const user = localStorage.getItem('currentUser');
+        if (!user) {
+            console.log('No user found, redirecting to login');
+            window.location.href = 'index.html';
+            return null;
+        }
+        console.log('User authenticated:', JSON.parse(user));
+        return JSON.parse(user);
+    } catch (error) {
+        console.error('Error checking auth:', error);
         window.location.href = 'index.html';
         return null;
     }
-    return JSON.parse(user);
 }
 
 // Logout function
 function logout() {
-    localStorage.removeItem('currentUser');
-    window.location.href = 'index.html';
+    console.log('Logging out user');
+    try {
+        localStorage.removeItem('currentUser');
+        window.location.href = 'index.html';
+    } catch (error) {
+        console.error('Error during logout:', error);
+        window.location.href = 'index.html';
+    }
 }
 
 // Initialize dashboard (call this on dashboard pages)
 function initDashboard() {
+    console.log('Initializing dashboard');
     const user = checkAuth();
     if (user) {
         // Update user info in header
         const userNameElement = document.getElementById('userName');
         const userRoleElement = document.getElementById('userRole');
         
-        if (userNameElement) userNameElement.textContent = user.name || user.email;
-        if (userRoleElement) userRoleElement.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+        if (userNameElement) {
+            userNameElement.textContent = user.name || user.email;
+            console.log('Updated user name display');
+        }
+        if (userRoleElement) {
+            userRoleElement.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+            console.log('Updated user role display');
+        }
     }
 }
 
 // Initialize page when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing authentication');
+    console.log('DOM loaded, initializing authentication system');
     
     // If we're on a dashboard page, initialize it
     if (window.location.pathname.includes('dashboard')) {
+        console.log('Dashboard page detected, initializing dashboard');
         initDashboard();
+        return;
     }
     
     // Add event listeners for login/register tabs and forms if they exist
@@ -155,13 +203,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('loginFormElement');
     const registerForm = document.getElementById('registerFormElement');
     
-    console.log('Elements found:', {
+    console.log('Auth elements found:', {
         loginTab: !!loginTab,
         registerTab: !!registerTab,
         loginForm: !!loginForm,
         registerForm: !!registerForm
     });
     
+    // Add tab listeners
     if (loginTab) {
         loginTab.addEventListener('click', showLogin);
         console.log('Login tab listener added');
@@ -170,6 +219,8 @@ document.addEventListener('DOMContentLoaded', function() {
         registerTab.addEventListener('click', showRegister);
         console.log('Register tab listener added');
     }
+    
+    // Add form listeners
     if (loginForm) {
         loginForm.addEventListener('submit', handleLogin);
         console.log('Login form listener added');
@@ -178,4 +229,17 @@ document.addEventListener('DOMContentLoaded', function() {
         registerForm.addEventListener('submit', handleRegister);
         console.log('Register form listener added');
     }
+    
+    console.log('Authentication system initialized successfully');
 });
+
+// Make functions globally available
+window.showLogin = showLogin;
+window.showRegister = showRegister;
+window.handleLogin = handleLogin;
+window.handleRegister = handleRegister;
+window.logout = logout;
+window.checkAuth = checkAuth;
+window.initDashboard = initDashboard;
+
+console.log('Auth script setup complete');

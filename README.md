@@ -1,73 +1,110 @@
-# Welcome to your Lovable project
 
-## Project info
+# AgriLink - Smart Agricultural Platform
 
-**URL**: https://lovable.dev/projects/e967633c-ee3d-4e04-88ee-c3e8b6f5b7d9
+A comprehensive web-based platform connecting farmers, consumers, retailers, logistics managers, and administrators in the agricultural supply chain.
 
-## How can I edit this code?
+## Project Overview
 
-There are several ways of editing your application.
+AgriLink is a multi-role agricultural platform built with vanilla HTML, CSS, and JavaScript. It provides role-based dashboards and functionality for different stakeholders in the agricultural ecosystem.
 
-**Use Lovable**
+## Features
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/e967633c-ee3d-4e04-88ee-c3e8b6f5b7d9) and start prompting.
+- **Multi-Role Authentication**: Support for Farmers, Consumers, Retailers, Logistics Managers, and Admins
+- **Role-Based Dashboards**: Customized interfaces for each user type
+- **Responsive Design**: Mobile-friendly interface
+- **Local Storage**: Client-side user session management
+- **Analytics Dashboard**: Data visualization and reporting
 
-Changes made via Lovable will be committed automatically to this repo.
+## User Roles
 
-**Use your preferred IDE**
+1. **Farmer**: Manage crops, track production, view market prices
+2. **Consumer**: Browse products, place orders, track deliveries
+3. **Retailer**: Manage inventory, process orders, track sales
+4. **Logistics Manager**: Coordinate deliveries, optimize routes
+5. **Admin**: System oversight, user management, analytics
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Project Structure
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+/
+├── index.html              # Main login/registration page
+├── farmer-dashboard.html   # Farmer interface
+├── consumer-dashboard.html # Consumer interface
+├── retailer-dashboard.html # Retailer interface
+├── logistics-dashboard.html# Logistics interface
+├── admin-dashboard.html    # Admin interface
+├── analytics.html          # Analytics dashboard
+├── scripts/
+│   ├── auth.js            # Authentication logic
+│   ├── farmer-dashboard.js # Farmer functionality
+│   ├── consumer-dashboard.js# Consumer functionality
+│   ├── retailer-dashboard.js# Retailer functionality
+│   ├── logistics-dashboard.js# Logistics functionality
+│   ├── admin-dashboard.js  # Admin functionality
+│   └── analytics.js       # Analytics functionality
+└── styles/
+    ├── main.css           # Global styles
+    ├── auth.css           # Authentication styles
+    └── dashboard.css      # Dashboard styles
 ```
 
-**Edit a file directly in GitHub**
+## Getting Started
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd agrilink-platform
+   ```
 
-**Use GitHub Codespaces**
+2. **Open in browser**
+   - Simply open `index.html` in your web browser
+   - Or use a local server like Live Server extension in VS Code
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+3. **Test the application**
+   - Use any email/password combination to login
+   - Select different roles to access various dashboards
+   - Data is stored locally in browser's localStorage
 
-## What technologies are used for this project?
+## Development
 
-This project is built with:
+### Local Development
+- No build process required
+- Use any local server for development
+- Recommended: VS Code with Live Server extension
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### File Serving
+Make sure all files are served from a web server (not file:// protocol) to avoid CORS issues with local storage and script loading.
 
-## How can I deploy this project?
+## Deployment
 
-Simply open [Lovable](https://lovable.dev/projects/e967633c-ee3d-4e04-88ee-c3e8b6f5b7d9) and click on Share -> Publish.
+Since this is a static web application, it can be deployed to:
+- GitHub Pages
+- Netlify
+- Vercel
+- Any static hosting service
 
-## Can I connect a custom domain to my Lovable project?
+## Browser Compatibility
 
-Yes, you can!
+- Modern browsers (Chrome, Firefox, Safari, Edge)
+- ES6+ features used
+- Local Storage API required
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Future Enhancements
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- Backend integration for real data persistence
+- API integration for real-time market data
+- Enhanced security with proper authentication
+- Mobile app development
+- Real-time notifications
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.
