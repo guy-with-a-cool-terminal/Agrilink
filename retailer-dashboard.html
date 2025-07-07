@@ -1,0 +1,171 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retailer Dashboard - AgriLink</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/dashboard.css">
+</head>
+<body>
+    <div class="dashboard active">
+        <header class="dashboard-header">
+            <nav class="dashboard-nav">
+                <h1 class="dashboard-title">🏪 Retailer Dashboard</h1>
+                <div class="user-info">
+                    <span id="userName">Retailer</span>
+                    <span class="role-badge" id="userRole">Retailer</span>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </nav>
+        </header>
+
+        <div class="dashboard-content">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 id="totalOrders">8</h3>
+                    <p>Bulk Orders</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalSpent">₹45,600</h3>
+                    <p>Total Spent</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="activeSuppliers">12</h3>
+                    <p>Active Suppliers</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="pendingDeliveries">3</h3>
+                    <p>Pending Deliveries</p>
+                </div>
+            </div>
+
+            <!-- Bulk Order Form -->
+            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px;">
+                <h3 style="margin-bottom: 20px;">Place Bulk Order</h3>
+                <form onsubmit="placeBulkOrder(event)">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                        <div class="form-group">
+                            <label for="productSelect">Product</label>
+                            <select id="productSelect" required>
+                                <option value="">Select Product</option>
+                                <option value="tomatoes">Fresh Tomatoes</option>
+                                <option value="corn">Sweet Corn</option>
+                                <option value="apples">Red Apples</option>
+                                <option value="rice">Basmati Rice</option>
+                                <option value="milk">Fresh Milk</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="bulkQuantity">Quantity</label>
+                            <input type="number" id="bulkQuantity" min="10" required placeholder="Minimum 10 units">
+                        </div>
+                        <div class="form-group">
+                            <label for="deliveryDate">Preferred Delivery Date</label>
+                            <input type="date" id="deliveryDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="budgetRange">Budget Range</label>
+                            <select id="budgetRange" required>
+                                <option value="">Select Budget</option>
+                                <option value="5000-10000">₹5,000 - ₹10,000</option>
+                                <option value="10000-25000">₹10,000 - ₹25,000</option>
+                                <option value="25000-50000">₹25,000 - ₹50,000</option>
+                                <option value="50000+">₹50,000+</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="specialRequirements">Special Requirements</label>
+                        <textarea id="specialRequirements" rows="3" placeholder="Any specific requirements or notes"></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary" style="width: auto; padding: 12px 24px;">Place Bulk Order</button>
+                </form>
+            </div>
+
+            <!-- Delivery Schedule -->
+            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px;">
+                <h3 style="margin-bottom: 20px;">Schedule Delivery</h3>
+                <form onsubmit="scheduleDelivery(event)">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                        <div class="form-group">
+                            <label for="orderSelect">Select Order</label>
+                            <select id="orderSelect" required>
+                                <option value="">Select Order</option>
+                                <option value="ORD001">Order #ORD001 - Tomatoes</option>
+                                <option value="ORD002">Order #ORD002 - Corn</option>
+                                <option value="ORD003">Order #ORD003 - Apples</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="deliveryTime">Delivery Time</label>
+                            <select id="deliveryTime" required>
+                                <option value="">Select Time</option>
+                                <option value="morning">Morning (8AM - 12PM)</option>
+                                <option value="afternoon">Afternoon (12PM - 4PM)</option>
+                                <option value="evening">Evening (4PM - 8PM)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="deliveryAddress">Delivery Address</label>
+                            <textarea id="deliveryAddress" rows="2" required placeholder="Enter delivery address"></textarea>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary" style="width: auto; padding: 12px 24px;">Schedule Delivery</button>
+                </form>
+            </div>
+
+            <!-- Order History -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>Bulk Order History</h3>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Delivery Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderHistoryTable">
+                        <tr>
+                            <td>#BULK001</td>
+                            <td>Fresh Tomatoes</td>
+                            <td>100 kg</td>
+                            <td>₹3,800</td>
+                            <td><span class="status-completed">Delivered</span></td>
+                            <td>2024-01-05</td>
+                            <td>
+                                <button class="btn-secondary">View Details</button>
+                                <button class="btn-secondary">Reorder</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>#BULK002</td>
+                            <td>Sweet Corn</td>
+                            <td>75 kg</td>
+                            <td>₹2,625</td>
+                            <td><span class="status-pending">In Transit</span></td>
+                            <td>2024-01-08</td>
+                            <td>
+                                <button class="btn-secondary">Track</button>
+                                <button class="btn-secondary">Contact Supplier</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="scripts/auth.js"></script>
+    <script src="scripts/retailer-dashboard.js"></script>
+</body>
+</html>

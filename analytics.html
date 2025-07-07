@@ -1,0 +1,243 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard - AgriLink</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/dashboard.css">
+</head>
+<body>
+    <div class="dashboard active">
+        <header class="dashboard-header">
+            <nav class="dashboard-nav">
+                <h1 class="dashboard-title">📊 Analytics Dashboard</h1>
+                <div class="user-info">
+                    <button class="btn-secondary" onclick="window.close()" style="margin-right: 10px;">Close</button>
+                    <span>Analytics View</span>
+                </div>
+            </nav>
+        </header>
+
+        <div class="dashboard-content">
+            <!-- Time Range Filter -->
+            <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+                    <label>Time Range:</label>
+                    <select id="timeRange" onchange="updateCharts()">
+                        <option value="7">Last 7 Days</option>
+                        <option value="30" selected>Last 30 Days</option>
+                        <option value="90">Last 3 Months</option>
+                        <option value="365">Last Year</option>
+                    </select>
+                    <button class="btn-primary" onclick="refreshData()" style="padding: 8px 16px;">Refresh Data</button>
+                    <button class="btn-secondary" onclick="exportAnalytics()" style="padding: 8px 16px;">Export Report</button>
+                </div>
+            </div>
+
+            <!-- Key Metrics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 id="totalSales">₹4,25,680</h3>
+                    <p>Total Sales</p>
+                    <small style="color: #28a745;">↑ 12.5% from last month</small>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalOrders">1,347</h3>
+                    <p>Total Orders</p>
+                    <small style="color: #28a745;">↑ 8.3% from last month</small>
+                </div>
+                <div class="stat-card">
+                    <h3 id="activeUsers">2,156</h3>
+                    <p>Active Users</p>
+                    <small style="color: #28a745;">↑ 15.2% from last month</small>
+                </div>
+                <div class="stat-card">
+                    <h3 id="avgOrderValue">₹316</h3>
+                    <p>Avg Order Value</p>
+                    <small style="color: #dc3545;">↓ 2.1% from last month</small>
+                </div>
+            </div>
+
+            <!-- Sales Trend Chart -->
+            <div class="chart-container">
+                <h3 style="margin-bottom: 20px;">Sales Trend</h3>
+                <div class="chart-placeholder">
+                    📈 Interactive Line Chart<br>
+                    <small>Shows daily/weekly/monthly sales trends<br>
+                    Integration: Chart.js, D3.js, or similar charting library</small>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 30px; margin-bottom: 30px;">
+                <!-- Product Categories Chart -->
+                <div class="chart-container">
+                    <h3 style="margin-bottom: 20px;">Top Product Categories</h3>
+                    <div class="chart-placeholder" style="height: 250px;">
+                        🥧 Pie Chart<br>
+                        <small>Vegetables: 35%<br>Fruits: 28%<br>Grains: 20%<br>Dairy: 12%<br>Spices: 5%</small>
+                    </div>
+                </div>
+
+                <!-- User Growth Chart -->
+                <div class="chart-container">
+                    <h3 style="margin-bottom: 20px;">User Growth</h3>
+                    <div class="chart-placeholder" style="height: 250px;">
+                        📊 Bar Chart<br>
+                        <small>Monthly new user registrations<br>by role and region</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Selling Products -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>Top Selling Products</h3>
+                    <select style="padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+                        <option>This Month</option>
+                        <option>Last Month</option>
+                        <option>This Quarter</option>
+                    </select>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Units Sold</th>
+                            <th>Revenue</th>
+                            <th>Growth</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>🍅 Fresh Tomatoes</td>
+                            <td>Vegetables</td>
+                            <td>2,456 kg</td>
+                            <td>₹98,240</td>
+                            <td style="color: #28a745;">+15%</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>🍎 Red Apples</td>
+                            <td>Fruits</td>
+                            <td>1,890 kg</td>
+                            <td>₹2,26,800</td>
+                            <td style="color: #28a745;">+8%</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>🌾 Basmati Rice</td>
+                            <td>Grains</td>
+                            <td>1,200 kg</td>
+                            <td>₹96,000</td>
+                            <td style="color: #dc3545;">-3%</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>🥛 Fresh Milk</td>
+                            <td>Dairy</td>
+                            <td>3,400 L</td>
+                            <td>₹85,000</td>
+                            <td style="color: #28a745;">+12%</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td>🌽 Sweet Corn</td>
+                            <td>Vegetables</td>
+                            <td>980 kg</td>
+                            <td>₹34,300</td>
+                            <td style="color: #28a745;">+22%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Market Trends -->
+            <div class="chart-container">
+                <h3 style="margin-bottom: 20px;">Real-time Market Trends</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                    <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <h4>🍅 Tomatoes</h4>
+                        <p style="font-size: 1.2rem; color: #28a745; margin: 5px 0;">₹42/kg</p>
+                        <small style="color: #28a745;">↑ ₹2 from yesterday</small>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <h4>🍎 Apples</h4>
+                        <p style="font-size: 1.2rem; color: #dc3545; margin: 5px 0;">₹118/kg</p>
+                        <small style="color: #dc3545;">↓ ₹5 from yesterday</small>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <h4>🌾 Rice</h4>
+                        <p style="font-size: 1.2rem; color: #6c757d; margin: 5px 0;">₹78/kg</p>
+                        <small style="color: #6c757d;">No change</small>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <h4>🥛 Milk</h4>
+                        <p style="font-size: 1.2rem; color: #28a745; margin: 5px 0;">₹26/L</p>
+                        <small style="color: #28a745;">↑ ₹1 from yesterday</small>
+                    </div>
+                </div>
+                <div class="chart-placeholder" style="height: 200px;">
+                    📈 Real-time Price Tracking Chart<br>
+                    <small>Live price updates with historical comparison</small>
+                </div>
+            </div>
+
+            <!-- Regional Performance -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>Regional Performance</h3>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Region</th>
+                            <th>Active Users</th>
+                            <th>Total Orders</th>
+                            <th>Revenue</th>
+                            <th>Growth Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>North India</td>
+                            <td>856</td>
+                            <td>2,340</td>
+                            <td>₹1,85,600</td>
+                            <td style="color: #28a745;">+18%</td>
+                        </tr>
+                        <tr>
+                            <td>South India</td>
+                            <td>743</td>
+                            <td>1,980</td>
+                            <td>₹1,42,800</td>
+                            <td style="color: #28a745;">+12%</td>
+                        </tr>
+                        <tr>
+                            <td>West India</td>
+                            <td>512</td>
+                            <td>1,456</td>
+                            <td>₹98,400</td>
+                            <td style="color: #28a745;">+8%</td>
+                        </tr>
+                        <tr>
+                            <td>East India</td>
+                            <td>345</td>
+                            <td>890</td>
+                            <td>₹67,200</td>
+                            <td style="color: #ffc107;">+3%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="scripts/analytics.js"></script>
+</body>
+</html>

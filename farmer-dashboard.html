@@ -1,0 +1,184 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmer Dashboard - AgriLink</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/dashboard.css">
+</head>
+<body>
+    <div class="dashboard active">
+        <header class="dashboard-header">
+            <nav class="dashboard-nav">
+                <h1 class="dashboard-title">🌾 Farmer Dashboard</h1>
+                <div class="user-info">
+                    <span id="userName">Farmer</span>
+                    <span class="role-badge" id="userRole">Farmer</span>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </nav>
+        </header>
+
+        <div class="dashboard-content">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 id="totalProducts">12</h3>
+                    <p>Products Listed</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalSales">₹25,430</h3>
+                    <p>Total Sales</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="pendingOrders">5</h3>
+                    <p>Pending Orders</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="monthlyRevenue">₹8,750</h3>
+                    <p>Monthly Revenue</p>
+                </div>
+            </div>
+
+            <!-- Add Product Button -->
+            <div style="margin-bottom: 30px;">
+                <button class="btn-primary" onclick="showAddProductModal()" style="width: auto; padding: 12px 24px;">
+                    + Add New Product
+                </button>
+            </div>
+
+            <!-- Products Table -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>My Products</h3>
+                </div>
+                <table id="productsTable">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Product Name</th>
+                            <th>Category</th>
+                            <th>Quantity</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>🍅</td>
+                            <td>Fresh Tomatoes</td>
+                            <td>Vegetables</td>
+                            <td>50 kg</td>
+                            <td>₹40/kg</td>
+                            <td><span class="status-active">Active</span></td>
+                            <td>
+                                <button class="btn-secondary" onclick="editProduct(1)">Edit</button>
+                                <button class="btn-danger" onclick="deleteProduct(1)">Delete</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>🌽</td>
+                            <td>Sweet Corn</td>
+                            <td>Vegetables</td>
+                            <td>30 kg</td>
+                            <td>₹35/kg</td>
+                            <td><span class="status-active">Active</span></td>
+                            <td>
+                                <button class="btn-secondary" onclick="editProduct(2)">Edit</button>
+                                <button class="btn-danger" onclick="deleteProduct(2)">Delete</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Orders Tracking -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>Recent Orders</h3>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Customer</th>
+                            <th>Status</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>#ORD001</td>
+                            <td>Fresh Tomatoes</td>
+                            <td>5 kg</td>
+                            <td>John Doe</td>
+                            <td><span class="status-pending">Processing</span></td>
+                            <td>₹200</td>
+                        </tr>
+                        <tr>
+                            <td>#ORD002</td>
+                            <td>Sweet Corn</td>
+                            <td>10 kg</td>
+                            <td>Jane Smith</td>
+                            <td><span class="status-completed">Delivered</span></td>
+                            <td>₹350</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div id="addProductModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Product</h3>
+                <button class="close-btn" onclick="closeModal('addProductModal')">&times;</button>
+            </div>
+            <form onsubmit="addProduct(event)">
+                <div class="form-group">
+                    <label for="productName">Product Name</label>
+                    <input type="text" id="productName" required>
+                </div>
+                <div class="form-group">
+                    <label for="productCategory">Category</label>
+                    <select id="productCategory" required>
+                        <option value="">Select Category</option>
+                        <option value="vegetables">Vegetables</option>
+                        <option value="fruits">Fruits</option>
+                        <option value="grains">Grains</option>
+                        <option value="dairy">Dairy</option>
+                        <option value="spices">Spices</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="productDescription">Description</label>
+                    <textarea id="productDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="productQuantity">Quantity</label>
+                    <input type="text" id="productQuantity" placeholder="e.g., 50 kg" required>
+                </div>
+                <div class="form-group">
+                    <label for="productPrice">Price</label>
+                    <input type="text" id="productPrice" placeholder="e.g., ₹40/kg" required>
+                </div>
+                <div class="form-group">
+                    <label for="productImage">Product Image</label>
+                    <input type="file" id="productImage" accept="image/*">
+                </div>
+                <button type="submit" class="btn-primary">Add Product</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="scripts/auth.js"></script>
+    <script src="scripts/farmer-dashboard.js"></script>
+</body>
+</html>
