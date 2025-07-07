@@ -89,7 +89,7 @@ function loadProducts(productsToShow = products) {
                 <h4>${product.name}</h4>
                 <p>${product.description}</p>
                 <p style="color: #666; font-size: 0.9rem;">By: ${product.farmer}</p>
-                <div class="product-price">₹${product.price}/${product.unit}</div>
+                <div class="product-price">Ksh${product.price}/${product.unit}</div>
                 <button class="btn-primary" onclick="addToCart(${product.id})">Add to Cart</button>
             </div>
         `;
@@ -175,14 +175,14 @@ function loadCartItems() {
             <div class="cart-item-image">${item.image}</div>
             <div class="cart-item-info">
                 <h4>${item.name}</h4>
-                <p>₹${item.price}/${item.unit}</p>
+                <p>Ksh${item.price}/${item.unit}</p>
             </div>
             <div class="quantity-controls">
                 <button class="quantity-btn" onclick="updateQuantity(${item.id}, -1)">-</button>
                 <span>${item.quantity}</span>
                 <button class="quantity-btn" onclick="updateQuantity(${item.id}, 1)">+</button>
             </div>
-            <div style="font-weight: bold;">₹${item.price * item.quantity}</div>
+            <div style="font-weight: bold;">Ksh${item.price * item.quantity}</div>
             <button class="btn-danger" onclick="removeFromCart(${item.id})" style="margin-left: 10px;">Remove</button>
         `;
         cartItemsContainer.appendChild(cartItem);
@@ -220,9 +220,9 @@ function updateCartSummary() {
     const delivery = cart.length > 0 ? 50 : 0;
     const total = subtotal + delivery;
     
-    document.getElementById('subtotal').textContent = `₹${subtotal}`;
-    document.getElementById('total').textContent = `₹${total}`;
-    document.getElementById('checkoutTotal').textContent = `₹${total}`;
+    document.getElementById('subtotal').textContent = `Ksh${subtotal}`;
+    document.getElementById('total').textContent = `Ksh${total}`;
+    document.getElementById('checkoutTotal').textContent = `Ksh${total}`;
 }
 
 // Proceed to checkout
