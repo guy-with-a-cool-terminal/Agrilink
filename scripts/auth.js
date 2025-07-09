@@ -53,11 +53,12 @@ async function handleLogin(event) {
         alert('Please fill in all fields');
         return;
     }
-    
+
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
     try {
         // Show loading state
-        const submitBtn = event.target.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
+        
         submitBtn.textContent = 'Logging in...';
         submitBtn.disabled = true;
         
@@ -112,11 +113,12 @@ async function handleRegister(event) {
         alert('Please fill in all fields');
         return;
     }
-    
-    try {
-        // Show loading state
+
         const submitBtn = event.target.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
+    try {
+        // Show loading state
+        
         submitBtn.textContent = 'Registering...';
         submitBtn.disabled = true;
         

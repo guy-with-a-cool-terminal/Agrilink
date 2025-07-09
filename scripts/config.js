@@ -3,10 +3,10 @@ const API_CONFIG = {
     BASE_URL: 'http://127.0.0.1:8000/api',
     ENDPOINTS: {
         // Authentication
-        LOGIN: '/auth/login',
-        REGISTER: '/auth/register',
-        LOGOUT: '/auth/logout',
-        USER: '/auth/user',
+        LOGIN: '/login',
+        REGISTER: '/register',
+        LOGOUT: '/logout',
+        USER: '/user',
         
         // Products
         PRODUCTS: '/products',
