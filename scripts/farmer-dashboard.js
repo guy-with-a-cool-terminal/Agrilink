@@ -5,56 +5,62 @@
 document.addEventListener('DOMContentLoaded', function() {
     initDashboard();
     loadProducts();
+    
+    // Load API configuration
+    const script = document.createElement('script');
+    script.src = 'scripts/config.js';
+    document.head.appendChild(script);
 });
 
-// Sample products data
-let products = [
-    {
-        id: 1,
-        name: 'Fresh Tomatoes',
-        category: 'vegetables',
-        description: 'Farm fresh red tomatoes',
-        quantity: '50 kg',
-        price: 'Ksh40/kg',
-        image: '🍅',
-        status: 'active'
-    },
-    {
-        id: 2,
-        name: 'Sweet Corn',
-        category: 'vegetables',
-        description: 'Sweet and tender corn',
-        quantity: '30 kg',
-        price: 'Ksh35/kg',
-        image: '🌽',
-        status: 'active'
-    }
-];
+// Products data from API
+let products = [];
 
-// Load products into table
-function loadProducts() {
-    const tableBody = document.querySelector('#productsTable tbody');
-    tableBody.innerHTML = '';
-    
-    products.forEach(product => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${product.image}</td>
-            <td>${product.name}</td>
-            <td>${product.category}</td>
-            <td>${product.quantity}</td>
-            <td>${product.price}</td>
-            <td><span class="status-${product.status}">${product.status}</span></td>
-            <td>
-                <button class="btn-secondary" onclick="editProduct(${product.id})">Edit</button>
-                <button class="btn-danger" onclick="deleteProduct(${product.id})">Delete</button>
-            </td>
-        `;
-        tableBody.appendChild(row);
-    });
-    
-    // Update stats
-    document.getElementById('totalProducts').textContent = products.length;
+// Load products from API
+async function loadProducts() {
+    try {
+        const response = await apiClient.getProducts();
+        products = response.data || response;
+        console.log('Products loaded:', products);
+        
+        const tableBody = document.querySelector('#productsTable tbody');
+        tableBody.innerHTML = '';
+        
+        products.forEach(product => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${getCategoryEmoji(product.category)}</td>
+                <td>${product.name}</td>
+                <td>${product.category}</td>
+                <td>${product.stock} ${product.unit || 'kg'}</td>
+                <td>Ksh${product.price}</td>
+                <td><span class="status-${product.status}">${product.status}</span></td>
+                <td>
+                    <button class="btn-secondary" onclick="editProduct(${product.id})">Edit</button>
+                    <button class="btn-danger" onclick="deleteProduct(${product.id})">Delete</button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+        
+        // Update stats
+        document.getElementById('totalProducts').textContent = products.length;
+        
+    } catch (error) {
+        console.error('Error loading products:', error);
+        alert('Failed to load products: ' + error.message);
+    }
+}
+
+// Helper function to get category emoji
+function getCategoryEmoji(category) {
+    const categoryEmojis = {
+        'vegetables': '🥬',
+        'fruits': '🍎',
+        'grains': '🌾',
+        'dairy': '🥛',
+        'spices': '🌶️'
+    };
+    return categoryEmojis[category] || '🥕';
 }
 
 // Show add product modal
@@ -68,7 +74,7 @@ function closeModal(modalId) {
 }
 
 // Add new product
-function addProduct(event) {
+async function addProduct(event) {
     event.preventDefault();
     
     const name = document.getElementById('productName').value;
@@ -77,34 +83,33 @@ function addProduct(event) {
     const quantity = document.getElementById('productQuantity').value;
     const price = document.getElementById('productPrice').value;
     
-    // Get category emoji
-    const categoryEmojis = {
-        'vegetables': '🥬',
-        'fruits': '🍎',
-        'grains': '🌾',
-        'dairy': '🥛',
-        'spices': '🌶️'
-    };
-    
-    const newProduct = {
-        id: products.length + 1,
-        name: name,
-        category: category,
-        description: description,
-        quantity: quantity,
-        price: price,
-        image: categoryEmojis[category] || '🥕',
-        status: 'active'
-    };
-    
-    products.push(newProduct);
-    loadProducts();
-    closeModal('addProductModal');
-    
-    // Reset form
-    document.querySelector('#addProductModal form').reset();
-    
-    alert('Product added successfully!');
+    try {
+        const productData = {
+            name: name,
+            category: category,
+            description: description,
+            stock: quantity,
+            price: parseFloat(price),
+            unit: 'kg',
+            status: 'active'
+        };
+        
+        const response = await apiClient.createProduct(productData);
+        console.log('Product created:', response);
+        
+        // Reload products
+        await loadProducts();
+        closeModal('addProductModal');
+        
+        // Reset form
+        document.querySelector('#addProductModal form').reset();
+        
+        alert('Product added successfully!');
+        
+    } catch (error) {
+        console.error('Error adding product:', error);
+        alert('Failed to add product: ' + error.message);
+    }
 }
 
 // Edit product
@@ -115,7 +120,7 @@ function editProduct(id) {
         document.getElementById('productName').value = product.name;
         document.getElementById('productCategory').value = product.category;
         document.getElementById('productDescription').value = product.description;
-        document.getElementById('productQuantity').value = product.quantity;
+        document.getElementById('productQuantity').value = product.stock;
         document.getElementById('productPrice').value = product.price;
         
         showAddProductModal();
@@ -130,16 +135,22 @@ function editProduct(id) {
 }
 
 // Update product
-function updateProduct(id) {
-    const product = products.find(p => p.id === id);
-    if (product) {
-        product.name = document.getElementById('productName').value;
-        product.category = document.getElementById('productCategory').value;
-        product.description = document.getElementById('productDescription').value;
-        product.quantity = document.getElementById('productQuantity').value;
-        product.price = document.getElementById('productPrice').value;
+async function updateProduct(id) {
+    try {
+        const productData = {
+            name: document.getElementById('productName').value,
+            category: document.getElementById('productCategory').value,
+            description: document.getElementById('productDescription').value,
+            stock: document.getElementById('productQuantity').value,
+            price: parseFloat(document.getElementById('productPrice').value),
+            unit: 'kg'
+        };
         
-        loadProducts();
+        const response = await apiClient.updateProduct(id, productData);
+        console.log('Product updated:', response);
+        
+        // Reload products
+        await loadProducts();
         closeModal('addProductModal');
         
         // Reset form submission back to add
@@ -147,15 +158,28 @@ function updateProduct(id) {
         form.onsubmit = addProduct;
         
         alert('Product updated successfully!');
+        
+    } catch (error) {
+        console.error('Error updating product:', error);
+        alert('Failed to update product: ' + error.message);
     }
 }
 
 // Delete product
-function deleteProduct(id) {
+async function deleteProduct(id) {
     if (confirm('Are you sure you want to delete this product?')) {
-        products = products.filter(p => p.id !== id);
-        loadProducts();
-        alert('Product deleted successfully!');
+        try {
+            await apiClient.deleteProduct(id);
+            console.log('Product deleted:', id);
+            
+            // Reload products
+            await loadProducts();
+            alert('Product deleted successfully!');
+            
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            alert('Failed to delete product: ' + error.message);
+        }
     }
 }
 

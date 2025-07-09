@@ -5,24 +5,52 @@
 document.addEventListener('DOMContentLoaded', function() {
     loadAnalyticsData();
     startRealTimeUpdates();
+    
+    // Load API configuration
+    const script = document.createElement('script');
+    script.src = 'scripts/config.js';
+    document.head.appendChild(script);
 });
 
-// Load analytics data
-function loadAnalyticsData() {
-    // In a real app, this would fetch data from backend API
-    updateKeyMetrics();
-    updateCharts();
+// Load analytics data from API
+async function loadAnalyticsData() {
+    try {
+        const response = await apiClient.getAnalytics();
+        const analytics = response.data || response;
+        console.log('Analytics loaded:', analytics);
+        
+        updateKeyMetrics(analytics);
+        updateCharts();
+        
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+        // Fallback to demo data
+        updateKeyMetrics();
+        updateCharts();
+    }
 }
 
 // Update key metrics
-function updateKeyMetrics() {
-    // Simulate real-time data updates
-    const metrics = {
-        totalSales: generateRandomValue(400000, 450000),
-        totalOrders: generateRandomValue(1300, 1400),
-        activeUsers: generateRandomValue(2100, 2200),
-        avgOrderValue: generateRandomValue(300, 350)
-    };
+function updateKeyMetrics(analytics = null) {
+    let metrics;
+    
+    if (analytics) {
+        // Use real data from API
+        metrics = {
+            totalSales: analytics.total_sales || 0,
+            totalOrders: analytics.total_orders || 0,
+            activeUsers: analytics.active_users || 0,
+            avgOrderValue: analytics.avg_order_value || 0
+        };
+    } else {
+        // Fallback to simulated data
+        metrics = {
+            totalSales: generateRandomValue(400000, 450000),
+            totalOrders: generateRandomValue(1300, 1400),
+            activeUsers: generateRandomValue(2100, 2200),
+            avgOrderValue: generateRandomValue(300, 350)
+        };
+    }
     
     document.getElementById('totalSales').textContent = `Ksh${metrics.totalSales.toLocaleString()}`;
     document.getElementById('totalOrders').textContent = metrics.totalOrders.toLocaleString();

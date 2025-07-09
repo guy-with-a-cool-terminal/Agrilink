@@ -5,6 +5,12 @@
 document.addEventListener('DOMContentLoaded', function() {
     initDashboard();
     setMinDate();
+    loadOrderHistory();
+    
+    // Load API configuration
+    const script = document.createElement('script');
+    script.src = 'scripts/config.js';
+    document.head.appendChild(script);
 });
 
 // Set minimum date for delivery date input
@@ -18,7 +24,7 @@ function setMinDate() {
 }
 
 // Place bulk order
-function placeBulkOrder(event) {
+async function placeBulkOrder(event) {
     event.preventDefault();
     
     const product = document.getElementById('productSelect').value;
@@ -27,28 +33,35 @@ function placeBulkOrder(event) {
     const budget = document.getElementById('budgetRange').value;
     const requirements = document.getElementById('specialRequirements').value;
     
-    // Create order object
-    const bulkOrder = {
-        id: 'BULK' + Date.now(),
-        product: product,
-        quantity: quantity,
-        deliveryDate: deliveryDate,
-        budget: budget,
-        requirements: requirements,
-        status: 'pending',
-        orderDate: new Date().toISOString().split('T')[0]
-    };
-    
-    // Save order (in real app, this would go to backend)
-    let bulkOrders = JSON.parse(localStorage.getItem('bulkOrders')) || [];
-    bulkOrders.push(bulkOrder);
-    localStorage.setItem('bulkOrders', JSON.stringify(bulkOrders));
-    
-    alert('Bulk order placed successfully! You will be contacted by suppliers soon.');
-    
-    // Reset form
-    event.target.reset();
-    setMinDate();
+    try {
+        // Create order data for bulk order
+        const orderData = {
+            type: 'bulk',
+            product_name: product,
+            quantity: parseInt(quantity),
+            delivery_address: 'Bulk delivery address', // In real app, get from form
+            delivery_date: deliveryDate,
+            budget: parseFloat(budget),
+            special_requirements: requirements,
+            total_amount: parseFloat(budget) // Use budget as estimated total
+        };
+        
+        const response = await apiClient.createOrder(orderData);
+        console.log('Bulk order created:', response);
+        
+        alert('Bulk order placed successfully! You will be contacted by suppliers soon.');
+        
+        // Reset form
+        event.target.reset();
+        setMinDate();
+        
+        // Reload order history
+        loadOrderHistory();
+        
+    } catch (error) {
+        console.error('Error placing bulk order:', error);
+        alert('Failed to place bulk order: ' + error.message);
+    }
 }
 
 // Schedule delivery
@@ -79,30 +92,37 @@ function scheduleDelivery(event) {
     event.target.reset();
 }
 
-// Load order history
-function loadOrderHistory() {
-    const bulkOrders = JSON.parse(localStorage.getItem('bulkOrders')) || [];
-    const tableBody = document.getElementById('orderHistoryTable');
-    
-    // Clear existing rows except sample data
-    // In a real app, you'd replace all data
-    
-    bulkOrders.forEach(order => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>#${order.id}</td>
-            <td>${order.product}</td>
-            <td>${order.quantity}</td>
-            <td>Calculating...</td>
-            <td><span class="status-${order.status}">${order.status}</span></td>
-            <td>${order.deliveryDate}</td>
-            <td>
-                <button class="btn-secondary" onclick="viewOrderDetails('${order.id}')">View Details</button>
-                <button class="btn-secondary" onclick="reorder('${order.id}')">Reorder</button>
-            </td>
-        `;
-        tableBody.appendChild(row);
-    });
+// Load order history from API
+async function loadOrderHistory() {
+    try {
+        const response = await apiClient.getOrders();
+        const orders = response.data || response;
+        console.log('Orders loaded:', orders);
+        
+        const tableBody = document.getElementById('orderHistoryTable');
+        tableBody.innerHTML = '';
+        
+        orders.forEach(order => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>#${order.id}</td>
+                <td>${order.product_name || 'Mixed items'}</td>
+                <td>${order.quantity || 'Various'}</td>
+                <td>Ksh${order.total_amount}</td>
+                <td><span class="status-${order.status}">${order.status}</span></td>
+                <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                <td>
+                    <button class="btn-secondary" onclick="viewOrderDetails('${order.id}')">View Details</button>
+                    <button class="btn-secondary" onclick="reorder('${order.id}')">Reorder</button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+        
+    } catch (error) {
+        console.error('Error loading order history:', error);
+        alert('Failed to load order history: ' + error.message);
+    }
 }
 
 // View order details
