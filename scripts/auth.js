@@ -3,6 +3,13 @@
 
 console.log('Auth script loaded successfully');
 
+// Load API configuration
+document.addEventListener('DOMContentLoaded', function() {
+    const script = document.createElement('script');
+    script.src = 'scripts/config.js';
+    document.head.appendChild(script);
+});
+
 // Show/Hide forms
 function showLogin() {
     console.log('Switching to login form');
@@ -31,7 +38,7 @@ function showRegister() {
 }
 
 // Handle Login
-function handleLogin(event) {
+async function handleLogin(event) {
     event.preventDefault();
     console.log('Login form submitted');
     
@@ -46,29 +53,50 @@ function handleLogin(event) {
         alert('Please fill in all fields');
         return;
     }
-    
-    // Store user info (in real app, this would be handled by backend)
-    const userData = {
-        email: email,
-        role: role,
-        name: email.split('@')[0], // Use email prefix as name
-        loginTime: new Date().toISOString()
-    };
-    
+
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
     try {
+        // Show loading state
+        
+        submitBtn.textContent = 'Logging in...';
+        submitBtn.disabled = true;
+        
+        // Call API
+        const response = await apiClient.login({
+            email: email,
+            password: password,
+            role: role
+        });
+        
+        console.log('Login successful:', response);
+        
+        // Store user info with token
+        const userData = {
+            ...response.user,
+            token: response.token,
+            loginTime: new Date().toISOString()
+        };
+        
         localStorage.setItem('currentUser', JSON.stringify(userData));
         console.log('User data stored successfully:', userData);
         
         // Redirect based on role
-        redirectToDashboard(role);
+        redirectToDashboard(userData.role);
+        
     } catch (error) {
-        console.error('Error storing user data:', error);
-        alert('Login failed. Please try again.');
+        console.error('Login error:', error);
+        alert('Login failed: ' + error.message);
+        
+        // Reset button state
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
     }
 }
 
 // Handle Registration
-function handleRegister(event) {
+async function handleRegister(event) {
     event.preventDefault();
     console.log('Register form submitted');
     
@@ -85,27 +113,49 @@ function handleRegister(event) {
         alert('Please fill in all fields');
         return;
     }
-    
-    // Store user info (in real app, this would be handled by backend)
-    const userData = {
-        name: name,
-        email: email,
-        phone: phone,
-        role: role,
-        loginTime: new Date().toISOString()
-    };
-    
+
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
     try {
+        // Show loading state
+        
+        submitBtn.textContent = 'Registering...';
+        submitBtn.disabled = true;
+        
+        // Call API
+        const response = await apiClient.register({
+            name: name,
+            email: email,
+            phone: phone,
+            password: password,
+            role: role
+        });
+        
+        console.log('Registration successful:', response);
+        
+        // Store user info with token
+        const userData = {
+            ...response.user,
+            token: response.token,
+            loginTime: new Date().toISOString()
+        };
+        
         localStorage.setItem('currentUser', JSON.stringify(userData));
         console.log('User registered and data stored successfully:', userData);
         
         alert('Registration successful! Redirecting to dashboard...');
         
         // Redirect based on role
-        redirectToDashboard(role);
+        redirectToDashboard(userData.role);
+        
     } catch (error) {
-        console.error('Error storing user data:', error);
-        alert('Registration failed. Please try again.');
+        console.error('Registration error:', error);
+        alert('Registration failed: ' + error.message);
+        
+        // Reset button state
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
     }
 }
 
@@ -155,8 +205,17 @@ function checkAuth() {
 }
 
 // Logout function
-function logout() {
+async function logout() {
     console.log('Logging out user');
+    try {
+        // Call API to logout
+        await apiClient.logout();
+        console.log('Server logout successful');
+    } catch (error) {
+        console.error('Server logout error:', error);
+        // Continue with local logout even if server fails
+    }
+    
     try {
         localStorage.removeItem('currentUser');
         window.location.href = 'index.html';
