@@ -2,7 +2,16 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from "path"
-import { componentTagger } from "lovable-tagger"
+
+// Safely import lovable-tagger with fallback
+let componentTagger;
+try {
+  const { componentTagger: tagger } = await import("lovable-tagger");
+  componentTagger = tagger;
+} catch (error) {
+  // Fallback if lovable-tagger is not available
+  componentTagger = () => null;
+}
 
 export default defineConfig(({ mode }) => ({
   server: {
