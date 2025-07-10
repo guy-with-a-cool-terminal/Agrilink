@@ -6,8 +6,7 @@ import path from "path"
 // Safely import lovable-tagger with fallback
 let componentTagger;
 try {
-  const { componentTagger: tagger } = await import("lovable-tagger");
-  componentTagger = tagger;
+  componentTagger = require("lovable-tagger").componentTagger;
 } catch (error) {
   // Fallback if lovable-tagger is not available
   componentTagger = () => null;
