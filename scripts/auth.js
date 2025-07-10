@@ -104,6 +104,7 @@ async function handleRegister(event) {
     const email = document.getElementById('registerEmail')?.value;
     const phone = document.getElementById('registerPhone')?.value;
     const password = document.getElementById('registerPassword')?.value;
+    const password_confirmation = password;
     const role = document.getElementById('registerRole')?.value;
     
     console.log('Registration details:', { name, email, role });
@@ -128,6 +129,7 @@ async function handleRegister(event) {
             email: email,
             phone: phone,
             password: password,
+            password_confirmation,
             role: role
         });
         
