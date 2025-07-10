@@ -1,4 +1,3 @@
-
 // Consumer Dashboard JavaScript
 
 // Initialize dashboard
@@ -6,95 +5,74 @@ document.addEventListener('DOMContentLoaded', function() {
     initDashboard();
     loadProducts();
     updateCartCount();
+    
+    // Load API configuration
+    const script = document.createElement('script');
+    script.src = 'scripts/config.js';
+    document.head.appendChild(script);
 });
 
-// Sample products data
-const products = [
-    {
-        id: 1,
-        name: 'Fresh Tomatoes',
-        category: 'vegetables',
-        description: 'Farm fresh red tomatoes, perfect for cooking',
-        price: 40,
-        unit: 'kg',
-        image: '🍅',
-        farmer: 'John Farm'
-    },
-    {
-        id: 2,
-        name: 'Sweet Corn',
-        category: 'vegetables',
-        description: 'Sweet and tender corn, freshly harvested',
-        price: 35,
-        unit: 'kg',
-        image: '🌽',
-        farmer: 'Green Valley Farm'
-    },
-    {
-        id: 3,
-        name: 'Red Apples',
-        category: 'fruits',
-        description: 'Crispy red apples, rich in vitamins',
-        price: 120,
-        unit: 'kg',
-        image: '🍎',
-        farmer: 'Mountain Orchards'
-    },
-    {
-        id: 4,
-        name: 'Basmati Rice',
-        category: 'grains',
-        description: 'Premium quality basmati rice',
-        price: 80,
-        unit: 'kg',
-        image: '🌾',
-        farmer: 'Rice Valley'
-    },
-    {
-        id: 5,
-        name: 'Fresh Milk',
-        category: 'dairy',
-        description: 'Pure cow milk, delivered fresh daily',
-        price: 25,
-        unit: 'liter',
-        image: '🥛',
-        farmer: 'Dairy Fresh'
-    },
-    {
-        id: 6,
-        name: 'Red Chili',
-        category: 'spices',
-        description: 'Hot red chilies, dried and ground',
-        price: 200,
-        unit: 'kg',
-        image: '🌶️',
-        farmer: 'Spice Garden'
-    }
-];
+// Products data from API
+let products = [];
 
 // Shopping cart
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 
-// Load products into grid
-function loadProducts(productsToShow = products) {
-    const productGrid = document.getElementById('productGrid');
-    productGrid.innerHTML = '';
-    
-    productsToShow.forEach(product => {
-        const productCard = document.createElement('div');
-        productCard.className = 'product-card';
-        productCard.innerHTML = `
-            <div class="product-image">${product.image}</div>
-            <div class="product-info">
-                <h4>${product.name}</h4>
-                <p>${product.description}</p>
-                <p style="color: #666; font-size: 0.9rem;">By: ${product.farmer}</p>
-                <div class="product-price">Ksh${product.price}/${product.unit}</div>
-                <button class="btn-primary" onclick="addToCart(${product.id})">Add to Cart</button>
-            </div>
-        `;
-        productGrid.appendChild(productCard);
-    });
+// Load products from API
+async function loadProducts(productsToShow = null) {
+    try {
+        if (!productsToShow) {
+            const response = await apiClient.getProducts();
+            products = response.data || response;
+            console.log('Products loaded:', products);
+            productsToShow = products;
+        }
+        
+        const productGrid = document.getElementById('productGrid');
+        productGrid.innerHTML = '';
+        
+        if (productsToShow.length === 0) {
+            productGrid.innerHTML = '<p style="text-align: center; padding: 40px;">No products available</p>';
+            return;
+        }
+        
+        productsToShow.forEach(product => {
+            const productCard = document.createElement('div');
+            productCard.className = 'product-card';
+            productCard.innerHTML = `
+                <div class="product-image">
+                    ${product.image_url ? `<img src="${product.image_url}" alt="${product.name}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;">` : getCategoryEmoji(product.category)}
+                </div>
+                <div class="product-info">
+                    <h4>${product.name}</h4>
+                    <p>${product.description}</p>
+                    <p style="color: #666; font-size: 0.9rem;">Stock: ${product.stock} ${product.unit || 'kg'}</p>
+                    <div class="product-price">Ksh${product.price}/${product.unit || 'kg'}</div>
+                    <button class="btn-primary" onclick="addToCart(${product.id})" ${product.stock <= 0 ? 'disabled' : ''}>
+                        ${product.stock <= 0 ? 'Out of Stock' : 'Add to Cart'}
+                    </button>
+                </div>
+            `;
+            productGrid.appendChild(productCard);
+        });
+        
+    } catch (error) {
+        console.error('Error loading products:', error);
+        const productGrid = document.getElementById('productGrid');
+        productGrid.innerHTML = '<p style="text-align: center; padding: 40px; color: red;">Failed to load products. Please try again.</p>';
+    }
+}
+
+// Helper function to get category emoji
+function getCategoryEmoji(category) {
+    const categoryEmojis = {
+        'vegetables': '🥬',
+        'fruits': '🍎',
+        'grains': '🌾',
+        'dairy': '🥛',
+        'spices': '🌶️'
+    };
+    return `<div style="font-size: 4rem; text-align: center; padding: 20px;">${categoryEmojis[category] || '🥕'}</div>`;
 }
 
 // Search products
@@ -123,25 +101,33 @@ function searchProducts() {
 // Add to cart
 function addToCart(productId) {
     const product = products.find(p => p.id === productId);
-    if (product) {
+    if (product && product.stock > 0) {
         const existingItem = cart.find(item => item.id === productId);
         
         if (existingItem) {
-            existingItem.quantity += 1;
+            if (existingItem.quantity < product.stock) {
+                existingItem.quantity += 1;
+            } else {
+                alert('Cannot add more items. Stock limit reached.');
+                return;
+            }
         } else {
             cart.push({
                 id: product.id,
                 name: product.name,
                 price: product.price,
-                unit: product.unit,
-                image: product.image,
-                quantity: 1
+                unit: product.unit || 'kg',
+                image: product.image_url,
+                quantity: 1,
+                maxStock: product.stock
             });
         }
         
         localStorage.setItem('cart', JSON.stringify(cart));
         updateCartCount();
         alert(`${product.name} added to cart!`);
+    } else {
+        alert('Product is out of stock!');
     }
 }
 
@@ -172,7 +158,9 @@ function loadCartItems() {
         const cartItem = document.createElement('div');
         cartItem.className = 'cart-item';
         cartItem.innerHTML = `
-            <div class="cart-item-image">${item.image}</div>
+            <div class="cart-item-image">
+                ${item.image ? `<img src="${item.image}" alt="${item.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">` : getCategoryEmoji('default')}
+            </div>
             <div class="cart-item-info">
                 <h4>${item.name}</h4>
                 <p>Ksh${item.price}/${item.unit}</p>
@@ -195,13 +183,17 @@ function loadCartItems() {
 function updateQuantity(productId, change) {
     const item = cart.find(item => item.id === productId);
     if (item) {
-        item.quantity += change;
-        if (item.quantity <= 0) {
+        const newQuantity = item.quantity + change;
+        
+        if (newQuantity <= 0) {
             removeFromCart(productId);
-        } else {
+        } else if (newQuantity <= item.maxStock) {
+            item.quantity = newQuantity;
             localStorage.setItem('cart', JSON.stringify(cart));
             loadCartItems();
             updateCartCount();
+        } else {
+            alert('Cannot add more items. Stock limit reached.');
         }
     }
 }
@@ -237,39 +229,51 @@ function proceedToCheckout() {
 }
 
 // Place order
-function placeOrder(event) {
+async function placeOrder(event) {
     event.preventDefault();
     
     const address = document.getElementById('deliveryAddress').value;
     const phone = document.getElementById('phoneNumber').value;
     const paymentMethod = document.getElementById('paymentMethod').value;
     
-    const order = {
-        id: 'ORD' + Date.now(),
-        items: [...cart],
-        address: address,
-        phone: phone,
-        paymentMethod: paymentMethod,
-        total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + 50,
-        status: 'processing',
-        date: new Date().toISOString()
-    };
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const deliveryFee = 50;
+    const total = subtotal + deliveryFee;
     
-    // Save order (in real app, this would go to backend)
-    let orders = JSON.parse(localStorage.getItem('orders')) || [];
-    orders.push(order);
-    localStorage.setItem('orders', JSON.stringify(orders));
-    
-    // Clear cart
-    cart = [];
-    localStorage.setItem('cart', JSON.stringify(cart));
-    updateCartCount();
-    
-    closeModal('checkoutModal');
-    alert(`Order placed successfully! Order ID: ${order.id}`);
-    
-    // Reset form
-    document.querySelector('#checkoutModal form').reset();
+    try {
+        // Create order items array
+        const orderItems = cart.map(item => ({
+            product_id: item.id,
+            quantity: item.quantity,
+            price: item.price
+        }));
+        
+        const orderData = {
+            delivery_address: address,
+            phone: phone,
+            payment_method: paymentMethod,
+            total_amount: total,
+            items: orderItems
+        };
+        
+        const response = await apiClient.createOrder(orderData);
+        console.log('Order created:', response);
+        
+        // Clear cart
+        cart = [];
+        localStorage.setItem('cart', JSON.stringify(cart));
+        updateCartCount();
+        
+        closeModal('checkoutModal');
+        alert(`Order placed successfully! Order ID: ${response.data?.id || response.id}`);
+        
+        // Reset form
+        document.querySelector('#checkoutModal form').reset();
+        
+    } catch (error) {
+        console.error('Error placing order:', error);
+        alert('Failed to place order: ' + error.message);
+    }
 }
 
 // Close modal
