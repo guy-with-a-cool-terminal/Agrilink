@@ -1,55 +1,134 @@
-// Consumer Dashboard JavaScript
+// Consumer Dashboard JavaScript - Dynamic Data Implementation
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Consumer Dashboard initializing...');
     initDashboard();
+    loadUserData();
     loadProducts();
+    loadUserStats();
     updateCartCount();
-    
-    // Load API configuration
-    const script = document.createElement('script');
-    script.src = 'scripts/config.js';
-    document.head.appendChild(script);
 });
 
-// Products data from API
+// Products data and user data
 let products = [];
-
-// Shopping cart
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
+let currentUser = null;
+
+// Initialize dashboard with user authentication
+async function initDashboard() {
+    const user = localStorage.getItem('currentUser');
+    if (!user) {
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    try {
+        currentUser = JSON.parse(user);
+        console.log('Current user:', currentUser);
+    } catch (error) {
+        console.error('Error parsing user data:', error);
+        window.location.href = 'index.html';
+    }
+}
+
+// Load user data and update UI
+async function loadUserData() {
+    try {
+        const userData = await apiClient.getUser();
+        console.log('User data loaded:', userData);
+        
+        document.getElementById('userName').textContent = userData.name || currentUser.name || 'Consumer';
+        document.getElementById('userRole').textContent = userData.role || 'Consumer';
+    } catch (error) {
+        console.error('Error loading user data:', error);
+        // Fallback to stored user data
+        document.getElementById('userName').textContent = currentUser.name || 'Consumer';
+    }
+}
+
+// Load user statistics
+async function loadUserStats() {
+    try {
+        const orders = await apiClient.getOrders();
+        console.log('User orders loaded:', orders);
+        
+        const ordersList = orders.data || orders || [];
+        const totalOrders = ordersList.length;
+        const activeOrders = ordersList.filter(order => 
+            order.status === 'pending' || order.status === 'processing' || order.status === 'in_transit'
+        ).length;
+        
+        const totalSpent = ordersList.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+        
+        // Update stats display
+        document.getElementById('totalOrders').textContent = totalOrders;
+        document.getElementById('totalSpent').textContent = `Ksh${totalSpent.toLocaleString()}`;
+        document.getElementById('activeOrders').textContent = activeOrders;
+        document.getElementById('favoriteProducts').textContent = Math.floor(totalOrders / 3); // Simple calculation
+        
+    } catch (error) {
+        console.error('Error loading user stats:', error);
+        // Keep default values on error
+    }
+}
 
 // Load products from API
 async function loadProducts(productsToShow = null) {
+    const loadingState = document.getElementById('loadingState');
+    const productGrid = document.getElementById('productGrid');
+    
     try {
         if (!productsToShow) {
+            loadingState.style.display = 'block';
             const response = await apiClient.getProducts();
-            products = response.data || response;
+            products = response.data || response || [];
             console.log('Products loaded:', products);
             productsToShow = products;
         }
         
-        const productGrid = document.getElementById('productGrid');
+        loadingState.style.display = 'none';
         productGrid.innerHTML = '';
         
         if (productsToShow.length === 0) {
-            productGrid.innerHTML = '<p style="text-align: center; padding: 40px;">No products available</p>';
+            productGrid.innerHTML = `
+                <div class="col-span-full text-center py-12">
+                    <div class="text-gray-400 text-6xl mb-4">🛒</div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No products available</h3>
+                    <p class="text-gray-600">Check back later for new products!</p>
+                </div>
+            `;
             return;
         }
         
         productsToShow.forEach(product => {
             const productCard = document.createElement('div');
             productCard.className = 'product-card';
+            
+            const isOutOfStock = (product.stock || 0) <= 0;
+            const stockClass = isOutOfStock ? 'text-red-600' : 'text-green-600';
+            const stockText = isOutOfStock ? 'Out of Stock' : `${product.stock} ${product.unit || 'kg'} available`;
+            
             productCard.innerHTML = `
                 <div class="product-image">
-                    ${product.image_url ? `<img src="${product.image_url}" alt="${product.name}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;">` : getCategoryEmoji(product.category)}
+                    ${product.image_url ? 
+                        `<img src="${product.image_url}" alt="${product.name}" class="w-full h-full object-cover">` : 
+                        `<div class="text-6xl">${getCategoryEmoji(product.category)}</div>`
+                    }
                 </div>
                 <div class="product-info">
-                    <h4>${product.name}</h4>
-                    <p>${product.description}</p>
-                    <p style="color: #666; font-size: 0.9rem;">Stock: ${product.stock} ${product.unit || 'kg'}</p>
-                    <div class="product-price">Ksh${product.price}/${product.unit || 'kg'}</div>
-                    <button class="btn-primary" onclick="addToCart(${product.id})" ${product.stock <= 0 ? 'disabled' : ''}>
-                        ${product.stock <= 0 ? 'Out of Stock' : 'Add to Cart'}
+                    <h4 class="text-lg font-semibold text-gray-900 mb-2">${product.name}</h4>
+                    <p class="text-gray-600 text-sm mb-3">${product.description || 'Fresh and quality product'}</p>
+                    <p class="text-sm ${stockClass} mb-3 font-medium">${stockText}</p>
+                    <div class="product-price text-xl font-bold text-green-600 mb-4">
+                        Ksh${product.price}/${product.unit || 'kg'}
+                    </div>
+                    <button 
+                        class="btn-primary w-full ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}" 
+                        onclick="addToCart(${product.id})" 
+                        ${isOutOfStock ? 'disabled' : ''}
+                    >
+                        ${isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
                     </button>
                 </div>
             `;
@@ -58,8 +137,15 @@ async function loadProducts(productsToShow = null) {
         
     } catch (error) {
         console.error('Error loading products:', error);
-        const productGrid = document.getElementById('productGrid');
-        productGrid.innerHTML = '<p style="text-align: center; padding: 40px; color: red;">Failed to load products. Please try again.</p>';
+        loadingState.style.display = 'none';
+        productGrid.innerHTML = `
+            <div class="col-span-full text-center py-12">
+                <div class="text-red-400 text-6xl mb-4">⚠️</div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Failed to load products</h3>
+                <p class="text-gray-600 mb-4">Please check your connection and try again.</p>
+                <button class="btn-primary" onclick="loadProducts()">Retry</button>
+            </div>
+        `;
     }
 }
 
@@ -72,7 +158,7 @@ function getCategoryEmoji(category) {
         'dairy': '🥛',
         'spices': '🌶️'
     };
-    return `<div style="font-size: 4rem; text-align: center; padding: 20px;">${categoryEmojis[category] || '🥕'}</div>`;
+    return categoryEmojis[category] || '🥕';
 }
 
 // Search products
@@ -85,7 +171,7 @@ function searchProducts() {
     if (searchTerm) {
         filteredProducts = filteredProducts.filter(product => 
             product.name.toLowerCase().includes(searchTerm) ||
-            product.description.toLowerCase().includes(searchTerm)
+            (product.description || '').toLowerCase().includes(searchTerm)
         );
     }
     
@@ -95,40 +181,51 @@ function searchProducts() {
         );
     }
     
+    console.log('Filtered products:', filteredProducts);
     loadProducts(filteredProducts);
 }
 
 // Add to cart
 function addToCart(productId) {
     const product = products.find(p => p.id === productId);
-    if (product && product.stock > 0) {
-        const existingItem = cart.find(item => item.id === productId);
-        
-        if (existingItem) {
-            if (existingItem.quantity < product.stock) {
-                existingItem.quantity += 1;
-            } else {
-                alert('Cannot add more items. Stock limit reached.');
-                return;
-            }
-        } else {
-            cart.push({
-                id: product.id,
-                name: product.name,
-                price: product.price,
-                unit: product.unit || 'kg',
-                image: product.image_url,
-                quantity: 1,
-                maxStock: product.stock
-            });
-        }
-        
-        localStorage.setItem('cart', JSON.stringify(cart));
-        updateCartCount();
-        alert(`${product.name} added to cart!`);
-    } else {
+    if (!product || (product.stock || 0) <= 0) {
         alert('Product is out of stock!');
+        return;
     }
+    
+    const existingItem = cart.find(item => item.id === productId);
+    
+    if (existingItem) {
+        if (existingItem.quantity < product.stock) {
+            existingItem.quantity += 1;
+        } else {
+            alert('Cannot add more items. Stock limit reached.');
+            return;
+        }
+    } else {
+        cart.push({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            unit: product.unit || 'kg',
+            image: product.image_url,
+            quantity: 1,
+            maxStock: product.stock
+        });
+    }
+    
+    localStorage.setItem('cart', JSON.stringify(cart));
+    updateCartCount();
+    
+    // Show success message
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+    toast.textContent = `${product.name} added to cart!`;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        document.body.removeChild(toast);
+    }, 3000);
 }
 
 // Update cart count
@@ -149,7 +246,12 @@ function loadCartItems() {
     cartItemsContainer.innerHTML = '';
     
     if (cart.length === 0) {
-        cartItemsContainer.innerHTML = '<p style="text-align: center; padding: 20px;">Your cart is empty</p>';
+        cartItemsContainer.innerHTML = `
+            <div class="text-center py-8">
+                <div class="text-gray-400 text-4xl mb-4">🛒</div>
+                <p class="text-gray-600">Your cart is empty</p>
+            </div>
+        `;
         updateCartSummary();
         return;
     }
@@ -159,19 +261,24 @@ function loadCartItems() {
         cartItem.className = 'cart-item';
         cartItem.innerHTML = `
             <div class="cart-item-image">
-                ${item.image ? `<img src="${item.image}" alt="${item.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">` : getCategoryEmoji('default')}
+                ${item.image ? 
+                    `<img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover rounded-lg">` : 
+                    `<div class="text-2xl">${getCategoryEmoji('default')}</div>`
+                }
             </div>
             <div class="cart-item-info">
-                <h4>${item.name}</h4>
-                <p>Ksh${item.price}/${item.unit}</p>
+                <h4 class="font-medium text-gray-900">${item.name}</h4>
+                <p class="text-sm text-gray-600">Ksh${item.price}/${item.unit}</p>
             </div>
             <div class="quantity-controls">
                 <button class="quantity-btn" onclick="updateQuantity(${item.id}, -1)">-</button>
-                <span>${item.quantity}</span>
+                <span class="mx-3 font-medium">${item.quantity}</span>
                 <button class="quantity-btn" onclick="updateQuantity(${item.id}, 1)">+</button>
             </div>
-            <div style="font-weight: bold;">Ksh${item.price * item.quantity}</div>
-            <button class="btn-danger" onclick="removeFromCart(${item.id})" style="margin-left: 10px;">Remove</button>
+            <div class="text-right">
+                <div class="font-bold text-gray-900">Ksh${(item.price * item.quantity).toLocaleString()}</div>
+                <button class="btn-danger text-sm mt-2" onclick="removeFromCart(${item.id})">Remove</button>
+            </div>
         `;
         cartItemsContainer.appendChild(cartItem);
     });
@@ -182,19 +289,19 @@ function loadCartItems() {
 // Update quantity
 function updateQuantity(productId, change) {
     const item = cart.find(item => item.id === productId);
-    if (item) {
-        const newQuantity = item.quantity + change;
-        
-        if (newQuantity <= 0) {
-            removeFromCart(productId);
-        } else if (newQuantity <= item.maxStock) {
-            item.quantity = newQuantity;
-            localStorage.setItem('cart', JSON.stringify(cart));
-            loadCartItems();
-            updateCartCount();
-        } else {
-            alert('Cannot add more items. Stock limit reached.');
-        }
+    if (!item) return;
+    
+    const newQuantity = item.quantity + change;
+    
+    if (newQuantity <= 0) {
+        removeFromCart(productId);
+    } else if (newQuantity <= item.maxStock) {
+        item.quantity = newQuantity;
+        localStorage.setItem('cart', JSON.stringify(cart));
+        loadCartItems();
+        updateCartCount();
+    } else {
+        alert('Cannot add more items. Stock limit reached.');
     }
 }
 
@@ -212,9 +319,9 @@ function updateCartSummary() {
     const delivery = cart.length > 0 ? 50 : 0;
     const total = subtotal + delivery;
     
-    document.getElementById('subtotal').textContent = `Ksh${subtotal}`;
-    document.getElementById('total').textContent = `Ksh${total}`;
-    document.getElementById('checkoutTotal').textContent = `Ksh${total}`;
+    document.getElementById('subtotal').textContent = `Ksh${subtotal.toLocaleString()}`;
+    document.getElementById('total').textContent = `Ksh${total.toLocaleString()}`;
+    document.getElementById('checkoutTotal').textContent = `Ksh${total.toLocaleString()}`;
 }
 
 // Proceed to checkout
@@ -240,22 +347,26 @@ async function placeOrder(event) {
     const deliveryFee = 50;
     const total = subtotal + deliveryFee;
     
+    // Show loading state
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Placing Order...';
+    submitBtn.disabled = true;
+    
     try {
-        // Create order items array
-        const orderItems = cart.map(item => ({
-            product_id: item.id,
-            quantity: item.quantity,
-            price: item.price
-        }));
-        
         const orderData = {
             delivery_address: address,
             phone: phone,
             payment_method: paymentMethod,
             total_amount: total,
-            items: orderItems
+            items: cart.map(item => ({
+                product_id: item.id,
+                quantity: item.quantity,
+                price: item.price
+            }))
         };
         
+        console.log('Placing order:', orderData);
         const response = await apiClient.createOrder(orderData);
         console.log('Order created:', response);
         
@@ -265,14 +376,22 @@ async function placeOrder(event) {
         updateCartCount();
         
         closeModal('checkoutModal');
-        alert(`Order placed successfully! Order ID: ${response.data?.id || response.id}`);
+        
+        // Show success message
+        alert(`Order placed successfully! Order ID: ${response.data?.id || response.id || 'Unknown'}`);
         
         // Reset form
-        document.querySelector('#checkoutModal form').reset();
+        event.target.reset();
+        
+        // Refresh user stats
+        loadUserStats();
         
     } catch (error) {
         console.error('Error placing order:', error);
         alert('Failed to place order: ' + error.message);
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
     }
 }
 
@@ -289,4 +408,11 @@ window.onclick = function(event) {
             modal.classList.remove('active');
         }
     });
+}
+
+// Logout function
+function logout() {
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('cart');
+    window.location.href = 'index.html';
 }

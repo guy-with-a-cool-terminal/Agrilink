@@ -5,10 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consumer Dashboard - AgriLink</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/dashboard.css">
 </head>
-<body>
+<body class="bg-gray-50">
     <div class="dashboard active">
         <header class="dashboard-header">
             <nav class="dashboard-nav">
@@ -17,7 +17,7 @@
                     <button class="btn-secondary" onclick="showCart()" style="margin-right: 10px;">
                         🛒 Cart (<span id="cartCount">0</span>)
                     </button>
-                    <span id="userName">Consumer</span>
+                    <span id="userName" class="text-gray-700 font-medium">Loading...</span>
                     <span class="role-badge" id="userRole">Consumer</span>
                     <button class="logout-btn" onclick="logout()">Logout</button>
                 </div>
@@ -25,11 +25,32 @@
         </header>
 
         <div class="dashboard-content">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 id="totalOrders">0</h3>
+                    <p>Total Orders</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalSpent">Ksh0</h3>
+                    <p>Total Spent</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="activeOrders">0</h3>
+                    <p>Active Orders</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="favoriteProducts">0</h3>
+                    <p>Favorite Products</p>
+                </div>
+            </div>
+
             <!-- Search and Filter -->
-            <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                    <input type="text" id="searchInput" placeholder="Search products..." style="flex: 1; min-width: 250px;">
-                    <select id="categoryFilter">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+                <div class="flex flex-wrap gap-4">
+                    <input type="text" id="searchInput" placeholder="Search products..." 
+                           class="flex-1 min-w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <select id="categoryFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
                         <option value="">All Categories</option>
                         <option value="vegetables">Vegetables</option>
                         <option value="fruits">Fruits</option>
@@ -37,25 +58,31 @@
                         <option value="dairy">Dairy</option>
                         <option value="spices">Spices</option>
                     </select>
-                    <button class="btn-primary" onclick="searchProducts()" style="width: auto; padding: 12px 24px;">Search</button>
+                    <button class="btn-primary" onclick="searchProducts()">Search</button>
                 </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-12">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+                <p class="text-gray-600 mt-4">Loading products...</p>
             </div>
 
             <!-- Product Catalog -->
             <div class="product-grid" id="productGrid">
-                <!-- Products will be loaded here -->
+                <!-- Products will be loaded here dynamically -->
             </div>
         </div>
     </div>
 
     <!-- Cart Modal -->
     <div id="cartModal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-content max-w-2xl">
             <div class="modal-header">
                 <h3>Shopping Cart</h3>
                 <button class="close-btn" onclick="closeModal('cartModal')">&times;</button>
             </div>
-            <div id="cartItems">
+            <div id="cartItems" class="max-h-96 overflow-y-auto">
                 <!-- Cart items will be loaded here -->
             </div>
             <div class="cart-summary">
@@ -71,7 +98,7 @@
                     <span>Total:</span>
                     <span id="total">Ksh50</span>
                 </div>
-                <button class="btn-primary" onclick="proceedToCheckout()" style="margin-top: 15px;">
+                <button class="btn-primary w-full mt-4" onclick="proceedToCheckout()">
                     Proceed to Checkout
                 </button>
             </div>
@@ -80,40 +107,43 @@
 
     <!-- Checkout Modal -->
     <div id="checkoutModal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-content max-w-2xl">
             <div class="modal-header">
                 <h3>Checkout</h3>
                 <button class="close-btn" onclick="closeModal('checkoutModal')">&times;</button>
             </div>
-            <form onsubmit="placeOrder(event)">
-                <div class="form-group">
-                    <label for="deliveryAddress">Delivery Address</label>
-                    <textarea id="deliveryAddress" rows="3" required placeholder="Enter your complete address"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="phoneNumber">Phone Number</label>
-                    <input type="tel" id="phoneNumber" required>
-                </div>
-                <div class="form-group">
-                    <label for="paymentMethod">Payment Method</label>
-                    <select id="paymentMethod" required>
-                        <option value="">Select Payment Method</option>
-                        <option value="cod">Cash on Delivery</option>
-                        <option value="upi">UPI</option>
-                        <option value="card">Credit/Debit Card</option>
-                    </select>
-                </div>
-                <div class="cart-summary">
-                    <div class="summary-row total">
-                        <span>Total Amount:</span>
-                        <span id="checkoutTotal">Ksh0</span>
+            <div class="p-6">
+                <form onsubmit="placeOrder(event)">
+                    <div class="form-group">
+                        <label for="deliveryAddress">Delivery Address</label>
+                        <textarea id="deliveryAddress" rows="3" required placeholder="Enter your complete address"></textarea>
                     </div>
-                </div>
-                <button type="submit" class="btn-primary">Place Order</button>
-            </form>
+                    <div class="form-group">
+                        <label for="phoneNumber">Phone Number</label>
+                        <input type="tel" id="phoneNumber" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="paymentMethod">Payment Method</label>
+                        <select id="paymentMethod" required>
+                            <option value="">Select Payment Method</option>
+                            <option value="cod">Cash on Delivery</option>
+                            <option value="mpesa">M-Pesa</option>
+                            <option value="card">Credit/Debit Card</option>
+                        </select>
+                    </div>
+                    <div class="cart-summary mb-4">
+                        <div class="summary-row total">
+                            <span>Total Amount:</span>
+                            <span id="checkoutTotal">Ksh0</span>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary w-full">Place Order</button>
+                </form>
+            </div>
         </div>
     </div>
 
+    <script src="scripts/api-client.js"></script>
     <script src="scripts/auth.js"></script>
     <script src="scripts/consumer-dashboard.js"></script>
 </body>

@@ -5,17 +5,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Retailer Dashboard - AgriLink</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/dashboard.css">
 </head>
-<body>
+<body class="bg-gray-50">
     <div class="dashboard active">
         <header class="dashboard-header">
             <nav class="dashboard-nav">
                 <h1 class="dashboard-title">🏪 Retailer Dashboard</h1>
                 <div class="user-info">
-                    <span id="userName">Retailer</span>
-                    <span class="role-badge" id="userRole">Retailer</span>
+                    <span id="userName" class="text-gray-700 font-medium">Loading...</span>
+                    <span class="role-badge bg-blue-100 text-blue-800" id="userRole">Retailer</span>
                     <button class="logout-btn" onclick="logout()">Logout</button>
                 </div>
             </nav>
@@ -25,28 +25,28 @@
             <!-- Stats Cards -->
             <div class="stats-grid">
                 <div class="stat-card">
-                    <h3 id="totalOrders">8</h3>
+                    <h3 id="totalOrders">0</h3>
                     <p>Bulk Orders</p>
                 </div>
                 <div class="stat-card">
-                    <h3 id="totalSpent">Ksh45,600</h3>
+                    <h3 id="totalSpent">Ksh0</h3>
                     <p>Total Spent</p>
                 </div>
                 <div class="stat-card">
-                    <h3 id="activeSuppliers">12</h3>
+                    <h3 id="activeSuppliers">0</h3>
                     <p>Active Suppliers</p>
                 </div>
                 <div class="stat-card">
-                    <h3 id="pendingDeliveries">3</h3>
+                    <h3 id="pendingDeliveries">0</h3>
                     <p>Pending Deliveries</p>
                 </div>
             </div>
 
             <!-- Bulk Order Form -->
-            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px;">
-                <h3 style="margin-bottom: 20px;">Place Bulk Order</h3>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">Place Bulk Order</h3>
                 <form onsubmit="placeBulkOrder(event)">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div class="form-group">
                             <label for="productSelect">Product</label>
                             <select id="productSelect" required>
@@ -81,22 +81,19 @@
                         <label for="specialRequirements">Special Requirements</label>
                         <textarea id="specialRequirements" rows="3" placeholder="Any specific requirements or notes"></textarea>
                     </div>
-                    <button type="submit" class="btn-primary" style="width: auto; padding: 12px 24px;">Place Bulk Order</button>
+                    <button type="submit" class="btn-primary">Place Bulk Order</button>
                 </form>
             </div>
 
             <!-- Delivery Schedule -->
-            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px;">
-                <h3 style="margin-bottom: 20px;">Schedule Delivery</h3>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">Schedule Delivery</h3>
                 <form onsubmit="scheduleDelivery(event)">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="form-group">
                             <label for="orderSelect">Select Order</label>
                             <select id="orderSelect" required>
                                 <option value="">Select Order</option>
-                                <option value="ORD001">Order #ORD001 - Tomatoes</option>
-                                <option value="ORD002">Order #ORD002 - Corn</option>
-                                <option value="ORD003">Order #ORD003 - Apples</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -113,7 +110,7 @@
                             <textarea id="deliveryAddress" rows="2" required placeholder="Enter delivery address"></textarea>
                         </div>
                     </div>
-                    <button type="submit" class="btn-primary" style="width: auto; padding: 12px 24px;">Schedule Delivery</button>
+                    <button type="submit" class="btn-primary">Schedule Delivery</button>
                 </form>
             </div>
 
@@ -122,49 +119,29 @@
                 <div class="table-header">
                     <h3>Bulk Order History</h3>
                 </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Order ID</th>
-                            <th>Product</th>
-                            <th>Quantity</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                            <th>Delivery Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="orderHistoryTable">
-                        <tr>
-                            <td>#BULK001</td>
-                            <td>Fresh Tomatoes</td>
-                            <td>100 kg</td>
-                            <td>Ksh3,800</td>
-                            <td><span class="status-completed">Delivered</span></td>
-                            <td>2024-01-05</td>
-                            <td>
-                                <button class="btn-secondary">View Details</button>
-                                <button class="btn-secondary">Reorder</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>#BULK002</td>
-                            <td>Sweet Corn</td>
-                            <td>75 kg</td>
-                            <td>Ksh2,625</td>
-                            <td><span class="status-pending">In Transit</span></td>
-                            <td>2024-01-08</td>
-                            <td>
-                                <button class="btn-secondary">Track</button>
-                                <button class="btn-secondary">Contact Supplier</button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Product</th>
+                                <th>Quantity</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderHistoryTable">
+                            <!-- Orders will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
+    <script src="scripts/api-client.js"></script>
     <script src="scripts/auth.js"></script>
     <script src="scripts/retailer-dashboard.js"></script>
 </body>
