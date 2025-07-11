@@ -1,15 +1,11 @@
 
-// Analytics Dashboard JavaScript
+// Analytics Dashboard JavaScript - Dynamic Data Implementation
 
 // Initialize analytics
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Analytics Dashboard initializing...');
     loadAnalyticsData();
     startRealTimeUpdates();
-    
-    // Load API configuration
-    const script = document.createElement('script');
-    script.src = 'scripts/config.js';
-    document.head.appendChild(script);
 });
 
 // Load analytics data from API
@@ -68,12 +64,6 @@ function updateCharts() {
     const timeRange = document.getElementById('timeRange').value;
     console.log(`Updating charts for ${timeRange} days`);
     
-    // In a real app, this would:
-    // 1. Fetch data from backend based on time range
-    // 2. Update all chart visualizations
-    // 3. Refresh table data
-    
-    // For demo, we'll just show a loading effect
     showLoadingEffect();
     
     setTimeout(() => {
@@ -190,24 +180,19 @@ function updateMarketPrices() {
     
     products.forEach(product => {
         // Simulate price fluctuation (±5%)
-        const fluctuation = (Math.random() - 0.5) * 0.1; // -5% to +5%
+        const fluctuation = (Math.random() - 0.5) * 0.1;
         const newPrice = Math.round(product.basePrice * (1 + fluctuation));
         
-        // In a real app, you would update the DOM elements showing prices
         console.log(`${product.name} price updated to Ksh${newPrice}`);
     });
 }
 
 // Utility function to format currency
 function formatCurrency(amount) {
-    return new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: 'INR',
-        minimumFractionDigits: 0
-    }).format(amount);
+    return `Ksh${amount.toLocaleString()}`;
 }
 
 // Utility function to format numbers
 function formatNumber(num) {
-    return new Intl.NumberFormat('en-IN').format(num);
+    return num.toLocaleString();
 }

@@ -5,10 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - AgriLink</title>
+    <link rel="stylesheet" href="styles/tailwind-output.css">
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/dashboard.css">
 </head>
-<body>
+<body class="bg-gray-50">
     <div class="dashboard active">
         <header class="dashboard-header">
             <nav class="dashboard-nav">
@@ -17,8 +17,8 @@
                     <button class="btn-secondary" onclick="window.open('analytics.html', '_blank')" style="margin-right: 10px;">
                         📊 Analytics
                     </button>
-                    <span id="userName">Admin</span>
-                    <span class="role-badge" id="userRole">Admin</span>
+                    <span id="userName" class="text-gray-700 font-medium">Loading...</span>
+                    <span class="role-badge bg-purple-100 text-purple-800" id="userRole">Admin</span>
                     <button class="logout-btn" onclick="logout()">Logout</button>
                 </div>
             </nav>
@@ -28,120 +28,96 @@
             <!-- Platform Stats -->
             <div class="stats-grid">
                 <div class="stat-card">
-                    <h3 id="totalUsers">1,248</h3>
+                    <h3 id="totalUsers">0</h3>
                     <p>Total Users</p>
+                    <small class="text-green-600">↑ <span id="userGrowth">0%</span> this month</small>
                 </div>
                 <div class="stat-card">
-                    <h3 id="totalTransactions">Ksh2,45,680</h3>
+                    <h3 id="totalTransactions">Ksh0</h3>
                     <p>Total Transactions</p>
+                    <small class="text-green-600">↑ <span id="transactionGrowth">0%</span> this month</small>
                 </div>
                 <div class="stat-card">
-                    <h3 id="activeOrders">67</h3>
+                    <h3 id="activeOrders">0</h3>
                     <p>Active Orders</p>
+                    <small class="text-blue-600">Currently processing</small>
                 </div>
                 <div class="stat-card">
-                    <h3 id="platformRevenue">Ksh12,284</h3>
+                    <h3 id="platformRevenue">Ksh0</h3>
                     <p>Platform Revenue</p>
+                    <small class="text-green-600">↑ <span id="revenueGrowth">0%</span> this month</small>
                 </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-12">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+                <p class="text-gray-600 mt-4">Loading admin data...</p>
             </div>
 
             <!-- User Management -->
-            <div class="table-container">
+            <div class="table-container" id="userManagementContainer" style="display: none;">
                 <div class="table-header">
                     <h3>User Management</h3>
-                    <div>
+                    <div class="flex space-x-2">
                         <button class="btn-secondary" onclick="showAddUserModal()">+ Add User</button>
-                        <button class="btn-secondary" onclick="exportUsers()">Export</button>
+                        <button class="btn-secondary" onclick="refreshUsers()">🔄 Refresh</button>
                     </div>
                 </div>
-                <table id="usersTable">
-                    <thead>
-                        <tr>
-                            <th>User ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                            <th>Join Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>#U001</td>
-                            <td>John Farmer</td>
-                            <td>john@farm.com</td>
-                            <td>Farmer</td>
-                            <td><span class="status-active">Active</span></td>
-                            <td>2024-01-01</td>
-                            <td>
-                                <button class="btn-secondary" onclick="editUser('U001')">Edit</button>
-                                <button class="btn-danger" onclick="deleteUser('U001')">Delete</button>
-                                <button class="btn-secondary" onclick="suspendUser('U001')">Suspend</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>#U002</td>
-                            <td>Jane Consumer</td>
-                            <td>jane@email.com</td>
-                            <td>Consumer</td>
-                            <td><span class="status-pending">Pending</span></td>
-                            <td>2024-01-05</td>
-                            <td>
-                                <button class="btn-primary" onclick="approveUser('U002')">Approve</button>
-                                <button class="btn-danger" onclick="deleteUser('U002')">Delete</button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Transaction Management -->
-            <div class="table-container">
-                <div class="table-header">
-                    <h3>Recent Transactions</h3>
-                    <button class="btn-secondary" onclick="viewAllTransactions()">View All</button>
+                <div class="overflow-x-auto">
+                    <table id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>User ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Join Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
                 </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Transaction ID</th>
-                            <th>From</th>
-                            <th>To</th>
-                            <th>Amount</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>#TXN001</td>
-                            <td>Jane Consumer</td>
-                            <td>John Farmer</td>
-                            <td>Ksh200</td>
-                            <td>Purchase</td>
-                            <td><span class="status-completed">Completed</span></td>
-                            <td>2024-01-06</td>
-                        </tr>
-                        <tr>
-                            <td>#TXN002</td>
-                            <td>Bob Retailer</td>
-                            <td>Farm Valley</td>
-                            <td>Ksh5,500</td>
-                            <td>Bulk Order</td>
-                            <td><span class="status-pending">Processing</span></td>
-                            <td>2024-01-06</td>
-                        </tr>
-                    </tbody>
-                </table>
             </div>
 
-            <!-- Announcements -->
-            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px;">
-                <h3 style="margin-bottom: 20px;">Create Announcement</h3>
+            <!-- System Settings -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200" id="systemSettingsContainer" style="display: none;">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">System Settings</h3>
+                <form onsubmit="saveSettings(event)">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="form-group">
+                            <label for="platformFee">Platform Fee (%)</label>
+                            <input type="number" id="platformFee" value="5" min="0" max="20" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="deliveryFee">Standard Delivery Fee (Ksh)</label>
+                            <input type="number" id="deliveryFee" value="50" min="0" step="5">
+                        </div>
+                        <div class="form-group">
+                            <label for="minOrderAmount">Minimum Order Amount (Ksh)</label>
+                            <input type="number" id="minOrderAmount" value="100" min="0" step="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="maintenanceMode">Maintenance Mode</label>
+                            <select id="maintenanceMode">
+                                <option value="off">Off</option>
+                                <option value="on">On</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary mt-4">Save Settings</button>
+                </form>
+            </div>
+
+            <!-- Create Announcement -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mt-8" id="announcementContainer" style="display: none;">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">Create Announcement</h3>
                 <form onsubmit="createAnnouncement(event)">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="form-group">
                             <label for="announcementTitle">Title</label>
                             <input type="text" id="announcementTitle" required>
@@ -169,76 +145,53 @@
                     </div>
                     <div class="form-group">
                         <label for="announcementMessage">Message</label>
-                        <textarea id="announcementMessage" rows="4" required placeholder="Enter announcement message"></textarea>
+                        <textarea id="announcementMessage" rows="4" required 
+                                  placeholder="Enter announcement message"></textarea>
                     </div>
-                    <button type="submit" class="btn-primary" style="width: auto; padding: 12px 24px;">Send Announcement</button>
+                    <button type="submit" class="btn-primary">Send Announcement</button>
                 </form>
-            </div>
-
-            <!-- System Settings -->
-            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <h3 style="margin-bottom: 20px;">System Settings</h3>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
-                    <div class="form-group">
-                        <label for="platformFee">Platform Fee (%)</label>
-                        <input type="number" id="platformFee" value="5" min="0" max="20" step="0.1">
-                    </div>
-                    <div class="form-group">
-                        <label for="deliveryFee">Standard Delivery Fee (Ksh)</label>
-                        <input type="number" id="deliveryFee" value="50" min="0" step="5">
-                    </div>
-                    <div class="form-group">
-                        <label for="minOrderAmount">Minimum Order Amount (Ksh)</label>
-                        <input type="number" id="minOrderAmount" value="100" min="0" step="10">
-                    </div>
-                    <div class="form-group">
-                        <label for="maintenanceMode">Maintenance Mode</label>
-                        <select id="maintenanceMode">
-                            <option value="off">Off</option>
-                            <option value="on">On</option>
-                        </select>
-                    </div>
-                </div>
-                <button class="btn-primary" onclick="saveSettings()" style="width: auto; padding: 12px 24px; margin-top: 15px;">Save Settings</button>
             </div>
         </div>
     </div>
 
     <!-- Add User Modal -->
     <div id="addUserModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content max-w-md">
             <div class="modal-header">
                 <h3>Add New User</h3>
                 <button class="close-btn" onclick="closeModal('addUserModal')">&times;</button>
             </div>
-            <form onsubmit="addUser(event)">
-                <div class="form-group">
-                    <label for="newUserName">Full Name</label>
-                    <input type="text" id="newUserName" required>
-                </div>
-                <div class="form-group">
-                    <label for="newUserEmail">Email</label>
-                    <input type="email" id="newUserEmail" required>
-                </div>
-                <div class="form-group">
-                    <label for="newUserRole">Role</label>
-                    <select id="newUserRole" required>
-                        <option value="">Select Role</option>
-                        <option value="farmer">Farmer</option>
-                        <option value="consumer">Consumer</option>
-                        <option value="retailer">Retailer</option>
-                        <option value="logistics">Logistics Manager</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="newUserPassword">Temporary Password</label>
-                    <input type="password" id="newUserPassword" required>
-                </div>
-                <button type="submit" class="btn-primary">Add User</button>
-            </form>
+            <div class="p-6">
+                <form onsubmit="addUser(event)">
+                    <div class="form-group">
+                        <label for="newUserName">Full Name</label>
+                        <input type="text" id="newUserName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newUserEmail">Email</label>
+                        <input type="email" id="newUserEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newUserRole">Role</label>
+                        <select id="newUserRole" required>
+                            <option value="">Select Role</option>
+                            <option value="farmer">Farmer</option>
+                            <option value="consumer">Consumer</option>
+                            <option value="retailer">Retailer</option>
+                            <option value="logistics">Logistics Manager</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="newUserPassword">Temporary Password</label>
+                        <input type="password" id="newUserPassword" required>
+                    </div>
+                    <button type="submit" class="btn-primary w-full">Add User</button>
+                </form>
+            </div>
         </div>
     </div>
 
+    <script src="scripts/api-client.js"></script>
     <script src="scripts/auth.js"></script>
     <script src="scripts/admin-dashboard.js"></script>
 </body>

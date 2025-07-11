@@ -5,17 +5,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Logistics Dashboard - AgriLink</title>
+    <link rel="stylesheet" href="styles/tailwind-output.css">
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/dashboard.css">
 </head>
-<body>
+<body class="bg-gray-50">
     <div class="dashboard active">
         <header class="dashboard-header">
             <nav class="dashboard-nav">
                 <h1 class="dashboard-title">🚚 Logistics Dashboard</h1>
                 <div class="user-info">
-                    <span id="userName">Logistics Manager</span>
-                    <span class="role-badge" id="userRole">Logistics</span>
+                    <span id="userName" class="text-gray-700 font-medium">Loading...</span>
+                    <span class="role-badge bg-orange-100 text-orange-800" id="userRole">Logistics</span>
                     <button class="logout-btn" onclick="logout()">Logout</button>
                 </div>
             </nav>
@@ -25,27 +25,27 @@
             <!-- Stats Cards -->
             <div class="stats-grid">
                 <div class="stat-card">
-                    <h3 id="activeDeliveries">15</h3>
+                    <h3 id="activeDeliveries">0</h3>
                     <p>Active Deliveries</p>
                 </div>
                 <div class="stat-card">
-                    <h3 id="completedToday">8</h3>
+                    <h3 id="completedToday">0</h3>
                     <p>Completed Today</p>
                 </div>
                 <div class="stat-card">
-                    <h3 id="totalDistance">245</h3>
+                    <h3 id="totalDistance">0</h3>
                     <p>KM Traveled</p>
                 </div>
                 <div class="stat-card">
-                    <h3 id="efficiency">94%</h3>
+                    <h3 id="efficiency">0%</h3>
                     <p>Delivery Efficiency</p>
                 </div>
             </div>
 
             <!-- Map Placeholder -->
             <div class="chart-container">
-                <h3 style="margin-bottom: 20px;">Delivery Route Map</h3>
-                <div class="chart-placeholder">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">Delivery Route Map</h3>
+                <div class="chart-placeholder h-64">
                     🗺️ Interactive Map Integration<br>
                     <small>Google Maps / OpenStreetMap API will be integrated here</small>
                 </div>
@@ -55,63 +55,39 @@
             <div class="table-container">
                 <div class="table-header">
                     <h3>Assigned Deliveries</h3>
-                    <button class="btn-primary" onclick="refreshDeliveries()" style="padding: 8px 16px; font-size: 14px;">
+                    <button class="btn-primary" onclick="refreshDeliveries()">
                         🔄 Refresh
                     </button>
                 </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Delivery ID</th>
-                            <th>Order Details</th>
-                            <th>Customer</th>
-                            <th>Address</th>
-                            <th>Status</th>
-                            <th>Priority</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="deliveriesTable">
-                        <tr>
-                            <td>#DEL001</td>
-                            <td>Tomatoes - 5kg<br><small>Order #ORD001</small></td>
-                            <td>John Doe<br><small>+91 98765 43210</small></td>
-                            <td>123 Main St, City</td>
-                            <td><span class="status-pending">Assigned</span></td>
-                            <td><span class="priority-high">High</span></td>
-                            <td>
-                                <button class="btn-secondary" onclick="startDelivery('DEL001')">Start</button>
-                                <button class="btn-secondary" onclick="viewRoute('DEL001')">Route</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>#DEL002</td>
-                            <td>Corn - 10kg<br><small>Order #ORD002</small></td>
-                            <td>Jane Smith<br><small>+91 87654 32109</small></td>
-                            <td>456 Oak Ave, Town</td>
-                            <td><span class="status-active">In Transit</span></td>
-                            <td><span class="priority-medium">Medium</span></td>
-                            <td>
-                                <button class="btn-primary" onclick="updateStatus('DEL002')">Update Status</button>
-                                <button class="btn-secondary" onclick="contactCustomer('DEL002')">Contact</button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Delivery ID</th>
+                                <th>Order Details</th>
+                                <th>Customer</th>
+                                <th>Address</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deliveriesTable">
+                            <!-- Deliveries will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Delivery Status Update -->
-            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px;">
-                <h3 style="margin-bottom: 20px;">Update Delivery Status</h3>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">Update Delivery Status</h3>
                 <form onsubmit="updateDeliveryStatus(event)">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="form-group">
                             <label for="deliverySelect">Select Delivery</label>
                             <select id="deliverySelect" required>
                                 <option value="">Select Delivery</option>
-                                <option value="DEL001">DEL001 - John Doe (Tomatoes)</option>
-                                <option value="DEL002">DEL002 - Jane Smith (Corn)</option>
-                                <option value="DEL003">DEL003 - Bob Wilson (Apples)</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -134,49 +110,13 @@
                         <label for="statusNotes">Notes/Comments</label>
                         <textarea id="statusNotes" rows="3" placeholder="Any additional notes about the delivery"></textarea>
                     </div>
-                    <button type="submit" class="btn-primary" style="width: auto; padding: 12px 24px;">Update Status</button>
+                    <button type="submit" class="btn-primary">Update Status</button>
                 </form>
-            </div>
-
-            <!-- Delivery History -->
-            <div class="table-container">
-                <div class="table-header">
-                    <h3>Recent Delivery History</h3>
-                </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Delivery ID</th>
-                            <th>Customer</th>
-                            <th>Product</th>
-                            <th>Status</th>
-                            <th>Rating</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>2024-01-06</td>
-                            <td>#DEL003</td>
-                            <td>Alice Brown</td>
-                            <td>Fresh Milk - 2L</td>
-                            <td><span class="status-completed">Delivered</span></td>
-                            <td>⭐⭐⭐⭐⭐</td>
-                        </tr>
-                        <tr>
-                            <td>2024-01-06</td>
-                            <td>#DEL004</td>
-                            <td>Mike Davis</td>
-                            <td>Basmati Rice - 5kg</td>
-                            <td><span class="status-completed">Delivered</span></td>
-                            <td>⭐⭐⭐⭐</td>
-                        </tr>
-                    </tbody>
-                </table>
             </div>
         </div>
     </div>
 
+    <script src="scripts/api-client.js"></script>
     <script src="scripts/auth.js"></script>
     <script src="scripts/logistics-dashboard.js"></script>
 </body>

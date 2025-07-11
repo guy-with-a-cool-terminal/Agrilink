@@ -1,7 +1,34 @@
 # AgriLink Frontend-Backend Integration Documentation
 
+## Project Setup Requirements
+
+**IMPORTANT**: This project is missing a `package-lock.json` file in the root directory. To fix this:
+
+1. Create a `package.json` file in the root directory with:
+```json
+{
+  "name": "agrilink-frontend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
+```
+
+2. Run `npm install` to generate the `package-lock.json` file
+3. Start the development server with `npm run dev` (will run on port 8080)
+
 ## Overview
 This document explains how the AgriLink frontend (HTML/CSS/JavaScript) integrates with the Laravel backend API.
+
+## Dynamic Registration & Login
+The application now supports full user registration with any role (Farmer, Consumer, Retailer, Logistics Manager, Admin). Users are stored in the database and can log in dynamically.
 
 ## API Configuration
 - **Base URL**: `http://127.0.0.1:8000/api`
