@@ -77,11 +77,9 @@ async function loadDashboardData() {
         if (productsContainer) productsContainer.style.display = 'none';
         if (ordersContainer) ordersContainer.style.display = 'none';
         
-        await Promise.all([
-            loadProducts(),
-            loadStats()
-        ]);
-        
+        await loadProducts();
+        await loadStats();
+
         // Hide loading state and show content
         if (loadingState) loadingState.style.display = 'none';
         if (productsContainer) productsContainer.style.display = 'block';
@@ -103,6 +101,7 @@ async function loadProducts() {
         
         // Use improved data extraction method to handle pagination
         products = apiClient.extractArrayData(response, 'data') || [];
+        products = products.filter(p => p.farmer_id == currentUser.id);
         console.log('Extracted products:', products);
         
         displayProducts(products);

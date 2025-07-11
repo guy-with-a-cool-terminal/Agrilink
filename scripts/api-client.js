@@ -81,36 +81,46 @@ class ApiClient {
 
     // Helper method to extract array data from nested responses, including pagination
     extractArrayData(response, key = 'data') {
-        // Handle direct array response
-        if (Array.isArray(response)) {
-            return response;
-        }
-        
-        // Handle paginated response structures
-        if (response && response.data) {
-            // Laravel pagination structure: { data: [...], current_page: 1, total: 10, ... }
-            if (Array.isArray(response.data)) {
-                return response.data;
-            }
-            // Nested data structure: { data: { items: [...] } }
-            if (response.data.items && Array.isArray(response.data.items)) {
-                return response.data.items;
-            }
-        }
-        
-        // Handle direct key access
-        if (response && Array.isArray(response[key])) {
-            return response[key];
-        }
-        
-        // Handle users specifically for admin dashboard
-        if (response && Array.isArray(response.users)) {
-            return response.users;
-        }
-        
-        console.warn('Expected array data but received:', response);
-        return [];
+    // 1. Direct array response
+    if (Array.isArray(response)) {
+        return response;
     }
+
+    // 2. Laravel pagination: { data: [...] }
+    if (response?.data && Array.isArray(response.data)) {
+        return response.data;
+    }
+
+    // 3. Nested Laravel-style: { data: { items: [...] } }
+    if (response?.data?.items && Array.isArray(response.data.items)) {
+        return response.data.items;
+    }
+
+    // 4. Products: { products: { data: [...] } }
+    if (response?.products?.data && Array.isArray(response.products.data)) {
+        return response.products.data;
+    }
+
+    // 5. Users: { users: { data: [...] } }
+    if (response?.users?.data && Array.isArray(response.users.data)) {
+        return response.users.data;
+    }
+
+    // 6. Direct key-based array
+    if (response && Array.isArray(response[key])) {
+        return response[key];
+    }
+
+    // 7. Fallback: top-level key holding paginated data
+    if (response?.[key]?.data && Array.isArray(response[key].data)) {
+        return response[key].data;
+    }
+
+    console.warn('Expected array data but received:', response);
+    return [];
+}
+
+
 
     // Authentication methods
     async login(credentials) {
