@@ -1,6 +1,5 @@
 
-// Consumer Dashboard Logic
-console.log('Consumer dashboard script loaded');
+// Consumer Dashboard JavaScript - Fixed Data Handling
 
 let currentUser = null;
 let products = [];
@@ -8,82 +7,121 @@ let cart = [];
 let orders = [];
 
 // Initialize dashboard
-function initializeConsumerDashboard() {
-    console.log('Initializing consumer dashboard');
-    
-    // Check authentication
-    currentUser = checkAuth();
-    if (!currentUser || currentUser.role !== 'consumer') {
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Consumer Dashboard initializing...');
+    initDashboard();
+    loadUserData();
+    loadConsumerData();
+    setupEventListeners();
+});
+
+// Initialize dashboard with user authentication
+async function initDashboard() {
+    const user = localStorage.getItem('currentUser');
+    if (!user) {
         window.location.href = 'index.html';
         return;
     }
-
-    initDashboard();
-    loadDashboardData();
-    setupEventListeners();
-    loadCart();
+    
+    try {
+        currentUser = JSON.parse(user);
+        console.log('Current user:', currentUser);
+        
+        // Load cart from localStorage
+        cart = JSON.parse(localStorage.getItem('cart')) || [];
+        updateCartCount();
+        
+    } catch (error) {
+        console.error('Error parsing user data:', error);
+        window.location.href = 'index.html';
+    }
 }
 
 // Setup event listeners
 function setupEventListeners() {
     const searchInput = document.getElementById('searchInput');
     const categoryFilter = document.getElementById('categoryFilter');
-    const cartModal = document.getElementById('cartModal');
-    const closeCartBtn = document.getElementById('closeCart');
-    const checkoutBtn = document.getElementById('checkoutBtn');
-
+    
     if (searchInput) {
-        searchInput.addEventListener('input', handleSearch);
-    }
-
-    if (categoryFilter) {
-        categoryFilter.addEventListener('change', handleCategoryFilter);
-    }
-
-    if (closeCartBtn) {
-        closeCartBtn.addEventListener('click', () => {
-            if (cartModal) cartModal.classList.remove('active');
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchProducts();
+            }
         });
     }
-
-    if (checkoutBtn) {
-        checkoutBtn.addEventListener('click', handleCheckout);
+    
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', searchProducts);
     }
-
-    // Close modal when clicking outside
+    
+    // Modal event listeners
+    const cartModal = document.getElementById('cartModal');
+    const checkoutModal = document.getElementById('checkoutModal');
+    
     if (cartModal) {
         cartModal.addEventListener('click', (e) => {
             if (e.target === cartModal) {
-                cartModal.classList.remove('active');
+                closeModal('cartModal');
+            }
+        });
+    }
+    
+    if (checkoutModal) {
+        checkoutModal.addEventListener('click', (e) => {
+            if (e.target === checkoutModal) {
+                closeModal('checkoutModal');
             }
         });
     }
 }
 
-// Load dashboard data
-async function loadDashboardData() {
+// Load user data and update UI
+async function loadUserData() {
     try {
-        await Promise.all([
-            loadProducts(),
-            loadOrders(),
-            loadStats()
-        ]);
+        const userData = await apiClient.getUser();
+        console.log('User data loaded:', userData);
+        
+        document.getElementById('userName').textContent = userData.name || currentUser.name || 'Consumer';
+        document.getElementById('userRole').textContent = userData.role || 'Consumer';
     } catch (error) {
-        console.error('Error loading dashboard data:', error);
-        showNotification('Failed to load dashboard data', 'error');
+        console.error('Error loading user data:', error);
+        document.getElementById('userName').textContent = currentUser.name || 'Consumer';
     }
 }
 
-// Load products
+// Load all consumer data
+async function loadConsumerData() {
+    const loadingState = document.getElementById('loadingState');
+    const productGrid = document.getElementById('productGrid');
+    
+    try {
+        // Show loading state
+        if (loadingState) loadingState.style.display = 'block';
+        if (productGrid) productGrid.style.display = 'none';
+        
+        await Promise.all([
+            loadProducts(),
+            loadStats(),
+            loadOrders()
+        ]);
+        
+        // Hide loading state and show content
+        if (loadingState) loadingState.style.display = 'none';
+        if (productGrid) productGrid.style.display = 'grid';
+        
+    } catch (error) {
+        console.error('Error loading consumer data:', error);
+        showNotification('Failed to load dashboard data', 'error');
+        if (loadingState) loadingState.style.display = 'none';
+    }
+}
+
+// Load products from API
 async function loadProducts() {
     try {
-        console.log('Loading products...');
         const response = await apiClient.getProducts();
-        console.log('Products response:', response);
-        
-        // Extract products array from response
         products = apiClient.extractArrayData(response, 'data') || [];
-        console.log('Extracted products:', products);
+        console.log('Products loaded:', products);
         
         displayProducts(products);
     } catch (error) {
@@ -92,74 +130,105 @@ async function loadProducts() {
     }
 }
 
-// Display products
+// Display products in grid
 function displayProducts(productsToShow) {
-    const productsContainer = document.getElementById('productsContainer');
-    if (!productsContainer) return;
-
+    const productGrid = document.getElementById('productGrid');
+    if (!productGrid) return;
+    
     if (!Array.isArray(productsToShow) || productsToShow.length === 0) {
-        productsContainer.innerHTML = `
-            <div class="col-span-full text-center py-8">
-                <p class="text-gray-500">No products available at the moment.</p>
+        productGrid.innerHTML = `
+            <div class="col-span-full text-center py-12">
+                <div class="text-gray-400 text-4xl mb-4">🛒</div>
+                <p class="text-gray-600">No products available at the moment.</p>
             </div>
         `;
         return;
     }
-
-    productsContainer.innerHTML = productsToShow.map(product => `
-        <div class="product-card">
-            <div class="product-image">
-                📦
+    
+    productGrid.innerHTML = productsToShow.map(product => `
+        <div class="product-card bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="product-image text-center text-4xl mb-3">🥬</div>
+            <h3 class="font-semibold text-lg mb-2">${product.name || 'Unnamed Product'}</h3>
+            <p class="text-gray-600 text-sm mb-3">${product.description || 'No description available'}</p>
+            <div class="flex justify-between items-center mb-3">
+                <span class="font-bold text-lg text-green-600">Ksh${parseFloat(product.price || 0).toFixed(2)}</span>
+                <span class="text-sm text-gray-500">Stock: ${product.quantity || 0}</span>
             </div>
-            <div class="product-info">
-                <h4>${product.name || 'Unnamed Product'}</h4>
-                <p>${product.description || 'No description available'}</p>
-                <div class="product-price">$${parseFloat(product.price || 0).toFixed(2)}</div>
-                <div class="flex justify-between items-center text-sm text-gray-500 mb-3">
-                    <span>Stock: ${product.quantity || product.stock || 0}</span>
-                    <span class="capitalize">${product.category || 'General'}</span>
-                </div>
-                <button onclick="addToCart(${product.id})" 
-                        class="btn-primary w-full" 
-                        ${(product.quantity || product.stock || 0) <= 0 ? 'disabled' : ''}>
-                    ${(product.quantity || product.stock || 0) <= 0 ? 'Out of Stock' : 'Add to Cart'}
+            <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-500 capitalize">${product.category || 'Uncategorized'}</span>
+                <button class="btn-primary text-sm" onclick="addToCart(${product.id})">
+                    Add to Cart
                 </button>
             </div>
         </div>
     `).join('');
 }
 
-// Load cart from localStorage
-function loadCart() {
+// Load consumer statistics
+async function loadStats() {
     try {
-        const savedCart = localStorage.getItem(`cart_${currentUser.id}`);
-        cart = savedCart ? JSON.parse(savedCart) : [];
-        updateCartDisplay();
+        const ordersResponse = await apiClient.getOrders();
+        const ordersList = apiClient.extractArrayData(ordersResponse) || [];
+        
+        const totalOrders = ordersList.length;
+        const totalSpent = ordersList.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+        const activeOrders = ordersList.filter(order => 
+            order.status === 'pending' || order.status === 'processing' || order.status === 'in_transit'
+        ).length;
+        
+        // Update stats display
+        document.getElementById('totalOrders').textContent = totalOrders;
+        document.getElementById('totalSpent').textContent = `Ksh${totalSpent.toLocaleString()}`;
+        document.getElementById('activeOrders').textContent = activeOrders;
+        document.getElementById('favoriteProducts').textContent = Math.min(products.length, 5);
+        
     } catch (error) {
-        console.error('Error loading cart:', error);
-        cart = [];
+        console.error('Error loading stats:', error);
     }
 }
 
-// Save cart to localStorage
-function saveCart() {
+// Load orders
+async function loadOrders() {
     try {
-        localStorage.setItem(`cart_${currentUser.id}`, JSON.stringify(cart));
+        const response = await apiClient.getOrders();
+        orders = apiClient.extractArrayData(response) || [];
+        console.log('Orders loaded:', orders);
     } catch (error) {
-        console.error('Error saving cart:', error);
+        console.error('Error loading orders:', error);
     }
+}
+
+// Search products
+function searchProducts() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const categoryFilter = document.getElementById('categoryFilter').value;
+    
+    let filteredProducts = products;
+    
+    if (searchTerm) {
+        filteredProducts = filteredProducts.filter(product =>
+            (product.name || '').toLowerCase().includes(searchTerm) ||
+            (product.description || '').toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    if (categoryFilter) {
+        filteredProducts = filteredProducts.filter(product =>
+            (product.category || '').toLowerCase() === categoryFilter.toLowerCase()
+        );
+    }
+    
+    displayProducts(filteredProducts);
 }
 
 // Add to cart
 function addToCart(productId) {
     const product = products.find(p => p.id === productId);
-    if (!product) return;
-
-    if ((product.quantity || product.stock || 0) <= 0) {
-        showNotification('Product is out of stock', 'warning');
+    if (!product) {
+        showNotification('Product not found', 'error');
         return;
     }
-
+    
     const existingItem = cart.find(item => item.id === productId);
     if (existingItem) {
         existingItem.quantity += 1;
@@ -171,235 +240,177 @@ function addToCart(productId) {
             quantity: 1
         });
     }
-
-    saveCart();
-    updateCartDisplay();
-    showNotification(`${product.name} added to cart!`, 'success');
+    
+    localStorage.setItem('cart', JSON.stringify(cart));
+    updateCartCount();
+    showNotification('Product added to cart!', 'success');
 }
 
-// Update cart display
-function updateCartDisplay() {
+// Update cart count
+function updateCartCount() {
     const cartCount = document.getElementById('cartCount');
-    const cartItems = document.getElementById('cartItems');
-    const cartTotal = document.getElementById('cartTotal');
-
-    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-    const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
     if (cartCount) {
+        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
         cartCount.textContent = totalItems;
     }
+}
 
-    if (cartItems) {
-        if (cart.length === 0) {
-            cartItems.innerHTML = '<p class="text-gray-500 text-center py-4">Your cart is empty</p>';
-        } else {
-            cartItems.innerHTML = cart.map(item => `
-                <div class="cart-item">
-                    <div class="cart-item-image">📦</div>
-                    <div class="cart-item-info">
-                        <h4>${item.name}</h4>
-                        <p>$${parseFloat(item.price).toFixed(2)} each</p>
-                    </div>
-                    <div class="quantity-controls">
-                        <button onclick="updateCartQuantity(${item.id}, -1)" class="quantity-btn">-</button>
-                        <span class="px-3">${item.quantity}</span>
-                        <button onclick="updateCartQuantity(${item.id}, 1)" class="quantity-btn">+</button>
-                    </div>
-                    <button onclick="removeFromCart(${item.id})" class="text-red-500 hover:text-red-700">×</button>
+// Show cart modal
+function showCart() {
+    const modal = document.getElementById('cartModal');
+    const cartItems = document.getElementById('cartItems');
+    
+    if (!modal || !cartItems) return;
+    
+    if (cart.length === 0) {
+        cartItems.innerHTML = `
+            <div class="text-center py-8">
+                <p class="text-gray-500">Your cart is empty</p>
+            </div>
+        `;
+    } else {
+        cartItems.innerHTML = cart.map(item => `
+            <div class="flex justify-between items-center p-4 border-b">
+                <div>
+                    <h4 class="font-medium">${item.name}</h4>
+                    <p class="text-sm text-gray-600">Ksh${parseFloat(item.price).toFixed(2)} x ${item.quantity}</p>
                 </div>
-            `).join('');
-        }
+                <div class="flex items-center gap-2">
+                    <button class="btn-secondary text-sm" onclick="updateCartQuantity(${item.id}, -1)">-</button>
+                    <span>${item.quantity}</span>
+                    <button class="btn-secondary text-sm" onclick="updateCartQuantity(${item.id}, 1)">+</button>
+                    <button class="btn-danger text-sm ml-2" onclick="removeFromCart(${item.id})">Remove</button>
+                </div>
+            </div>
+        `).join('');
     }
-
-    if (cartTotal) {
-        cartTotal.textContent = `$${totalAmount.toFixed(2)}`;
-    }
+    
+    updateCartSummary();
+    modal.classList.add('active');
 }
 
 // Update cart quantity
 function updateCartQuantity(productId, change) {
     const item = cart.find(item => item.id === productId);
-    if (!item) return;
-
-    item.quantity += change;
-    if (item.quantity <= 0) {
-        cart = cart.filter(item => item.id !== productId);
+    if (item) {
+        item.quantity += change;
+        if (item.quantity <= 0) {
+            removeFromCart(productId);
+        } else {
+            localStorage.setItem('cart', JSON.stringify(cart));
+            showCart(); // Refresh cart display
+            updateCartCount();
+        }
     }
-
-    saveCart();
-    updateCartDisplay();
 }
 
 // Remove from cart
 function removeFromCart(productId) {
     cart = cart.filter(item => item.id !== productId);
-    saveCart();
-    updateCartDisplay();
-    showNotification('Item removed from cart', 'info');
+    localStorage.setItem('cart', JSON.stringify(cart));
+    showCart(); // Refresh cart display
+    updateCartCount();
+    showNotification('Product removed from cart', 'success');
 }
 
-// Show cart
-function showCart() {
-    const cartModal = document.getElementById('cartModal');
-    if (cartModal) {
-        cartModal.classList.add('active');
-    }
+// Update cart summary
+function updateCartSummary() {
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const delivery = 50;
+    const total = subtotal + delivery;
+    
+    const subtotalElement = document.getElementById('subtotal');
+    const totalElement = document.getElementById('total');
+    const checkoutTotalElement = document.getElementById('checkoutTotal');
+    
+    if (subtotalElement) subtotalElement.textContent = `Ksh${subtotal.toFixed(2)}`;
+    if (totalElement) totalElement.textContent = `Ksh${total.toFixed(2)}`;
+    if (checkoutTotalElement) checkoutTotalElement.textContent = `Ksh${total.toFixed(2)}`;
 }
 
-// Handle search
-function handleSearch(event) {
-    const searchTerm = event.target.value.toLowerCase();
-    const filteredProducts = products.filter(product => 
-        (product.name || '').toLowerCase().includes(searchTerm) ||
-        (product.description || '').toLowerCase().includes(searchTerm)
-    );
-    displayProducts(filteredProducts);
-}
-
-// Handle category filter
-function handleCategoryFilter(event) {
-    const category = event.target.value;
-    const filteredProducts = category 
-        ? products.filter(product => product.category === category)
-        : products;
-    displayProducts(filteredProducts);
-}
-
-// Handle checkout
-async function handleCheckout() {
+// Proceed to checkout
+function proceedToCheckout() {
     if (cart.length === 0) {
-        showNotification('Your cart is empty', 'warning');
+        showNotification('Your cart is empty', 'error');
         return;
     }
+    
+    closeModal('cartModal');
+    const checkoutModal = document.getElementById('checkoutModal');
+    if (checkoutModal) {
+        checkoutModal.classList.add('active');
+        updateCartSummary();
+    }
+}
 
+// Place order
+async function placeOrder(event) {
+    event.preventDefault();
+    
+    if (cart.length === 0) {
+        showNotification('Your cart is empty', 'error');
+        return;
+    }
+    
+    const orderData = {
+        items: cart.map(item => ({
+            product_id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            unit_price: item.price
+        })),
+        delivery_address: document.getElementById('deliveryAddress').value,
+        phone: document.getElementById('phoneNumber').value,
+        payment_method: document.getElementById('paymentMethod').value,
+        total_amount: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + 50
+    };
+    
     try {
-        const orderData = {
-            items: cart.map(item => ({
-                product_id: item.id,
-                quantity: item.quantity,
-                price: item.price
-            })),
-            total_amount: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-        };
-
-        console.log('Placing order:', orderData);
         const response = await apiClient.createOrder(orderData);
-        console.log('Order placed successfully:', response);
-
-        // Clear cart
-        cart = [];
-        saveCart();
-        updateCartDisplay();
-
-        // Close cart modal
-        const cartModal = document.getElementById('cartModal');
-        if (cartModal) cartModal.classList.remove('active');
-
+        console.log('Order created:', response);
+        
         showNotification('Order placed successfully!', 'success');
         
-        // Reload orders and stats
-        await loadOrders();
+        // Clear cart
+        cart = [];
+        localStorage.removeItem('cart');
+        updateCartCount();
+        
+        // Close modal and reset form
+        closeModal('checkoutModal');
+        event.target.reset();
+        
+        // Reload stats
         await loadStats();
-
+        
     } catch (error) {
         console.error('Error placing order:', error);
         showNotification('Failed to place order: ' + error.message, 'error');
     }
 }
 
-// Load orders
-async function loadOrders() {
-    try {
-        console.log('Loading orders...');
-        const response = await apiClient.getOrders();
-        console.log('Orders response:', response);
-        
-        orders = apiClient.extractArrayData(response, 'data') || [];
-        console.log('Extracted orders:', orders);
-        
-        displayOrders(orders);
-    } catch (error) {
-        console.error('Error loading orders:', error);
-        showNotification('Failed to load orders', 'error');
+// Close modal
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
     }
 }
 
-// Display orders
-function displayOrders(ordersToShow) {
-    const ordersContainer = document.getElementById('ordersContainer');
-    if (!ordersContainer) return;
-
-    if (!Array.isArray(ordersToShow) || ordersToShow.length === 0) {
-        ordersContainer.innerHTML = `
-            <tr>
-                <td colspan="5" class="text-center py-4 text-gray-500">No orders found</td>
-            </tr>
-        `;
-        return;
-    }
-
-    ordersContainer.innerHTML = ordersToShow.slice(0, 10).map(order => `
-        <tr>
-            <td>#${order.id}</td>
-            <td>${new Date(order.created_at).toLocaleDateString()}</td>
-            <td>$${parseFloat(order.total_amount || 0).toFixed(2)}</td>
-            <td><span class="status-${order.status}">${(order.status || 'pending').replace('_', ' ')}</span></td>
-            <td>
-                <button onclick="viewOrder(${order.id})" class="btn-secondary">View</button>
-            </td>
-        </tr>
-    `).join('');
-}
-
-// Load stats
-async function loadStats() {
-    try {
-        console.log('Loading consumer stats...');
-        
-        // Calculate stats from existing data
-        const totalOrders = orders.length;
-        const pendingOrders = orders.filter(o => o.status === 'pending').length;
-        const completedOrders = orders.filter(o => o.status === 'completed').length;
-        const totalSpent = orders.reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
-
-        // Update stats display
-        updateStatCard('totalOrders', totalOrders);
-        updateStatCard('pendingOrders', pendingOrders);
-        updateStatCard('completedOrders', completedOrders);
-        updateStatCard('totalSpent', `$${totalSpent.toFixed(2)}`);
-        
-        console.log('Stats updated successfully');
-    } catch (error) {
-        console.error('Error loading stats:', error);
-        showNotification('Failed to load statistics', 'error');
-    }
-}
-
-// Update stat card
-function updateStatCard(id, value) {
-    const element = document.getElementById(id);
-    if (element) {
-        element.textContent = value;
-    }
-}
-
-// View order details
-function viewOrder(orderId) {
-    const order = orders.find(o => o.id === orderId);
-    if (order) {
-        showNotification(`Order #${orderId} - Status: ${order.status}`, 'info');
-    }
+// Logout function
+function logout() {
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('cart');
+    window.location.href = 'index.html';
 }
 
 // Make functions globally available
+window.searchProducts = searchProducts;
 window.addToCart = addToCart;
+window.showCart = showCart;
 window.updateCartQuantity = updateCartQuantity;
 window.removeFromCart = removeFromCart;
-window.showCart = showCart;
-window.viewOrder = viewOrder;
-
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', initializeConsumerDashboard);
-
-console.log('Consumer dashboard script setup complete');
+window.proceedToCheckout = proceedToCheckout;
+window.placeOrder = placeOrder;
+window.closeModal = closeModal;
+window.logout = logout;

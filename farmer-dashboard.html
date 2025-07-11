@@ -44,7 +44,7 @@
 
             <!-- Add Product Button -->
             <div class="mb-8">
-                <button class="btn-primary" onclick="showAddProductModal()">
+                <button class="btn-primary" id="addProductBtn">
                     + Add New Product
                 </button>
             </div>
@@ -112,18 +112,18 @@
         <div class="modal-content max-w-2xl">
             <div class="modal-header">
                 <h3 id="modalTitle">Add New Product</h3>
-                <button class="close-btn" onclick="closeModal('addProductModal')">&times;</button>
+                <button class="close-btn" id="closeModal">&times;</button>
             </div>
             <div class="p-6">
-                <form id="productForm" onsubmit="handleProductSubmit(event)">
+                <form id="addProductForm">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="form-group">
                             <label for="productName">Product Name</label>
-                            <input type="text" id="productName" required>
+                            <input type="text" id="productName" name="name" required>
                         </div>
                         <div class="form-group">
                             <label for="productCategory">Category</label>
-                            <select id="productCategory" required>
+                            <select id="productCategory" name="category" required>
                                 <option value="">Select Category</option>
                                 <option value="vegetables">Vegetables</option>
                                 <option value="fruits">Fruits</option>
@@ -135,16 +135,16 @@
                     </div>
                     <div class="form-group">
                         <label for="productDescription">Description</label>
-                        <textarea id="productDescription" rows="3" placeholder="Describe your product..."></textarea>
+                        <textarea id="productDescription" name="description" rows="3" placeholder="Describe your product..."></textarea>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="form-group">
                             <label for="productStock">Stock Quantity</label>
-                            <input type="number" id="productStock" min="0" required>
+                            <input type="number" id="productStock" name="quantity" min="0" required>
                         </div>
                         <div class="form-group">
                             <label for="productUnit">Unit</label>
-                            <select id="productUnit" required>
+                            <select id="productUnit" name="unit" required>
                                 <option value="kg">Kilograms (kg)</option>
                                 <option value="g">Grams (g)</option>
                                 <option value="L">Liters (L)</option>
@@ -153,7 +153,7 @@
                         </div>
                         <div class="form-group">
                             <label for="productPrice">Price per Unit (Ksh)</label>
-                            <input type="number" id="productPrice" min="0" step="0.01" required>
+                            <input type="number" id="productPrice" name="price" min="0" step="0.01" required>
                         </div>
                     </div>
                     <button type="submit" class="btn-primary w-full" id="submitBtn">Add Product</button>

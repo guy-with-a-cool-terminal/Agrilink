@@ -84,11 +84,15 @@ async function loadAdminData() {
     }
 }
 
-// Load users
+// Load users - Fixed to use correct API endpoint
 async function loadUsers() {
     try {
+        // Use the correct endpoint for getting users list
         const response = await apiClient.getUsers();
-        users = apiClient.extractArrayData(response);
+        console.log('Raw users response:', response);
+        
+        // Extract users array - try multiple possible response structures
+        users = response.users || response.data || (Array.isArray(response) ? response : []);
         console.log('Users loaded:', users);
         
         const tableBody = document.querySelector('#usersTable tbody');
@@ -140,6 +144,22 @@ async function loadUsers() {
         
     } catch (error) {
         console.error('Error loading users:', error);
+        // Try fallback method if main API fails
+        try {
+            const fallbackResponse = await fetch('/api/admin/users', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (fallbackResponse.ok) {
+                const fallbackData = await fallbackResponse.json();
+                users = fallbackData.users || fallbackData.data || [];
+                console.log('Fallback users loaded:', users);
+            }
+        } catch (fallbackError) {
+            console.error('Fallback user loading also failed:', fallbackError);
+        }
     }
 }
 
@@ -175,11 +195,16 @@ function updatePlatformStats() {
     document.getElementById('revenueGrowth').textContent = `${Math.floor(Math.random() * 12) + 3}`;
 }
 
+// Show add user modal
+function showAddUserModal() {
+    document.getElementById('addUserModal').classList.add('active');
+}
+
 // Toggle user status
 async function toggleUserStatus(userId) {
     const user = users.find(u => u.id == userId);
     if (!user) {
-        alert('User not found');
+        showNotification('User not found', 'error');
         return;
     }
     
@@ -190,11 +215,11 @@ async function toggleUserStatus(userId) {
     
     try {
         await apiClient.toggleUserStatus(userId);
-        alert(`User ${action}d successfully!`);
+        showNotification(`User ${action}d successfully!`, 'success');
         await loadUsers();
     } catch (error) {
         console.error('Error toggling user status:', error);
-        alert('Failed to update user status: ' + error.message);
+        showNotification('Failed to update user status: ' + error.message, 'error');
     }
 }
 
@@ -212,13 +237,8 @@ Join Date: ${new Date(user.created_at).toLocaleDateString()}
         `;
         alert(details);
     } else {
-        alert('User not found');
+        showNotification('User not found', 'error');
     }
-}
-
-// Show add user modal
-function showAddUserModal() {
-    document.getElementById('addUserModal').classList.add('active');
 }
 
 // Add new user
@@ -239,7 +259,7 @@ async function addUser(event) {
     
     try {
         await apiClient.register(userData);
-        alert('User added successfully!');
+        showNotification('User added successfully!', 'success');
         
         closeModal('addUserModal');
         event.target.reset();
@@ -247,7 +267,7 @@ async function addUser(event) {
         
     } catch (error) {
         console.error('Error adding user:', error);
-        alert('Failed to add user: ' + error.message);
+        showNotification('Failed to add user: ' + error.message, 'error');
     } finally {
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
@@ -266,7 +286,7 @@ function saveSettings(event) {
     };
     
     localStorage.setItem('systemSettings', JSON.stringify(settings));
-    alert('Settings saved successfully!');
+    showNotification('Settings saved successfully!', 'success');
 }
 
 // Create announcement
@@ -286,14 +306,14 @@ function createAnnouncement(event) {
     announcements.push(announcement);
     localStorage.setItem('announcements', JSON.stringify(announcements));
     
-    alert('Announcement sent successfully!');
+    showNotification('Announcement sent successfully!', 'success');
     event.target.reset();
 }
 
 // Refresh users
 async function refreshUsers() {
     await loadUsers();
-    alert('User data refreshed!');
+    showNotification('User data refreshed!', 'success');
 }
 
 // Helper function to get role color
@@ -321,3 +341,14 @@ function logout() {
     localStorage.removeItem('currentUser');
     window.location.href = 'index.html';
 }
+
+// Make functions globally available
+window.showAddUserModal = showAddUserModal;
+window.toggleUserStatus = toggleUserStatus;
+window.viewUserDetails = viewUserDetails;
+window.addUser = addUser;
+window.saveSettings = saveSettings;
+window.createAnnouncement = createAnnouncement;
+window.refreshUsers = refreshUsers;
+window.closeModal = closeModal;
+window.logout = logout;
