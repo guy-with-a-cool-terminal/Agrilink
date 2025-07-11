@@ -1,4 +1,3 @@
-
 // Admin Dashboard JavaScript - Fixed Data Handling
 
 // Initialize dashboard
@@ -84,16 +83,16 @@ async function loadAdminData() {
     }
 }
 
-// Load users - Fixed to use correct API endpoint
+// Load users - Fixed to use correct API endpoint and data extraction
 async function loadUsers() {
     try {
-        // Use the correct endpoint for getting users list
+        console.log('Loading users from admin endpoint...');
         const response = await apiClient.getUsers();
         console.log('Raw users response:', response);
         
-        // Extract users array - try multiple possible response structures
-        users = response.users || response.data || (Array.isArray(response) ? response : []);
-        console.log('Users loaded:', users);
+        // Extract users array using the improved method
+        users = apiClient.extractArrayData(response, 'users') || [];
+        console.log('Extracted users:', users);
         
         const tableBody = document.querySelector('#usersTable tbody');
         if (!tableBody) return;
@@ -114,15 +113,15 @@ async function loadUsers() {
         
         users.forEach(user => {
             const row = document.createElement('tr');
-            const joinDate = new Date(user.created_at).toLocaleDateString();
+            const joinDate = user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A';
             
             row.innerHTML = `
                 <td class="font-medium">#${user.id}</td>
-                <td>${user.name}</td>
-                <td>${user.email}</td>
+                <td>${user.name || 'N/A'}</td>
+                <td>${user.email || 'N/A'}</td>
                 <td class="capitalize">
                     <span class="role-badge bg-${getRoleColor(user.role)}-100 text-${getRoleColor(user.role)}-800">
-                        ${user.role}
+                        ${user.role || 'user'}
                     </span>
                 </td>
                 <td><span class="status-${user.status || 'active'}">${user.status || 'active'}</span></td>
@@ -144,36 +143,24 @@ async function loadUsers() {
         
     } catch (error) {
         console.error('Error loading users:', error);
-        // Try fallback method if main API fails
-        try {
-            const fallbackResponse = await fetch('/api/admin/users', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            if (fallbackResponse.ok) {
-                const fallbackData = await fallbackResponse.json();
-                users = fallbackData.users || fallbackData.data || [];
-                console.log('Fallback users loaded:', users);
-            }
-        } catch (fallbackError) {
-            console.error('Fallback user loading also failed:', fallbackError);
-        }
+        showNotification('Failed to load users: ' + error.message, 'error');
     }
 }
 
-// Load analytics
+// Load analytics - Separate from users
 async function loadAnalytics() {
     try {
+        console.log('Loading analytics data...');
         const response = await apiClient.getAnalytics();
-        analytics = response.data || response || {};
+        analytics = response.analytics || response.data || response || {};
         console.log('Analytics loaded:', analytics);
         
         updatePlatformStats();
         
     } catch (error) {
         console.error('Error loading analytics:', error);
+        // Use fallback data for analytics if API fails
+        analytics = {};
     }
 }
 
