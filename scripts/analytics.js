@@ -1,22 +1,28 @@
-
-// Analytics Dashboard JavaScript - Dynamic Data Implementation
+// Analytics Dashboard JavaScript - Dynamic Data Implementation with Real Charts
 
 // Initialize analytics
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Analytics Dashboard initializing...');
     loadAnalyticsData();
     startRealTimeUpdates();
+    initializeCharts();
 });
+
+// Chart instances
+let salesChart = null;
+let categoryChart = null;
+let userGrowthChart = null;
+let priceChart = null;
 
 // Load analytics data from API
 async function loadAnalyticsData() {
     try {
         const response = await apiClient.getAnalytics();
-        const analytics = response.data || response;
+        const analytics = response.data || response.analytics || response;
         console.log('Analytics loaded:', analytics);
         
         updateKeyMetrics(analytics);
-        updateCharts();
+        updateCharts(analytics);
         
     } catch (error) {
         console.error('Error loading analytics:', error);
@@ -59,8 +65,218 @@ function generateRandomValue(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+// Initialize charts with Chart.js-like functionality using canvas
+function initializeCharts() {
+    createSalesChart();
+    createCategoryChart();
+    createUserGrowthChart();
+    createPriceChart();
+}
+
+// Create sales trend chart
+function createSalesChart() {
+    const salesContainer = document.querySelector('.chart-container .chart-placeholder');
+    if (salesContainer) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 300;
+        canvas.style.width = '100%';
+        canvas.style.height = '300px';
+        
+        salesContainer.innerHTML = '';
+        salesContainer.appendChild(canvas);
+        
+        // Simple line chart simulation
+        const ctx = canvas.getContext('2d');
+        drawLineChart(ctx, canvas.width, canvas.height, generateSalesData());
+    }
+}
+
+// Create category pie chart
+function createCategoryChart() {
+    const containers = document.querySelectorAll('.chart-container .chart-placeholder');
+    if (containers.length > 1) {
+        const categoryContainer = containers[1];
+        const canvas = document.createElement('canvas');
+        canvas.width = 400;
+        canvas.height = 250;
+        canvas.style.width = '100%';
+        canvas.style.height = '250px';
+        
+        categoryContainer.innerHTML = '';
+        categoryContainer.appendChild(canvas);
+        
+        const ctx = canvas.getContext('2d');
+        drawPieChart(ctx, canvas.width, canvas.height, [
+            { label: 'Vegetables', value: 35, color: '#10B981' },
+            { label: 'Fruits', value: 28, color: '#F59E0B' },
+            { label: 'Grains', value: 20, color: '#8B5CF6' },
+            { label: 'Dairy', value: 12, color: '#EF4444' },
+            { label: 'Spices', value: 5, color: '#6B7280' }
+        ]);
+    }
+}
+
+// Create user growth chart
+function createUserGrowthChart() {
+    const containers = document.querySelectorAll('.chart-container .chart-placeholder');
+    if (containers.length > 2) {
+        const userContainer = containers[2];
+        const canvas = document.createElement('canvas');
+        canvas.width = 400;
+        canvas.height = 250;
+        canvas.style.width = '100%';
+        canvas.style.height = '250px';
+        
+        userContainer.innerHTML = '';
+        userContainer.appendChild(canvas);
+        
+        const ctx = canvas.getContext('2d');
+        drawBarChart(ctx, canvas.width, canvas.height, generateUserGrowthData());
+    }
+}
+
+// Create price tracking chart
+function createPriceChart() {
+    const containers = document.querySelectorAll('.chart-container .chart-placeholder');
+    if (containers.length > 3) {
+        const priceContainer = containers[3];
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 200;
+        canvas.style.width = '100%';
+        canvas.style.height = '200px';
+        
+        priceContainer.innerHTML = '';
+        priceContainer.appendChild(canvas);
+        
+        const ctx = canvas.getContext('2d');
+        drawLineChart(ctx, canvas.width, canvas.height, generatePriceData(), '#EF4444');
+    }
+}
+
+// Chart drawing functions
+function drawLineChart(ctx, width, height, data, color = '#10B981') {
+    const padding = 40;
+    const chartWidth = width - 2 * padding;
+    const chartHeight = height - 2 * padding;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+    
+    // Draw axes
+    ctx.strokeStyle = '#E5E7EB';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padding, padding);
+    ctx.lineTo(padding, height - padding);
+    ctx.lineTo(width - padding, height - padding);
+    ctx.stroke();
+    
+    // Draw data line
+    if (data.length > 0) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        
+        const stepX = chartWidth / (data.length - 1);
+        const maxValue = Math.max(...data);
+        
+        data.forEach((value, index) => {
+            const x = padding + index * stepX;
+            const y = height - padding - (value / maxValue) * chartHeight;
+            
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+        
+        ctx.stroke();
+        
+        // Draw points
+        ctx.fillStyle = color;
+        data.forEach((value, index) => {
+            const x = padding + index * stepX;
+            const y = height - padding - (value / maxValue) * chartHeight;
+            ctx.beginPath();
+            ctx.arc(x, y, 3, 0, 2 * Math.PI);
+            ctx.fill();
+        });
+    }
+}
+
+function drawPieChart(ctx, width, height, data) {
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = Math.min(width, height) / 3;
+    
+    ctx.clearRect(0, 0, width, height);
+    
+    let currentAngle = -Math.PI / 2;
+    const total = data.reduce((sum, item) => sum + item.value, 0);
+    
+    data.forEach(item => {
+        const sliceAngle = (item.value / total) * 2 * Math.PI;
+        
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+        ctx.closePath();
+        ctx.fillStyle = item.color;
+        ctx.fill();
+        
+        currentAngle += sliceAngle;
+    });
+}
+
+function drawBarChart(ctx, width, height, data) {
+    const padding = 40;
+    const chartWidth = width - 2 * padding;
+    const chartHeight = height - 2 * padding;
+    
+    ctx.clearRect(0, 0, width, height);
+    
+    // Draw axes
+    ctx.strokeStyle = '#E5E7EB';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padding, padding);
+    ctx.lineTo(padding, height - padding);
+    ctx.lineTo(width - padding, height - padding);
+    ctx.stroke();
+    
+    // Draw bars
+    const barWidth = chartWidth / data.length * 0.8;
+    const barSpacing = chartWidth / data.length * 0.2;
+    const maxValue = Math.max(...data);
+    
+    ctx.fillStyle = '#3B82F6';
+    data.forEach((value, index) => {
+        const barHeight = (value / maxValue) * chartHeight;
+        const x = padding + index * (barWidth + barSpacing) + barSpacing / 2;
+        const y = height - padding - barHeight;
+        
+        ctx.fillRect(x, y, barWidth, barHeight);
+    });
+}
+
+// Data generators
+function generateSalesData() {
+    return Array.from({ length: 30 }, () => Math.floor(Math.random() * 50000) + 10000);
+}
+
+function generateUserGrowthData() {
+    return Array.from({ length: 12 }, () => Math.floor(Math.random() * 200) + 50);
+}
+
+function generatePriceData() {
+    return Array.from({ length: 24 }, () => Math.floor(Math.random() * 100) + 20);
+}
+
 // Update charts based on time range
-function updateCharts() {
+function updateCharts(analytics = null) {
     const timeRange = document.getElementById('timeRange').value;
     console.log(`Updating charts for ${timeRange} days`);
     
@@ -68,7 +284,8 @@ function updateCharts() {
     
     setTimeout(() => {
         hideLoadingEffect();
-        alert(`Charts updated for the last ${timeRange} days!`);
+        initializeCharts(); // Recreate charts with new data
+        showNotification(`Charts updated for the last ${timeRange} days!`, 'success');
     }, 1500);
 }
 

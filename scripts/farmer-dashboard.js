@@ -1,4 +1,3 @@
-
 // Farmer Dashboard Logic
 console.log('Farmer dashboard script loaded');
 
@@ -95,14 +94,14 @@ async function loadDashboardData() {
     }
 }
 
-// Load products
+// Load products - Fixed to handle paginated response correctly
 async function loadProducts() {
     try {
         console.log('Loading products...');
         const response = await apiClient.getProducts();
         console.log('Products response:', response);
         
-        // Extract products array from response
+        // Use improved data extraction method to handle pagination
         products = apiClient.extractArrayData(response, 'data') || [];
         console.log('Extracted products:', products);
         
@@ -110,10 +109,11 @@ async function loadProducts() {
     } catch (error) {
         console.error('Error loading products:', error);
         showNotification('Failed to load products', 'error');
+        displayProducts([]); // Show empty state
     }
 }
 
-// Display products
+// Display products - Ensure proper rendering
 function displayProducts(productsToShow) {
     const productsTableBody = document.querySelector('#productsTable tbody');
     if (!productsTableBody) return;
@@ -152,18 +152,16 @@ function displayProducts(productsToShow) {
     });
 }
 
-// Load stats
+// Load stats - Updated to calculate from products array
 async function loadStats() {
     try {
         console.log('Loading farmer stats...');
-        const response = await apiClient.getProducts();
-        const productsData = apiClient.extractArrayData(response, 'data') || [];
         
-        // Calculate stats
-        const totalProducts = productsData.length;
-        const activeProducts = productsData.filter(p => p.status === 'active').length;
-        const totalRevenue = productsData.reduce((sum, p) => sum + (parseFloat(p.price || 0) * parseInt(p.quantity || 0)), 0);
-        const lowStockProducts = productsData.filter(p => parseInt(p.quantity || 0) < 10).length;
+        // Calculate stats from products data
+        const totalProducts = products.length;
+        const activeProducts = products.filter(p => p.status === 'active').length;
+        const totalRevenue = products.reduce((sum, p) => sum + (parseFloat(p.price || 0) * parseInt(p.quantity || 0)), 0);
+        const lowStockProducts = products.filter(p => parseInt(p.quantity || 0) < 10).length;
 
         // Update stats display
         updateStatCard('totalProducts', totalProducts);
@@ -186,7 +184,7 @@ function updateStatCard(id, value) {
     }
 }
 
-// Handle add product
+// Handle add product - Enhanced with immediate refresh
 async function handleAddProduct(event) {
     event.preventDefault();
     console.log('Adding new product...');
@@ -213,7 +211,7 @@ async function handleAddProduct(event) {
         closeModal('addProductModal');
         event.target.reset();
         
-        // Reload products
+        // Immediately reload products and stats to show new product
         await loadProducts();
         await loadStats();
         

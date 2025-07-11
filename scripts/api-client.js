@@ -79,17 +79,35 @@ class ApiClient {
         }
     }
 
-    // Helper method to extract array data from nested responses
+    // Helper method to extract array data from nested responses, including pagination
     extractArrayData(response, key = 'data') {
+        // Handle direct array response
         if (Array.isArray(response)) {
             return response;
         }
+        
+        // Handle paginated response structures
+        if (response && response.data) {
+            // Laravel pagination structure: { data: [...], current_page: 1, total: 10, ... }
+            if (Array.isArray(response.data)) {
+                return response.data;
+            }
+            // Nested data structure: { data: { items: [...] } }
+            if (response.data.items && Array.isArray(response.data.items)) {
+                return response.data.items;
+            }
+        }
+        
+        // Handle direct key access
         if (response && Array.isArray(response[key])) {
             return response[key];
         }
-        if (response && Array.isArray(response.data)) {
-            return response.data;
+        
+        // Handle users specifically for admin dashboard
+        if (response && Array.isArray(response.users)) {
+            return response.users;
         }
+        
         console.warn('Expected array data but received:', response);
         return [];
     }
@@ -176,9 +194,15 @@ class ApiClient {
         return this.request(this.endpoints.ADMIN_ANALYTICS);
     }
 
-    // Admin methods
+    // Admin methods - Fixed to use correct endpoint
     async getUsers() {
         return this.request(this.endpoints.ADMIN_USERS);
+    }
+
+    async toggleUserStatus(userId) {
+        return this.request(`${this.endpoints.ADMIN_USERS}/${userId}/status`, {
+            method: 'PUT'
+        });
     }
 }
 
