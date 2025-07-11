@@ -79,6 +79,21 @@ class ApiClient {
         }
     }
 
+    // Helper method to extract array data from nested responses
+    extractArrayData(response, key = 'data') {
+        if (Array.isArray(response)) {
+            return response;
+        }
+        if (response && Array.isArray(response[key])) {
+            return response[key];
+        }
+        if (response && Array.isArray(response.data)) {
+            return response.data;
+        }
+        console.warn('Expected array data but received:', response);
+        return [];
+    }
+
     // Authentication methods
     async login(credentials) {
         return this.request(this.endpoints.LOGIN, {
@@ -167,5 +182,7 @@ class ApiClient {
     }
 }
 
-// Global instance
-window.apiClient = new ApiClient();
+// Prevent redeclaration by checking if already exists
+if (typeof window.apiClient === 'undefined') {
+    window.apiClient = new ApiClient();
+}

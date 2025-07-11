@@ -1,5 +1,5 @@
 
-// Retailer Dashboard JavaScript - Dynamic Data Implementation
+// Retailer Dashboard JavaScript - Fixed Data Handling
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
@@ -50,7 +50,7 @@ async function loadUserData() {
 async function loadRetailerStats() {
     try {
         const ordersResponse = await apiClient.getOrders();
-        const ordersList = ordersResponse.data || ordersResponse || [];
+        const ordersList = apiClient.extractArrayData(ordersResponse);
         
         const totalOrders = ordersList.length;
         const totalSpent = ordersList.reduce((sum, order) => sum + (order.total_amount || 0), 0);
@@ -81,7 +81,7 @@ function setMinDate() {
     }
 }
 
-// Place bulk order
+// Place bulk order - Fixed to include items array
 async function placeBulkOrder(event) {
     event.preventDefault();
     
@@ -90,15 +90,36 @@ async function placeBulkOrder(event) {
     submitBtn.textContent = 'Placing Order...';
     submitBtn.disabled = true;
     
+    const productName = document.getElementById('productSelect').value;
+    const quantity = parseInt(document.getElementById('bulkQuantity').value);
+    const budgetValue = document.getElementById('budgetRange').value;
+    
+    // Extract budget amount
+    let budgetAmount = 0;
+    if (budgetValue.includes('-')) {
+        budgetAmount = parseFloat(budgetValue.split('-')[1]);
+    } else {
+        budgetAmount = parseFloat(budgetValue.replace('Ksh', '').replace('+', ''));
+    }
+    
+    // Fixed: Include items array to prevent "At least one item is required" error
     const orderData = {
         type: 'bulk',
-        product_name: document.getElementById('productSelect').value,
-        quantity: parseInt(document.getElementById('bulkQuantity').value),
+        items: [
+            {
+                name: productName,
+                quantity: quantity,
+                unit_price: budgetAmount / quantity
+            }
+        ],
+        product_name: productName,
+        quantity: quantity,
         delivery_address: 'Bulk delivery address',
         delivery_date: document.getElementById('deliveryDate').value,
-        budget: parseFloat(document.getElementById('budgetRange').value.split('-')[1] || document.getElementById('budgetRange').value.replace('Ksh', '')),
+        budget: budgetAmount,
         special_requirements: document.getElementById('specialRequirements').value,
-        total_amount: parseFloat(document.getElementById('budgetRange').value.split('-')[1] || document.getElementById('budgetRange').value.replace('Ksh', ''))
+        total_amount: budgetAmount,
+        status: 'pending'
     };
     
     try {
@@ -155,7 +176,7 @@ function scheduleDelivery(event) {
 async function loadOrderHistory() {
     try {
         const response = await apiClient.getOrders();
-        orders = response.data || response || [];
+        orders = apiClient.extractArrayData(response);
         console.log('Orders loaded:', orders);
         
         const tableBody = document.getElementById('orderHistoryTable');

@@ -1,5 +1,5 @@
 
-// Logistics Dashboard JavaScript - Dynamic Data Implementation
+// Logistics Dashboard JavaScript - Fixed Data Handling
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
@@ -49,7 +49,7 @@ async function loadUserData() {
 async function loadLogisticsStats() {
     try {
         const deliveriesResponse = await apiClient.getDeliveries();
-        const deliveriesList = deliveriesResponse.data || deliveriesResponse || [];
+        const deliveriesList = apiClient.extractArrayData(deliveriesResponse);
         
         const activeDeliveries = deliveriesList.filter(d => 
             d.status !== 'delivered' && d.status !== 'cancelled'
@@ -76,7 +76,7 @@ async function loadLogisticsStats() {
 async function loadDeliveries() {
     try {
         const response = await apiClient.getDeliveries();
-        deliveries = response.data || response || [];
+        deliveries = apiClient.extractArrayData(response);
         console.log('Deliveries loaded:', deliveries);
         
         const tableBody = document.querySelector('#deliveriesTable');
@@ -196,18 +196,6 @@ function updateStatus(deliveryId) {
     }
 }
 
-// Contact customer
-function contactCustomer(deliveryId) {
-    const delivery = deliveries.find(d => d.id == deliveryId);
-    if (delivery) {
-        if (confirm(`Call ${delivery.customer_name || 'Customer'} at ${delivery.customer_phone || 'Unknown'}?`)) {
-            alert(`Calling ${delivery.customer_phone || 'Unknown'}...`);
-        }
-    } else {
-        alert('Delivery not found.');
-    }
-}
-
 // Update delivery status
 async function updateDeliveryStatus(event) {
     event.preventDefault();
@@ -252,17 +240,6 @@ async function refreshDeliveries() {
     alert('Refreshing delivery data...');
     await Promise.all([loadDeliveries(), loadLogisticsStats()]);
 }
-
-// Simulate real-time updates
-setInterval(() => {
-    if (Math.random() > 0.9) { // 10% chance every 5 seconds
-        const activeDeliveries = deliveries.filter(d => d.status === 'in_transit');
-        if (activeDeliveries.length > 0) {
-            const randomDelivery = activeDeliveries[Math.floor(Math.random() * activeDeliveries.length)];
-            console.log(`Auto-updating delivery ${randomDelivery.id} status`);
-        }
-    }
-}, 5000);
 
 // Logout function
 function logout() {
