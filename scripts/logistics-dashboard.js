@@ -1,4 +1,3 @@
-
 // Logistics Dashboard JavaScript - Enhanced with Location Tracking and Real-time Data
 
 // Initialize dashboard
@@ -7,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initDashboard();
     loadUserData();
     loadDeliveries();
-    loadLogisticsRealTimeStats();
+    loadLogisticsStats();
     initializeMap();
 });
 
@@ -47,8 +46,8 @@ async function loadUserData() {
     }
 }
 
-// Load real-time logistics statistics
-async function loadLogisticsRealTimeStats() {
+// Load logistics-specific statistics (no admin analytics)
+async function loadLogisticsStats() {
     try {
         const deliveriesResponse = await apiClient.getDeliveries();
         const deliveriesList = apiClient.extractArrayData(deliveriesResponse);
@@ -73,7 +72,7 @@ async function loadLogisticsRealTimeStats() {
         const totalCompleted = deliveriesList.filter(d => d.status === 'delivered').length;
         const efficiency = totalAssigned > 0 ? Math.round((totalCompleted / totalAssigned) * 100) : 0;
         
-        // Update stats display with real data
+        // Update stats display with logistics-specific data
         document.getElementById('activeDeliveries').textContent = activeDeliveries;
         document.getElementById('completedToday').textContent = completedToday;
         document.getElementById('totalDistance').textContent = totalDistance;
@@ -295,7 +294,7 @@ async function startDelivery(deliveryId) {
         console.log('Started delivery:', deliveryId);
         
         alert(`Started delivery ${deliveryId}. Location tracking enabled. Status updated to "Picked Up"`);
-        await Promise.all([loadDeliveries(), loadLogisticsRealTimeStats()]);
+        await Promise.all([loadDeliveries(), loadLogisticsStats()]);
         
     } catch (error) {
         console.error('Error starting delivery:', error);
@@ -430,7 +429,7 @@ async function updateDeliveryStatus(event) {
         
         // Reset form
         event.target.reset();
-        await Promise.all([loadDeliveries(), loadLogisticsRealTimeStats()]);
+        await Promise.all([loadDeliveries(), loadLogisticsStats()]);
         
     } catch (error) {
         console.error('Error updating delivery status:', error);
@@ -444,7 +443,7 @@ async function updateDeliveryStatus(event) {
 // Refresh deliveries
 async function refreshDeliveries() {
     alert('Refreshing delivery data...');
-    await Promise.all([loadDeliveries(), loadLogisticsRealTimeStats()]);
+    await Promise.all([loadDeliveries(), loadLogisticsStats()]);
 }
 
 // Logout function

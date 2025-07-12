@@ -1,4 +1,3 @@
-
 // Retailer Dashboard JavaScript - Enhanced with Product Browsing and Purchase Requests
 
 // Initialize dashboard
@@ -8,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadUserData();
     setMinDate();
     loadOrderHistory();
-    loadRetailerRealTimeStats();
+    loadRetailerStats();
     loadAvailableProducts();
 });
 
@@ -48,25 +47,36 @@ async function loadUserData() {
     }
 }
 
-// Load real-time retailer statistics
-async function loadRetailerRealTimeStats() {
+// Load retailer-specific statistics (no admin analytics)
+async function loadRetailerStats() {
     try {
         const ordersResponse = await apiClient.getOrders();
         const ordersList = apiClient.extractArrayData(ordersResponse);
         
-        const totalOrders = ordersList.length;
-        const totalSpent = ordersList.reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0);
-        const pendingDeliveries = ordersList.filter(order => 
+        // Filter orders for current retailer if user_id is available
+        const retailerOrders = ordersList.filter(order => 
+            order.user_id == currentUser.id || 
+            order.customer_email === currentUser.email
+        );
+        
+        const totalOrders = retailerOrders.length;
+        const totalSpent = retailerOrders.reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0);
+        const pendingDeliveries = retailerOrders.filter(order => 
             ['pending', 'processing', 'confirmed', 'shipped', 'in_transit'].includes(order.status)
         ).length;
         
-        // Get analytics for supplier data
-        const analyticsResponse = await apiClient.getAnalytics();
-        const analytics = analyticsResponse.data || analyticsResponse.analytics || analyticsResponse;
+        // Calculate active suppliers based on order diversity
+        const supplierProducts = new Set();
+        retailerOrders.forEach(order => {
+            if (order.items) {
+                order.items.forEach(item => {
+                    supplierProducts.add(item.product_id);
+                });
+            }
+        });
+        const activeSuppliers = Math.max(1, Math.ceil(supplierProducts.size / 3)); // Estimate suppliers
         
-        const activeSuppliers = analytics.active_suppliers || Math.floor(totalOrders / 3) + 8;
-        
-        // Update stats display with real data
+        // Update stats display with retailer-specific data
         document.getElementById('totalOrders').textContent = totalOrders;
         document.getElementById('totalSpent').textContent = `Ksh${totalSpent.toLocaleString()}`;
         document.getElementById('activeSuppliers').textContent = activeSuppliers;
@@ -230,43 +240,38 @@ async function placeBulkOrder(event) {
     // Extract budget amount
     let budgetAmount = 0;
     if (budgetValue.includes('-')) {
-        budgetAmount = parseFloat(budgetValue.split('-')[1].replace('Ksh', '').replace(',', ''));
+        const range = budgetValue.split('-');
+        budgetAmount = parseInt(range[1].replace(/\D/g, ''));
     } else {
-        budgetAmount = parseFloat(budgetValue.replace('Ksh', '').replace('+', '').replace(',', ''));
+        budgetAmount = parseInt(budgetValue.replace(/\D/g, ''));
     }
     
-    const orderData = {
-        type: 'bulk',
-        items: [
-            {
+    try {
+        const orderData = {
+            type: 'bulk',
+            items: [{
                 product_id: selectedProduct?.id || null,
                 name: productName,
                 quantity: quantity,
                 unit_price: selectedProduct?.price || (budgetAmount / quantity)
-            }
-        ],
-        product_name: productName,
-        quantity: quantity,
-        delivery_address: 'Bulk delivery address - will be specified later',
-        delivery_date: document.getElementById('deliveryDate').value,
-        budget: budgetAmount,
-        special_requirements: document.getElementById('specialRequirements').value,
-        total_amount: budgetAmount,
-        status: 'pending'
-    };
-    
-    try {
+            }],
+            delivery_address: 'Bulk delivery address will be provided',
+            delivery_date: document.getElementById('deliveryDate').value,
+            budget_range: budgetValue,
+            special_requirements: document.getElementById('specialRequirements').value,
+            total_amount: Math.min(budgetAmount, (selectedProduct?.price || 0) * quantity),
+            status: 'pending'
+        };
+        
         const response = await apiClient.createOrder(orderData);
         console.log('Bulk order created:', response);
         
-        alert('Bulk order placed successfully! You will be contacted by suppliers soon.');
+        alert(`Bulk order placed successfully!\nOrder ID: ${response.id || 'Generated'}\nWe will contact you within 24 hours with supplier details.`);
         
-        // Reset form
+        // Reset form and reload data
         event.target.reset();
-        setMinDate();
-        
-        // Reload order history and stats
-        await Promise.all([loadOrderHistory(), loadRetailerRealTimeStats()]);
+        await loadRetailerStats();
+        await loadOrderHistory();
         
     } catch (error) {
         console.error('Error placing bulk order:', error);
@@ -278,107 +283,113 @@ async function placeBulkOrder(event) {
 }
 
 // Schedule delivery
-function scheduleDelivery(event) {
+async function scheduleDelivery(event) {
     event.preventDefault();
     
     const orderId = document.getElementById('orderSelect').value;
     const deliveryTime = document.getElementById('deliveryTime').value;
-    const address = document.getElementById('deliveryAddress').value;
+    const deliveryAddress = document.getElementById('deliveryAddress').value;
     
-    const delivery = {
-        id: 'DEL' + Date.now(),
-        orderId: orderId,
-        deliveryTime: deliveryTime,
-        address: address,
-        status: 'scheduled',
-        scheduledDate: new Date().toISOString()
-    };
+    if (!orderId) {
+        alert('Please select an order to schedule delivery');
+        return;
+    }
     
-    // Save delivery schedule (in real app, this would go to backend)
-    let deliveries = JSON.parse(localStorage.getItem('deliveries')) || [];
-    deliveries.push(delivery);
-    localStorage.setItem('deliveries', JSON.stringify(deliveries));
-    
-    alert('Delivery scheduled successfully!');
-    
-    // Reset form
-    event.target.reset();
+    try {
+        const deliveryData = {
+            order_id: orderId,
+            delivery_time: deliveryTime,
+            delivery_address: deliveryAddress,
+            status: 'scheduled'
+        };
+        
+        await apiClient.scheduleDelivery(deliveryData);
+        alert('Delivery scheduled successfully!');
+        
+        event.target.reset();
+        await loadOrderHistory();
+        
+    } catch (error) {
+        console.error('Error scheduling delivery:', error);
+        alert('Failed to schedule delivery: ' + error.message);
+    }
 }
 
-// Load order history from API
+// Load order history
 async function loadOrderHistory() {
     try {
         const response = await apiClient.getOrders();
         orders = apiClient.extractArrayData(response);
-        console.log('Orders loaded:', orders);
+        console.log('Order history loaded:', orders);
         
-        const tableBody = document.getElementById('orderHistoryTable');
+        // Filter orders for current retailer
+        const retailerOrders = orders.filter(order => 
+            order.user_id == currentUser.id || 
+            order.customer_email === currentUser.email
+        );
+        
+        const tableBody = document.querySelector('#orderHistoryTable');
         if (!tableBody) return;
         
         tableBody.innerHTML = '';
         
-        if (orders.length === 0) {
+        if (retailerOrders.length === 0) {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td colspan="7" class="text-center py-8">
                     <div class="text-gray-400 text-4xl mb-4">📦</div>
-                    <p class="text-gray-600">No bulk orders yet. Place your first order above!</p>
+                    <p class="text-gray-600">No orders found. Place your first bulk order to get started!</p>
                 </td>
             `;
             tableBody.appendChild(row);
             return;
         }
         
-        orders.forEach(order => {
+        // Update order select dropdown
+        const orderSelect = document.getElementById('orderSelect');
+        if (orderSelect) {
+            orderSelect.innerHTML = '<option value="">Select Order</option>';
+            retailerOrders.forEach(order => {
+                const option = document.createElement('option');
+                option.value = order.id;
+                option.textContent = `Order #${order.id} - ${order.items?.[0]?.name || 'Items'}`;
+                orderSelect.appendChild(option);
+            });
+        }
+        
+        retailerOrders.forEach(order => {
             const row = document.createElement('tr');
             const orderDate = new Date(order.created_at).toLocaleDateString();
+            const amount = parseFloat(order.total_amount) || 0;
+            const mainItem = order.items?.[0] || {};
             
             row.innerHTML = `
                 <td class="font-medium">#${order.id}</td>
                 <td>
-                    <div class="font-medium">${order.product_name || 'Mixed items'}</div>
-                    <div class="text-sm text-gray-500">${order.type || 'Standard'} order</div>
+                    <div class="font-medium">${mainItem.name || 'Mixed Items'}</div>
+                    <div class="text-sm text-gray-500">${order.items?.length || 0} items</div>
                 </td>
-                <td>${order.quantity || 'Various'}</td>
-                <td class="font-medium">Ksh${(parseFloat(order.total_amount) || 0).toLocaleString()}</td>
+                <td>${mainItem.quantity || 0}</td>
+                <td class="font-medium">Ksh${amount.toLocaleString()}</td>
                 <td><span class="status-${order.status}">${order.status}</span></td>
                 <td class="text-sm text-gray-500">${orderDate}</td>
                 <td>
                     <div class="flex space-x-2">
-                        <button class="btn-secondary text-sm" onclick="viewOrderDetails('${order.id}')">View Details</button>
-                        <button class="btn-secondary text-sm" onclick="reorder('${order.id}')">Reorder</button>
+                        <button class="btn-secondary text-sm" onclick="viewOrderDetails('${order.id}')">
+                            View
+                        </button>
+                        ${order.status === 'pending' ? 
+                            `<button class="btn-primary text-sm" onclick="scheduleOrderDelivery('${order.id}')">Schedule</button>` :
+                            ''
+                        }
                     </div>
                 </td>
             `;
             tableBody.appendChild(row);
         });
         
-        // Update order select dropdown
-        const orderSelect = document.getElementById('orderSelect');
-        if (orderSelect) {
-            orderSelect.innerHTML = '<option value="">Select Order</option>';
-            orders.forEach(order => {
-                const option = document.createElement('option');
-                option.value = order.id;
-                option.textContent = `Order #${order.id} - ${order.product_name || 'Mixed items'}`;
-                orderSelect.appendChild(option);
-            });
-        }
-        
     } catch (error) {
         console.error('Error loading order history:', error);
-        const tableBody = document.getElementById('orderHistoryTable');
-        if (tableBody) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="text-center py-8">
-                        <div class="text-red-400 text-4xl mb-4">⚠️</div>
-                        <p class="text-gray-600 mb-4">Failed to load order history. Please try again.</p>
-                        <button class="btn-primary" onclick="loadOrderHistory()">Retry</button>
-                    </td>
-                </tr>
-            `;
-        }
     }
 }
 
@@ -386,40 +397,38 @@ async function loadOrderHistory() {
 function viewOrderDetails(orderId) {
     const order = orders.find(o => o.id == orderId);
     if (order) {
-        const details = `
-Order ID: ${order.id}
-Product: ${order.product_name || 'Mixed items'}
-Quantity: ${order.quantity || 'Various'}
-Amount: Ksh${(parseFloat(order.total_amount) || 0).toLocaleString()}
+        const items = order.items || [];
+        const itemsList = items.map(item => 
+            `${item.name || 'Item'} x${item.quantity} @ Ksh${item.unit_price || 0}`
+        ).join('\n');
+        
+        alert(`Order Details:
+
+Order ID: #${order.id}
 Status: ${order.status}
 Date: ${new Date(order.created_at).toLocaleDateString()}
-${order.special_requirements ? 'Requirements: ' + order.special_requirements : ''}
-        `;
-        alert(details);
-    } else {
-        alert(`Order details not found for order ${orderId}`);
+Amount: Ksh${(parseFloat(order.total_amount) || 0).toLocaleString()}
+Delivery: ${order.delivery_date || 'Not scheduled'}
+
+Items:
+${itemsList || 'No items listed'}
+
+Special Requirements:
+${order.special_requirements || 'None'}`);
     }
 }
 
-// Reorder
-function reorder(orderId) {
-    const order = orders.find(o => o.id == orderId);
+// Schedule order delivery (from order history)
+function scheduleOrderDelivery(orderId) {
+    const orderSelect = document.getElementById('orderSelect');
+    if (orderSelect) {
+        orderSelect.value = orderId;
+    }
     
-    if (order) {
-        // Pre-fill the form with previous order data
-        const productSelect = document.getElementById('productSelect');
-        const quantityInput = document.getElementById('bulkQuantity');
-        const requirementsTextarea = document.getElementById('specialRequirements');
-        
-        if (productSelect) productSelect.value = order.product_name || '';
-        if (quantityInput) quantityInput.value = order.quantity || '';
-        if (requirementsTextarea) requirementsTextarea.value = order.special_requirements || '';
-        
-        // Scroll to form
-        window.scrollTo(0, 0);
-        alert('Form pre-filled with previous order details. Please review and submit.');
-    } else {
-        alert('Order not found for reorder.');
+    // Scroll to delivery scheduling form
+    const deliveryForm = document.querySelector('form[onsubmit="scheduleDelivery(event)"]');
+    if (deliveryForm) {
+        deliveryForm.scrollIntoView({ behavior: 'smooth' });
     }
 }
 
@@ -432,7 +441,7 @@ function logout() {
 // Make functions globally available
 window.placeBulkOrder = placeBulkOrder;
 window.scheduleDelivery = scheduleDelivery;
-window.viewOrderDetails = viewOrderDetails;
-window.reorder = reorder;
 window.requestProduct = requestProduct;
+window.viewOrderDetails = viewOrderDetails;
+window.scheduleOrderDelivery = scheduleOrderDelivery;
 window.logout = logout;

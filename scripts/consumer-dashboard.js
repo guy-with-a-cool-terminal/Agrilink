@@ -1,4 +1,3 @@
-
 // Consumer Dashboard JavaScript - Enhanced with Real-time Data and Complete Checkout
 
 let currentUser = null;
@@ -83,7 +82,7 @@ async function loadConsumerData() {
   try {
     if (loadingState) loadingState.style.display = 'block';
     if (productGrid) productGrid.style.display = 'none';
-    await Promise.all([loadProducts(), loadRealTimeStats(), loadOrders()]);
+    await Promise.all([loadProducts(), loadConsumerStats(), loadOrders()]);
     if (loadingState) loadingState.style.display = 'none';
     if (productGrid) productGrid.style.display = 'grid';
   } catch {
@@ -140,30 +139,43 @@ function displayProducts(productsToShow) {
     `).join('');
 }
 
-// Load real-time consumer statistics
-async function loadRealTimeStats() {
+// Load consumer-specific statistics (no admin analytics)
+async function loadConsumerStats() {
     try {
         const ordersResponse = await apiClient.getOrders();
         const ordersList = apiClient.extractArrayData(ordersResponse) || [];
         
-        const totalOrders = ordersList.length;
-        const totalSpent = ordersList.reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0);
-        const activeOrders = ordersList.filter(order => 
+        // Filter orders for current user if user_id is available
+        const userOrders = ordersList.filter(order => 
+            order.user_id == currentUser.id || 
+            order.customer_email === currentUser.email
+        );
+        
+        const totalOrders = userOrders.length;
+        const totalSpent = userOrders.reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0);
+        const activeOrders = userOrders.filter(order => 
             ['pending', 'processing', 'confirmed', 'shipped', 'in_transit'].includes(order.status)
         ).length;
         
-        // Get analytics for additional metrics
-        const analyticsResponse = await apiClient.getAnalytics();
-        const analytics = analyticsResponse.data || analyticsResponse.analytics || analyticsResponse;
+        // Calculate favorite products based on order history
+        const productCount = {};
+        userOrders.forEach(order => {
+            if (order.items) {
+                order.items.forEach(item => {
+                    productCount[item.product_id] = (productCount[item.product_id] || 0) + 1;
+                });
+            }
+        });
+        const favoriteProducts = Object.keys(productCount).length;
         
-        // Update stats display with real data
+        // Update stats display with consumer-specific data
         document.getElementById('totalOrders').textContent = totalOrders;
         document.getElementById('totalSpent').textContent = `Ksh${totalSpent.toLocaleString()}`;
         document.getElementById('activeOrders').textContent = activeOrders;
-        document.getElementById('favoriteProducts').textContent = Math.min(products.length, totalOrders > 0 ? 5 : 0);
+        document.getElementById('favoriteProducts').textContent = favoriteProducts;
         
     } catch (error) {
-        console.error('Error loading real-time stats:', error);
+        console.error('Error loading consumer stats:', error);
         // Fallback to basic counts
         document.getElementById('totalOrders').textContent = orders.length;
         document.getElementById('totalSpent').textContent = 'Ksh0';
@@ -432,7 +444,7 @@ async function placeOrder(event) {
         updateCartCount();
         closeModal('checkoutModal');
         event.target.reset();
-        await loadRealTimeStats();
+        await loadConsumerStats();
         
     } catch (error) {
         console.error('Error placing order:', error);

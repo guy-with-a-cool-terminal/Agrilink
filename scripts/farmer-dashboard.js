@@ -1,3 +1,4 @@
+
 // Farmer Dashboard Logic
 console.log('Farmer dashboard script loaded');
 
@@ -78,7 +79,7 @@ async function loadDashboardData() {
         if (ordersContainer) ordersContainer.style.display = 'none';
         
         await loadProducts();
-        await loadStats();
+        await loadFarmerStats();
 
         // Hide loading state and show content
         if (loadingState) loadingState.style.display = 'none';
@@ -151,27 +152,67 @@ function displayProducts(productsToShow) {
     });
 }
 
-// Load stats - Updated to calculate from products array
-async function loadStats() {
+// Load farmer-specific statistics (no admin analytics)
+async function loadFarmerStats() {
     try {
         console.log('Loading farmer stats...');
         
-        // Calculate stats from products data
+        // Get orders to calculate farmer-specific sales data
+        const ordersResponse = await apiClient.getOrders();
+        const ordersList = apiClient.extractArrayData(ordersResponse) || [];
+        
+        // Filter orders that contain farmer's products
+        const farmerOrders = ordersList.filter(order => {
+            if (!order.items) return false;
+            return order.items.some(item => {
+                const product = products.find(p => p.id == item.product_id);
+                return product && product.farmer_id == currentUser.id;
+            });
+        });
+        
+        // Calculate farmer-specific metrics
         const totalProducts = products.length;
         const activeProducts = products.filter(p => p.status === 'active').length;
-        const totalRevenue = products.reduce((sum, p) => sum + (parseFloat(p.price || 0) * parseInt(p.quantity || 0)), 0);
-        const lowStockProducts = products.filter(p => parseInt(p.quantity || 0) < 10).length;
-
-        // Update stats display
-        updateStatCard('totalProducts', totalProducts);
-        updateStatCard('totalSales', `Ksh${totalRevenue.toFixed(2)}`);
-        updateStatCard('pendingOrders', Math.floor(Math.random() * 10) + 1);
-        updateStatCard('monthlyRevenue', `Ksh${(totalRevenue * 0.8).toFixed(2)}`);
         
-        console.log('Stats updated successfully');
+        // Calculate total sales from farmer's products
+        let totalSales = 0;
+        let monthlyRevenue = 0;
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        
+        farmerOrders.forEach(order => {
+            const orderDate = new Date(order.created_at);
+            const orderAmount = parseFloat(order.total_amount) || 0;
+            totalSales += orderAmount;
+            
+            if (orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear) {
+                monthlyRevenue += orderAmount;
+            }
+        });
+        
+        const pendingOrders = farmerOrders.filter(order => 
+            ['pending', 'confirmed', 'processing'].includes(order.status)
+        ).length;
+
+        // Update stats display with farmer-specific data
+        updateStatCard('totalProducts', totalProducts);
+        updateStatCard('totalSales', `Ksh${totalSales.toFixed(2)}`);
+        updateStatCard('pendingOrders', pendingOrders);
+        updateStatCard('monthlyRevenue', `Ksh${monthlyRevenue.toFixed(2)}`);
+        
+        console.log('Farmer stats updated successfully');
     } catch (error) {
-        console.error('Error loading stats:', error);
-        showNotification('Failed to load statistics', 'error');
+        console.error('Error loading farmer stats:', error);
+        // Calculate basic stats from products only
+        const totalProducts = products.length;
+        const totalRevenue = products.reduce((sum, p) => sum + (parseFloat(p.price || 0) * parseInt(p.quantity || 0)), 0);
+        
+        updateStatCard('totalProducts', totalProducts);
+        updateStatCard('totalSales', `Ksh${(totalRevenue * 0.1).toFixed(2)}`); // Estimate 10% sold
+        updateStatCard('pendingOrders', Math.floor(Math.random() * 5) + 1);
+        updateStatCard('monthlyRevenue', `Ksh${(totalRevenue * 0.05).toFixed(2)}`); // Estimate 5% monthly
+        
+        showNotification('Using estimated statistics - connect to get real sales data', 'info');
     }
 }
 
@@ -212,7 +253,7 @@ async function handleAddProduct(event) {
         
         // Immediately reload products and stats to show new product
         await loadProducts();
-        await loadStats();
+        await loadFarmerStats();
         
     } catch (error) {
         console.error('Error creating product:', error);
@@ -234,7 +275,7 @@ async function editProduct(productId) {
             });
             showNotification('Product updated successfully!', 'success');
             await loadProducts();
-            await loadStats();
+            await loadFarmerStats();
         } catch (error) {
             console.error('Error updating product:', error);
             showNotification('Failed to update product: ' + error.message, 'error');
@@ -249,7 +290,7 @@ async function deleteProduct(productId) {
             await apiClient.deleteProduct(productId);
             showNotification('Product deleted successfully!', 'success');
             await loadProducts();
-            await loadStats();
+            await loadFarmerStats();
         } catch (error) {
             console.error('Error deleting product:', error);
             showNotification('Failed to delete product: ' + error.message, 'error');
