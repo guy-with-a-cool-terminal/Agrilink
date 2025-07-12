@@ -1,5 +1,5 @@
 
-// Consumer Dashboard JavaScript - Fixed Data Handling
+// Consumer Dashboard JavaScript - Enhanced with Real-time Data and Complete Checkout
 
 let currentUser = null;
 let products = [];
@@ -83,7 +83,7 @@ async function loadConsumerData() {
   try {
     if (loadingState) loadingState.style.display = 'block';
     if (productGrid) productGrid.style.display = 'none';
-    await Promise.all([loadProducts(), loadStats(), loadOrders()]);
+    await Promise.all([loadProducts(), loadRealTimeStats(), loadOrders()]);
     if (loadingState) loadingState.style.display = 'none';
     if (productGrid) productGrid.style.display = 'grid';
   } catch {
@@ -140,26 +140,35 @@ function displayProducts(productsToShow) {
     `).join('');
 }
 
-// Load consumer statistics
-async function loadStats() {
+// Load real-time consumer statistics
+async function loadRealTimeStats() {
     try {
         const ordersResponse = await apiClient.getOrders();
         const ordersList = apiClient.extractArrayData(ordersResponse) || [];
         
         const totalOrders = ordersList.length;
-        const totalSpent = ordersList.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+        const totalSpent = ordersList.reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0);
         const activeOrders = ordersList.filter(order => 
-            order.status === 'pending' || order.status === 'processing' || order.status === 'in_transit'
+            ['pending', 'processing', 'confirmed', 'shipped', 'in_transit'].includes(order.status)
         ).length;
         
-        // Update stats display
+        // Get analytics for additional metrics
+        const analyticsResponse = await apiClient.getAnalytics();
+        const analytics = analyticsResponse.data || analyticsResponse.analytics || analyticsResponse;
+        
+        // Update stats display with real data
         document.getElementById('totalOrders').textContent = totalOrders;
         document.getElementById('totalSpent').textContent = `Ksh${totalSpent.toLocaleString()}`;
         document.getElementById('activeOrders').textContent = activeOrders;
-        document.getElementById('favoriteProducts').textContent = Math.min(products.length, 5);
+        document.getElementById('favoriteProducts').textContent = Math.min(products.length, totalOrders > 0 ? 5 : 0);
         
     } catch (error) {
-        console.error('Error loading stats:', error);
+        console.error('Error loading real-time stats:', error);
+        // Fallback to basic counts
+        document.getElementById('totalOrders').textContent = orders.length;
+        document.getElementById('totalSpent').textContent = 'Ksh0';
+        document.getElementById('activeOrders').textContent = '0';
+        document.getElementById('favoriteProducts').textContent = '0';
     }
 }
 
@@ -204,9 +213,15 @@ function addToCart(productId) {
 
   const existing = cart.find(i => i.id === productId);
   if (existing) existing.quantity += 1;
-  else cart.push({ id: product.id, name: product.name, price: product.price, quantity: 1 });
+  else cart.push({ 
+    id: product.id, 
+    name: product.name, 
+    price: parseFloat(product.price), 
+    quantity: 1,
+    product_id: product.id 
+  });
 
-  localStorage.setItem(getCartKey(), JSON.stringify(cart)); // persist per user
+  localStorage.setItem(getCartKey(), JSON.stringify(cart));
   updateCartCount();
   showNotification('Product added to cart!', 'success');
 }
@@ -293,41 +308,139 @@ function proceedToCheckout() {
     if (checkoutModal) {
         checkoutModal.classList.add('active');
         updateCartSummary();
+        setupPaymentOptions();
     }
 }
 
-// Place order
-async function placeOrder(event) {
-  event.preventDefault();
-  if (cart.length === 0) return showNotification('Your cart is empty','error');
+// Setup payment options
+function setupPaymentOptions() {
+    const paymentMethodSelect = document.getElementById('paymentMethod');
+    if (paymentMethodSelect) {
+        paymentMethodSelect.addEventListener('change', function() {
+            showPaymentForm(this.value);
+        });
+    }
+}
 
-  const orderData = {
-    items: cart.map(i => ({
-      product_id: i.id,
-      name: i.name,
-      quantity: i.quantity,
-      unit_price: i.price
-    })),
-    delivery_address: document.getElementById('deliveryAddress').value,
-    phone: document.getElementById('phoneNumber').value,
-    payment_method: document.getElementById('paymentMethod').value,
-    total_amount: cart.reduce((sum, i) => sum + (i.price * i.quantity), 0) + 50
-  };
+// Show payment form based on selection
+function showPaymentForm(paymentMethod) {
+    const existingForm = document.getElementById('paymentForm');
+    if (existingForm) existingForm.remove();
     
+    if (!paymentMethod) return;
+    
+    const checkoutForm = document.querySelector('#checkoutModal form');
+    const formContainer = document.createElement('div');
+    formContainer.id = 'paymentForm';
+    formContainer.className = 'mt-4 p-4 bg-gray-50 rounded-lg';
+    
+    if (paymentMethod === 'card') {
+        formContainer.innerHTML = `
+            <h4 class="font-semibold mb-3">Card Payment</h4>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="form-group">
+                    <label for="cardNumber">Card Number</label>
+                    <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19">
+                </div>
+                <div class="form-group">
+                    <label for="expiryDate">Expiry Date</label>
+                    <input type="text" id="expiryDate" placeholder="MM/YY" maxlength="5">
+                </div>
+                <div class="form-group">
+                    <label for="cvv">CVV</label>
+                    <input type="text" id="cvv" placeholder="123" maxlength="3">
+                </div>
+                <div class="form-group">
+                    <label for="cardName">Cardholder Name</label>
+                    <input type="text" id="cardName" placeholder="John Doe">
+                </div>
+            </div>
+        `;
+    } else if (paymentMethod === 'mpesa') {
+        formContainer.innerHTML = `
+            <h4 class="font-semibold mb-3">M-Pesa Payment</h4>
+            <div class="space-y-4">
+                <div class="form-group">
+                    <label for="mpesaPhone">M-Pesa Phone Number</label>
+                    <input type="tel" id="mpesaPhone" placeholder="254712345678" required>
+                </div>
+                <div class="bg-blue-50 p-3 rounded">
+                    <h5 class="font-medium text-blue-800 mb-2">Payment Instructions:</h5>
+                    <ol class="text-sm text-blue-700 list-decimal list-inside space-y-1">
+                        <li>You will receive an STK push notification</li>
+                        <li>Enter your M-Pesa PIN to complete payment</li>
+                        <li>You will receive confirmation via SMS</li>
+                    </ol>
+                </div>
+            </div>
+        `;
+    }
+    
+    checkoutForm.appendChild(formContainer);
+}
+
+// Place order with enhanced payment processing
+async function placeOrder(event) {
+    event.preventDefault();
+    if (cart.length === 0) return showNotification('Your cart is empty','error');
+
+    const paymentMethod = document.getElementById('paymentMethod').value;
+    if (!paymentMethod) return showNotification('Please select a payment method', 'error');
+    
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Processing Order...';
+    submitBtn.disabled = true;
+
     try {
-    const response = await apiClient.createOrder(orderData);
-    console.log('Order created:', response);
-    showNotification('Order placed successfully!', 'success');
-    cart = [];
-    localStorage.removeItem(getCartKey()); // clear only on checkout
-    updateCartCount();
-    closeModal('checkoutModal');
-    event.target.reset();
-    await loadStats();
-  } catch (error) {
-    console.error('Error placing order:', error);
-    showNotification('Failed to place order: ' + error.message, 'error');
-  }
+        const orderData = {
+            items: cart.map(i => ({
+                product_id: i.product_id || i.id,
+                name: i.name,
+                quantity: i.quantity,
+                unit_price: i.price
+            })),
+            delivery_address: document.getElementById('deliveryAddress').value,
+            phone: document.getElementById('phoneNumber').value,
+            payment_method: paymentMethod,
+            total_amount: cart.reduce((sum, i) => sum + (i.price * i.quantity), 0) + 50
+        };
+
+        // Add payment-specific data
+        if (paymentMethod === 'card') {
+            orderData.card_details = {
+                card_number: document.getElementById('cardNumber')?.value,
+                expiry_date: document.getElementById('expiryDate')?.value,
+                cardholder_name: document.getElementById('cardName')?.value
+            };
+        } else if (paymentMethod === 'mpesa') {
+            orderData.mpesa_phone = document.getElementById('mpesaPhone')?.value;
+        }
+        
+        const response = await apiClient.createOrder(orderData);
+        console.log('Order created:', response);
+        
+        // Handle M-Pesa STK push
+        if (paymentMethod === 'mpesa') {
+            showNotification('STK push sent to your phone. Please complete payment.', 'info');
+            // You can add STK push status checking here
+        }
+        
+        showNotification('Order placed successfully!', 'success');
+        cart = [];
+        localStorage.removeItem(getCartKey());
+        updateCartCount();
+        closeModal('checkoutModal');
+        event.target.reset();
+        await loadRealTimeStats();
+        
+    } catch (error) {
+        console.error('Error placing order:', error);
+        showNotification('Failed to place order: ' + error.message, 'error');
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
 }
 
 // Close modal
@@ -342,6 +455,23 @@ function closeModal(modalId) {
 function logout() {
     localStorage.removeItem('currentUser');
     window.location.href = 'index.html';
+}
+
+// Notification system
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        type === 'info' ? 'bg-blue-500 text-white' :
+        'bg-gray-500 text-white'
+    }`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
 }
 
 // Make functions globally available
