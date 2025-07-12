@@ -1,4 +1,3 @@
-
 // Retailer Dashboard JavaScript - Enhanced for Bulk Orders and Real-time Data
 
 let currentUser = null;
@@ -263,7 +262,7 @@ function populateOrderSelect() {
     });
 }
 
-// Place bulk order with enhanced validation
+// Place bulk order with enhanced validation and payment method
 async function placeBulkOrder(event) {
     event.preventDefault();
     
@@ -303,6 +302,8 @@ async function placeBulkOrder(event) {
     submitBtn.disabled = true;
     
     try {
+        const totalAmount = quantity * parseFloat(selectedProduct.price);
+        
         const orderData = {
             items: [{
                 product_id: selectedProduct.id,
@@ -310,18 +311,20 @@ async function placeBulkOrder(event) {
                 quantity: quantity,
                 unit_price: selectedProduct.price
             }],
-            delivery_address: `Bulk delivery - Budget: ${budgetRange}`,
+            delivery_address: `Bulk delivery - Budget: ${budgetRange}${specialRequirements ? '. Requirements: ' + specialRequirements : ''}`,
             delivery_date: deliveryDate,
             phone: currentUser.phone || '254700000000',
-            payment_method: 'cod', // Cash on delivery for bulk orders
-            total_amount: quantity * parseFloat(selectedProduct.price),
-            notes: specialRequirements || 'Bulk order for retail'
+            payment_method: 'mpesa', // Default to M-Pesa for bulk orders
+            total_amount: totalAmount,
+            notes: `Bulk order for retail - ${specialRequirements || 'Standard bulk order'}`
         };
+        
+        console.log('Submitting bulk order:', orderData);
         
         const response = await apiClient.createOrder(orderData);
         console.log('Bulk order created:', response);
         
-        showNotification('Bulk order placed successfully!', 'success');
+        showNotification('Bulk order placed successfully! You will receive M-Pesa payment instructions.', 'success');
         
         // Reset form
         event.target.reset();
@@ -332,9 +335,15 @@ async function placeBulkOrder(event) {
     } catch (error) {
         console.error('Error placing bulk order:', error);
         let errorMessage = 'Failed to place bulk order';
+        
         if (error.message.includes('Insufficient stock')) {
             errorMessage = 'Insufficient stock available. Please check availability and try again.';
+        } else if (error.message.includes('payment method')) {
+            errorMessage = 'Payment method error. Please try again or contact support.';
+        } else if (error.message.includes('validation')) {
+            errorMessage = 'Please check all fields and try again.';
         }
+        
         showNotification(errorMessage + ': ' + error.message, 'error');
     } finally {
         submitBtn.textContent = originalText;

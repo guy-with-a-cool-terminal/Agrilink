@@ -42,12 +42,22 @@
                 </div>
             </div>
 
-            <!-- Map Placeholder -->
+            <!-- Delivery Route Map -->
             <div class="chart-container">
-                <h3 class="text-lg font-semibold text-gray-900 mb-6">Delivery Route Map</h3>
-                <div class="chart-placeholder h-64">
-                    🗺️ Interactive Map Integration<br>
-                    <small>Google Maps / OpenStreetMap API will be integrated here</small>
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900">Delivery Route Map</h3>
+                    <button onclick="refreshDeliveryMap()" class="btn-secondary text-sm">
+                        🔄 Refresh Map
+                    </button>
+                </div>
+                <div id="deliveryMap" class="w-full h-96 rounded-lg border border-gray-200 bg-gray-100">
+                    <div class="flex items-center justify-center h-full">
+                        <div class="text-center">
+                            <div class="text-gray-400 text-2xl mb-2">🗺️</div>
+                            <p class="text-gray-600">Loading delivery map...</p>
+                            <p class="text-gray-500 text-sm mt-1">Google Maps integration</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -116,8 +126,12 @@
         </div>
     </div>
 
+    <!-- Google Maps API - Replace YOUR_API_KEY with your actual Google Maps API key -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap&libraries=geometry"></script>
+    
     <script src="scripts/api-client.js"></script>
     <script src="scripts/auth.js"></script>
     <script src="scripts/logistics-dashboard.js"></script>
+    <script src="scripts/maps.js"></script>
 </body>
 </html>

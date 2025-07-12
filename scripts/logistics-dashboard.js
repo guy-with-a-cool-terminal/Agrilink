@@ -1,4 +1,3 @@
-
 // Logistics Dashboard JavaScript - Enhanced with Real-time Delivery Tracking
 
 let currentUser = null;
@@ -55,6 +54,12 @@ async function loadLogisticsData() {
         ]);
         displayDeliveries();
         populateDeliverySelect();
+        
+        // Refresh map after data loads
+        if (typeof refreshDeliveryMap === 'function') {
+            setTimeout(refreshDeliveryMap, 1000); // Give time for data to be available
+        }
+        
         console.log('Logistics data loaded successfully');
     } catch (error) {
         console.error('Error loading logistics data:', error);
@@ -270,7 +275,7 @@ async function updateDeliveryStatus(event) {
         // Reset form
         event.target.reset();
         
-        // Reload data
+        // Reload data and refresh map
         await loadLogisticsData();
         
     } catch (error) {
@@ -308,7 +313,7 @@ async function updateDeliveryWithLocation(deliveryId, location) {
         await apiClient.updateDeliveryStatus(deliveryId, updateData);
         showNotification('Location updated successfully!', 'success');
         
-        // Reload data
+        // Reload data and refresh map
         await loadLogisticsData();
         
     } catch (error) {
