@@ -1,19 +1,18 @@
-// Logistics Dashboard JavaScript - Enhanced with Location Tracking and Real-time Data
+
+// Logistics Dashboard JavaScript - Enhanced with Real-time Delivery Tracking
+
+let currentUser = null;
+let deliveries = [];
+let orders = [];
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Logistics Dashboard initializing...');
     initDashboard();
     loadUserData();
-    loadDeliveries();
-    loadLogisticsStats();
-    initializeMap();
+    loadLogisticsData();
+    startRealTimeUpdates();
 });
-
-// Data storage
-let deliveries = [];
-let currentUser = null;
-let trackingData = {};
 
 // Initialize dashboard with user authentication
 async function initDashboard() {
@@ -38,45 +37,87 @@ async function loadUserData() {
         const userData = await apiClient.getUser();
         console.log('User data loaded:', userData);
         
-        document.getElementById('userName').textContent = userData.name || currentUser.name || 'Logistics Manager';
+        document.getElementById('userName').textContent = userData.name || currentUser.name || 'Logistics';
         document.getElementById('userRole').textContent = userData.role || 'Logistics';
     } catch (error) {
         console.error('Error loading user data:', error);
-        document.getElementById('userName').textContent = currentUser.name || 'Logistics Manager';
+        document.getElementById('userName').textContent = currentUser.name || 'Logistics';
     }
 }
 
-// Load logistics-specific statistics (no admin analytics)
+// Load all logistics data
+async function loadLogisticsData() {
+    try {
+        await Promise.all([
+            loadDeliveries(),
+            loadOrders(),
+            loadLogisticsStats()
+        ]);
+        displayDeliveries();
+        populateDeliverySelect();
+        console.log('Logistics data loaded successfully');
+    } catch (error) {
+        console.error('Error loading logistics data:', error);
+        showNotification('Failed to load dashboard data', 'error');
+    }
+}
+
+// Load deliveries
+async function loadDeliveries() {
+    try {
+        const response = await apiClient.getDeliveries();
+        deliveries = apiClient.extractArrayData(response) || [];
+        console.log('Deliveries loaded:', deliveries);
+    } catch (error) {
+        console.error('Error loading deliveries:', error);
+        showNotification('Failed to load deliveries', 'error');
+    }
+}
+
+// Load orders for context
+async function loadOrders() {
+    try {
+        const response = await apiClient.getOrders();
+        orders = apiClient.extractArrayData(response) || [];
+        console.log('Orders loaded:', orders);
+    } catch (error) {
+        console.error('Error loading orders:', error);
+    }
+}
+
+// Load logistics-specific statistics
 async function loadLogisticsStats() {
     try {
-        const deliveriesResponse = await apiClient.getDeliveries();
-        const deliveriesList = apiClient.extractArrayData(deliveriesResponse);
+        // Filter deliveries assigned to current user or available for assignment
+        const userDeliveries = deliveries.filter(delivery => 
+            !delivery.logistics_user_id || delivery.logistics_user_id == currentUser.id
+        );
         
-        const activeDeliveries = deliveriesList.filter(d => 
-            ['assigned', 'picked_up', 'in_transit', 'out_for_delivery'].includes(d.status)
+        const activeDeliveries = userDeliveries.filter(delivery => 
+            ['pending', 'assigned', 'picked_up', 'in_transit', 'out_for_delivery'].includes(delivery.status)
         ).length;
         
-        const completedToday = deliveriesList.filter(d => {
-            const deliveryDate = new Date(d.updated_at || d.created_at);
-            const today = new Date();
-            return deliveryDate.toDateString() === today.toDateString() && d.status === 'delivered';
+        const completedToday = userDeliveries.filter(delivery => {
+            const today = new Date().toDateString();
+            const deliveryDate = new Date(delivery.updated_at).toDateString();
+            return delivery.status === 'delivered' && deliveryDate === today;
         }).length;
         
-        // Calculate total distance (simulated for now, will integrate with Google Maps later)
-        const totalDistance = deliveriesList.reduce((sum, delivery) => {
-            return sum + (delivery.estimated_distance || Math.floor(Math.random() * 20) + 5);
+        // Calculate total distance (simulated for now - will use Google Maps later)
+        const totalDistance = userDeliveries.reduce((sum, delivery) => {
+            return sum + (delivery.distance || Math.floor(Math.random() * 20) + 5);
         }, 0);
         
-        // Calculate efficiency based on completed vs assigned deliveries
-        const totalAssigned = deliveriesList.filter(d => d.status !== 'pending').length;
-        const totalCompleted = deliveriesList.filter(d => d.status === 'delivered').length;
-        const efficiency = totalAssigned > 0 ? Math.round((totalCompleted / totalAssigned) * 100) : 0;
+        // Calculate efficiency based on completed vs total deliveries
+        const completedDeliveries = userDeliveries.filter(d => d.status === 'delivered').length;
+        const totalAssigned = userDeliveries.filter(d => d.logistics_user_id == currentUser.id).length;
+        const efficiency = totalAssigned > 0 ? Math.round((completedDeliveries / totalAssigned) * 100) : 0;
         
-        // Update stats display with logistics-specific data
+        // Update stats display
         document.getElementById('activeDeliveries').textContent = activeDeliveries;
         document.getElementById('completedToday').textContent = completedToday;
         document.getElementById('totalDistance').textContent = totalDistance;
-        document.getElementById('efficiency').textContent = efficiency + '%';
+        document.getElementById('efficiency').textContent = `${efficiency}%`;
         
     } catch (error) {
         console.error('Error loading logistics stats:', error);
@@ -88,362 +129,252 @@ async function loadLogisticsStats() {
     }
 }
 
-// Initialize map placeholder (will integrate with Google Maps later)
-function initializeMap() {
-    const mapContainer = document.querySelector('.chart-placeholder');
-    if (mapContainer) {
-        mapContainer.innerHTML = `
-            <div class="flex flex-col items-center justify-center h-full">
-                <div class="text-6xl mb-4">🗺️</div>
-                <h4 class="text-lg font-semibold mb-2">Delivery Route Map</h4>
-                <p class="text-gray-600 text-center">
-                    Interactive map with real-time delivery tracking<br>
-                    <small>Google Maps integration will be added here</small>
-                </p>
-                <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
-                    <div class="flex items-center">
-                        <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                        <span>Completed Routes</span>
-                    </div>
-                    <div class="flex items-center">
-                        <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                        <span>Active Routes</span>
-                    </div>
-                    <div class="flex items-center">
-                        <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-                        <span>Pending Routes</span>
-                    </div>
-                    <div class="flex items-center">
-                        <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                        <span>Delayed Routes</span>
-                    </div>
-                </div>
-            </div>
+// Display deliveries table
+function displayDeliveries() {
+    const tableBody = document.querySelector('#deliveriesTable');
+    if (!tableBody) return;
+    
+    if (deliveries.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-8 text-gray-500">
+                    No deliveries assigned yet.
+                </td>
+            </tr>
         `;
-    }
-}
-
-// Load deliveries from API with enhanced location data
-async function loadDeliveries() {
-    try {
-        const response = await apiClient.getDeliveries();
-        deliveries = apiClient.extractArrayData(response);
-        console.log('Deliveries loaded:', deliveries);
-        
-        // Enhance deliveries with location data (simulated for now)
-        deliveries = deliveries.map(delivery => ({
-            ...delivery,
-            current_location: delivery.current_location || generateSimulatedLocation(),
-            estimated_distance: delivery.estimated_distance || Math.floor(Math.random() * 20) + 5,
-            estimated_arrival: delivery.estimated_arrival || generateEstimatedArrival(delivery.status)
-        }));
-        
-        const tableBody = document.querySelector('#deliveriesTable');
-        if (!tableBody) return;
-        
-        tableBody.innerHTML = '';
-        
-        if (deliveries.length === 0) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="8" class="text-center py-8">
-                        <div class="text-gray-400 text-4xl mb-4">🚚</div>
-                        <p class="text-gray-600">No deliveries assigned yet.</p>
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-        
-        deliveries.forEach(delivery => {
-            const row = document.createElement('tr');
-            const priorityClass = delivery.priority === 'high' ? 'priority-high' : 
-                                 delivery.priority === 'low' ? 'priority-low' : 'priority-medium';
-            
-            row.innerHTML = `
-                <td class="font-medium">#${delivery.id}</td>
-                <td>
-                    <div class="font-medium">${delivery.product_name || 'Order items'}</div>
-                    <div class="text-sm text-gray-500">Order #${delivery.order_id}</div>
-                </td>
-                <td>
-                    <div class="font-medium">${delivery.customer_name || 'Customer'}</div>
-                    <div class="text-sm text-gray-500">${delivery.customer_phone || 'No phone'}</div>
-                </td>
-                <td class="text-sm">
-                    <div class="font-medium">${delivery.delivery_address || 'Address not provided'}</div>
-                    <div class="text-xs text-gray-500">📍 ${delivery.current_location}</div>
-                </td>
-                <td><span class="status-${delivery.status}">${delivery.status}</span></td>
-                <td><span class="${priorityClass}">${delivery.priority || 'medium'}</span></td>
-                <td class="text-sm text-gray-500">
-                    <div>ETA: ${delivery.estimated_arrival}</div>
-                    <div>${delivery.estimated_distance} km</div>
-                </td>
-                <td>
-                    <div class="flex space-x-2">
-                        ${delivery.status === 'assigned' ? 
-                            `<button class="btn-primary text-sm" onclick="startDelivery('${delivery.id}')">Start</button>` :
-                            `<button class="btn-secondary text-sm" onclick="updateStatus('${delivery.id}')">Update</button>`
-                        }
-                        <button class="btn-secondary text-sm" onclick="viewRoute('${delivery.id}')">Route</button>
-                        <button class="btn-secondary text-sm" onclick="trackDelivery('${delivery.id}')">Track</button>
-                    </div>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-        
-        // Update delivery select dropdown
-        const deliverySelect = document.getElementById('deliverySelect');
-        if (deliverySelect) {
-            deliverySelect.innerHTML = '<option value="">Select Delivery</option>';
-            deliveries.forEach(delivery => {
-                const option = document.createElement('option');
-                option.value = delivery.id;
-                option.textContent = `${delivery.id} - ${delivery.customer_name || 'Customer'} (${delivery.product_name || 'Items'})`;
-                deliverySelect.appendChild(option);
-            });
-        }
-        
-    } catch (error) {
-        console.error('Error loading deliveries:', error);
-        const tableBody = document.querySelector('#deliveriesTable');
-        if (tableBody) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="8" class="text-center py-8">
-                        <div class="text-red-400 text-4xl mb-4">⚠️</div>
-                        <p class="text-gray-600 mb-4">Failed to load deliveries. Please try again.</p>
-                        <button class="btn-primary" onclick="loadDeliveries()">Retry</button>
-                    </td>
-                </tr>
-            `;
-        }
-    }
-}
-
-// Generate simulated location (will be replaced with real GPS data)
-function generateSimulatedLocation() {
-    const locations = [
-        'Nairobi CBD', 'Westlands', 'Karen', 'Kileleshwa', 'Lavington',
-        'Kilimani', 'Parklands', 'Kasarani', 'Embakasi', 'Donholm'
-    ];
-    return locations[Math.floor(Math.random() * locations.length)];
-}
-
-// Generate estimated arrival time
-function generateEstimatedArrival(status) {
-    const now = new Date();
-    let minutes = 30;
-    
-    switch (status) {
-        case 'assigned':
-            minutes = Math.floor(Math.random() * 60) + 60; // 1-2 hours
-            break;
-        case 'picked_up':
-            minutes = Math.floor(Math.random() * 45) + 45; // 45-90 minutes
-            break;
-        case 'in_transit':
-            minutes = Math.floor(Math.random() * 30) + 15; // 15-45 minutes
-            break;
-        case 'out_for_delivery':
-            minutes = Math.floor(Math.random() * 15) + 5; // 5-20 minutes
-            break;
-        default:
-            minutes = Math.floor(Math.random() * 30) + 30;
-    }
-    
-    const eta = new Date(now.getTime() + minutes * 60000);
-    return eta.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-// Start delivery with location tracking
-async function startDelivery(deliveryId) {
-    try {
-        const delivery = deliveries.find(d => d.id == deliveryId);
-        if (!delivery) {
-            alert('Delivery not found.');
-            return;
-        }
-        
-        // Start location tracking
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const { latitude, longitude } = position.coords;
-                    trackingData[deliveryId] = {
-                        lat: latitude,
-                        lng: longitude,
-                        lastUpdate: new Date().toISOString()
-                    };
-                    console.log(`Started tracking delivery ${deliveryId} at ${latitude}, ${longitude}`);
-                },
-                (error) => {
-                    console.warn('Could not get current location:', error);
-                }
-            );
-        }
-        
-        await apiClient.updateDeliveryStatus(deliveryId, { 
-            status: 'picked_up',
-            current_location: 'Starting location - GPS coordinates will be added',
-            notes: 'Delivery started with location tracking enabled'
-        });
-        
-        console.log('Started delivery:', deliveryId);
-        
-        alert(`Started delivery ${deliveryId}. Location tracking enabled. Status updated to "Picked Up"`);
-        await Promise.all([loadDeliveries(), loadLogisticsStats()]);
-        
-    } catch (error) {
-        console.error('Error starting delivery:', error);
-        alert('Failed to start delivery: ' + error.message);
-    }
-}
-
-// Track delivery in real-time
-function trackDelivery(deliveryId) {
-    const delivery = deliveries.find(d => d.id == deliveryId);
-    if (!delivery) {
-        alert('Delivery not found.');
         return;
     }
     
-    const trackingInfo = trackingData[deliveryId];
-    let locationInfo = delivery.current_location;
-    
-    if (trackingInfo) {
-        locationInfo += `\nGPS: ${trackingInfo.lat.toFixed(6)}, ${trackingInfo.lng.toFixed(6)}`;
-        locationInfo += `\nLast Update: ${new Date(trackingInfo.lastUpdate).toLocaleTimeString()}`;
-    }
-    
-    alert(`Delivery Tracking - #${deliveryId}
-    
-Status: ${delivery.status}
-Customer: ${delivery.customer_name || 'N/A'}
-Address: ${delivery.delivery_address}
-Current Location: ${locationInfo}
-ETA: ${delivery.estimated_arrival}
-Distance: ${delivery.estimated_distance} km
-
-In a real application, this would show a live map with the delivery route and real-time location updates.`);
+    tableBody.innerHTML = deliveries.map(delivery => {
+        const order = orders.find(o => o.id === delivery.order_id);
+        const statusClass = getDeliveryStatusClass(delivery.status);
+        const priorityClass = getPriorityClass(delivery.priority);
+        
+        // Get order details
+        let orderDetails = 'N/A';
+        let customerInfo = 'N/A';
+        if (order) {
+            if (order.items && order.items.length > 0) {
+                orderDetails = order.items.length === 1 
+                    ? order.items[0].name || 'Unknown Product'
+                    : `${order.items.length} items`;
+            }
+            customerInfo = order.user?.name || order.customer_name || 'Unknown Customer';
+        }
+        
+        return `
+            <tr>
+                <td>#${delivery.id}</td>
+                <td>${orderDetails}</td>
+                <td>${customerInfo}</td>
+                <td class="max-w-xs truncate" title="${delivery.delivery_address}">
+                    ${delivery.delivery_address || 'Not specified'}
+                </td>
+                <td><span class="status-badge ${statusClass}">${delivery.status}</span></td>
+                <td><span class="priority-badge ${priorityClass}">${delivery.priority || 'medium'}</span></td>
+                <td>
+                    <button class="btn-primary text-sm mr-2" onclick="updateDeliveryLocation(${delivery.id})">
+                        Update Location
+                    </button>
+                    <button class="btn-secondary text-sm" onclick="viewDeliveryDetails(${delivery.id})">
+                        Details
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
-// View route with enhanced location info
-function viewRoute(deliveryId) {
-    const delivery = deliveries.find(d => d.id == deliveryId);
-    if (delivery) {
-        alert(`Route Information - Delivery #${deliveryId}
-
-From: Distribution Center
-To: ${delivery.delivery_address}
-Current Location: ${delivery.current_location}
-Estimated Distance: ${delivery.estimated_distance} km
-ETA: ${delivery.estimated_arrival}
-
-Google Maps integration will provide:
-- Turn-by-turn navigation
-- Real-time traffic updates
-- Alternative route suggestions
-- Live location sharing with customer`);
-    } else {
-        alert('Delivery not found.');
-    }
+// Get status class for styling
+function getDeliveryStatusClass(status) {
+    const statusClasses = {
+        'pending': 'bg-yellow-100 text-yellow-800',
+        'assigned': 'bg-blue-100 text-blue-800',
+        'picked_up': 'bg-purple-100 text-purple-800',
+        'in_transit': 'bg-orange-100 text-orange-800',
+        'out_for_delivery': 'bg-green-100 text-green-800',
+        'delivered': 'bg-green-100 text-green-800',
+        'failed': 'bg-red-100 text-red-800'
+    };
+    return statusClasses[status] || 'bg-gray-100 text-gray-800';
 }
 
-// Update status from table action
-function updateStatus(deliveryId) {
-    // Pre-select the delivery in the form
+// Get priority class for styling
+function getPriorityClass(priority) {
+    const priorityClasses = {
+        'low': 'bg-gray-100 text-gray-800',
+        'medium': 'bg-blue-100 text-blue-800',
+        'high': 'bg-orange-100 text-orange-800',
+        'urgent': 'bg-red-100 text-red-800'
+    };
+    return priorityClasses[priority] || 'bg-blue-100 text-blue-800';
+}
+
+// Populate delivery select for status updates
+function populateDeliverySelect() {
     const deliverySelect = document.getElementById('deliverySelect');
-    if (deliverySelect) {
-        deliverySelect.value = deliveryId;
-    }
+    if (!deliverySelect) return;
     
-    // Pre-fill current location if available
-    const locationInput = document.getElementById('location');
-    const delivery = deliveries.find(d => d.id == deliveryId);
-    if (locationInput && delivery) {
-        locationInput.value = delivery.current_location || '';
-    }
+    // Clear existing options
+    deliverySelect.innerHTML = '<option value="">Select Delivery</option>';
     
-    // Scroll to update form
-    const updateForm = document.querySelector('form[onsubmit="updateDeliveryStatus(event)"]');
-    if (updateForm) {
-        updateForm.scrollIntoView({ behavior: 'smooth' });
-    }
+    // Filter deliveries that can be updated
+    const updateableDeliveries = deliveries.filter(delivery => 
+        !['delivered', 'failed'].includes(delivery.status)
+    );
+    
+    updateableDeliveries.forEach(delivery => {
+        const option = document.createElement('option');
+        option.value = delivery.id;
+        
+        const order = orders.find(o => o.id === delivery.order_id);
+        const orderInfo = order ? `Order #${order.id}` : `Delivery #${delivery.id}`;
+        
+        option.textContent = `${orderInfo} - ${delivery.status}`;
+        deliverySelect.appendChild(option);
+    });
 }
 
-// Update delivery status with enhanced location tracking
+// Update delivery status
 async function updateDeliveryStatus(event) {
     event.preventDefault();
-    
-    const submitBtn = event.target.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = 'Updating...';
-    submitBtn.disabled = true;
     
     const deliveryId = document.getElementById('deliverySelect').value;
     const newStatus = document.getElementById('newStatus').value;
     const location = document.getElementById('location').value;
     const notes = document.getElementById('statusNotes').value;
     
+    if (!deliveryId || !newStatus) {
+        showNotification('Please select delivery and status', 'error');
+        return;
+    }
+    
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Updating...';
+    submitBtn.disabled = true;
+    
     try {
-        // Get current GPS location if available
-        let gpsLocation = null;
-        if (navigator.geolocation && ['in_transit', 'out_for_delivery'].includes(newStatus)) {
-            try {
-                const position = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
-                });
-                gpsLocation = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                };
-            } catch (gpsError) {
-                console.warn('Could not get GPS location:', gpsError);
-            }
-        }
-        
-        const statusData = {
+        const updateData = {
             status: newStatus,
             current_location: location,
             notes: notes,
-            gps_coordinates: gpsLocation,
-            updated_by: currentUser.id,
-            timestamp: new Date().toISOString()
+            updated_at: new Date().toISOString()
         };
         
-        await apiClient.updateDeliveryStatus(deliveryId, statusData);
-        console.log('Delivery status updated:', deliveryId, newStatus);
+        const response = await apiClient.updateDeliveryStatus(deliveryId, updateData);
+        console.log('Delivery status updated:', response);
         
-        // Update local tracking data
-        if (gpsLocation) {
-            trackingData[deliveryId] = {
-                ...gpsLocation,
-                lastUpdate: new Date().toISOString()
-            };
-        }
-        
-        alert(`Delivery ${deliveryId} status updated to: ${newStatus}${gpsLocation ? '\nGPS location recorded' : ''}`);
+        showNotification('Delivery status updated successfully!', 'success');
         
         // Reset form
         event.target.reset();
-        await Promise.all([loadDeliveries(), loadLogisticsStats()]);
+        
+        // Reload data
+        await loadLogisticsData();
         
     } catch (error) {
         console.error('Error updating delivery status:', error);
-        alert('Failed to update delivery status: ' + error.message);
+        showNotification('Failed to update delivery status: ' + error.message, 'error');
     } finally {
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
     }
 }
 
+// Update delivery location
+function updateDeliveryLocation(deliveryId) {
+    const delivery = deliveries.find(d => d.id === deliveryId);
+    if (!delivery) {
+        showNotification('Delivery not found', 'error');
+        return;
+    }
+    
+    const newLocation = prompt('Enter current location:', delivery.current_location || '');
+    if (newLocation === null) return; // User cancelled
+    
+    // Update delivery location
+    updateDeliveryWithLocation(deliveryId, newLocation);
+}
+
+// Update delivery with location
+async function updateDeliveryWithLocation(deliveryId, location) {
+    try {
+        const updateData = {
+            current_location: location,
+            updated_at: new Date().toISOString()
+        };
+        
+        await apiClient.updateDeliveryStatus(deliveryId, updateData);
+        showNotification('Location updated successfully!', 'success');
+        
+        // Reload data
+        await loadLogisticsData();
+        
+    } catch (error) {
+        console.error('Error updating location:', error);
+        showNotification('Failed to update location: ' + error.message, 'error');
+    }
+}
+
+// View delivery details
+function viewDeliveryDetails(deliveryId) {
+    const delivery = deliveries.find(d => d.id === deliveryId);
+    if (!delivery) {
+        showNotification('Delivery not found', 'error');
+        return;
+    }
+    
+    const order = orders.find(o => o.id === delivery.order_id);
+    
+    let details = `Delivery #${delivery.id}\n`;
+    details += `Status: ${delivery.status}\n`;
+    details += `Priority: ${delivery.priority || 'medium'}\n`;
+    details += `Address: ${delivery.delivery_address}\n`;
+    
+    if (delivery.current_location) {
+        details += `Current Location: ${delivery.current_location}\n`;
+    }
+    
+    if (delivery.scheduled_date) {
+        details += `Scheduled: ${new Date(delivery.scheduled_date).toLocaleString()}\n`;
+    }
+    
+    if (order) {
+        details += `\nOrder Details:\n`;
+        details += `Order #${order.id}\n`;
+        details += `Customer: ${order.user?.name || 'Unknown'}\n`;
+        details += `Total: Ksh${parseFloat(order.total_amount || 0).toFixed(2)}\n`;
+        
+        if (order.items) {
+            details += `Items:\n`;
+            order.items.forEach(item => {
+                details += `- ${item.name}: ${item.quantity} units\n`;
+            });
+        }
+    }
+    
+    alert(details);
+}
+
 // Refresh deliveries
 async function refreshDeliveries() {
-    alert('Refreshing delivery data...');
-    await Promise.all([loadDeliveries(), loadLogisticsStats()]);
+    showNotification('Refreshing deliveries...', 'info');
+    await loadLogisticsData();
+    showNotification('Deliveries refreshed!', 'success');
+}
+
+// Start real-time updates
+function startRealTimeUpdates() {
+    // Update deliveries every 2 minutes
+    setInterval(async () => {
+        try {
+            await loadLogisticsData();
+            console.log('Real-time update completed');
+        } catch (error) {
+            console.error('Real-time update failed:', error);
+        }
+    }, 120000); // 2 minutes
 }
 
 // Logout function
@@ -452,11 +383,26 @@ function logout() {
     window.location.href = 'index.html';
 }
 
+// Notification system
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        type === 'info' ? 'bg-blue-500 text-white' :
+        'bg-gray-500 text-white'
+    }`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+
 // Make functions globally available
-window.startDelivery = startDelivery;
-window.trackDelivery = trackDelivery;
-window.viewRoute = viewRoute;
-window.updateStatus = updateStatus;
 window.updateDeliveryStatus = updateDeliveryStatus;
+window.updateDeliveryLocation = updateDeliveryLocation;
+window.viewDeliveryDetails = viewDeliveryDetails;
 window.refreshDeliveries = refreshDeliveries;
 window.logout = logout;

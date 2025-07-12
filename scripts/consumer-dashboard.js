@@ -127,12 +127,16 @@ function displayProducts(productsToShow) {
             <p class="text-gray-600 text-sm mb-3">${product.description || 'No description available'}</p>
             <div class="flex justify-between items-center mb-3">
                 <span class="font-bold text-lg text-green-600">Ksh${parseFloat(product.price || 0).toFixed(2)}</span>
-                <span class="text-sm text-gray-500">Stock: ${product.quantity || 0}</span>
+                <span class="text-sm ${product.quantity > 0 ? 'text-gray-500' : 'text-red-500'}">
+                    Stock: ${product.quantity || 0}
+                </span>
             </div>
             <div class="flex justify-between items-center">
                 <span class="text-xs text-gray-500 capitalize">${product.category || 'Uncategorized'}</span>
-                <button class="btn-primary text-sm" onclick="addToCart(${product.id})">
-                    Add to Cart
+                <button class="btn-primary text-sm ${product.quantity <= 0 ? 'opacity-50 cursor-not-allowed' : ''}" 
+                        onclick="addToCart(${product.id})" 
+                        ${product.quantity <= 0 ? 'disabled' : ''}>
+                    ${product.quantity <= 0 ? 'Out of Stock' : 'Add to Cart'}
                 </button>
             </div>
         </div>
@@ -145,7 +149,7 @@ async function loadConsumerStats() {
         const ordersResponse = await apiClient.getOrders();
         const ordersList = apiClient.extractArrayData(ordersResponse) || [];
         
-        // Filter orders for current user if user_id is available
+        // Filter orders for current user
         const userOrders = ordersList.filter(order => 
             order.user_id == currentUser.id || 
             order.customer_email === currentUser.email
@@ -218,19 +222,30 @@ function searchProducts() {
     displayProducts(filteredProducts);
 }
 
-// Add to cart
+// Add to cart with stock validation
 function addToCart(productId) {
   const product = products.find(p => p.id === productId);
   if (!product) return showNotification('Product not found','error');
+  
+  if (product.quantity <= 0) {
+    return showNotification('Product is out of stock', 'error');
+  }
 
   const existing = cart.find(i => i.id === productId);
+  const currentQty = existing ? existing.quantity : 0;
+  
+  if (currentQty >= product.quantity) {
+    return showNotification(`Only ${product.quantity} units available in stock`, 'error');
+  }
+
   if (existing) existing.quantity += 1;
   else cart.push({ 
     id: product.id, 
     name: product.name, 
     price: parseFloat(product.price), 
     quantity: 1,
-    product_id: product.id 
+    product_id: product.id,
+    max_stock: product.quantity
   });
 
   localStorage.setItem(getCartKey(), JSON.stringify(cart));
@@ -260,11 +275,14 @@ function showCart() {
                 <div>
                     <h4 class="font-medium">${item.name}</h4>
                     <p class="text-sm text-gray-600">Ksh${parseFloat(item.price).toFixed(2)} x ${item.quantity}</p>
+                    ${item.max_stock ? `<p class="text-xs text-gray-500">Stock: ${item.max_stock}</p>` : ''}
                 </div>
                 <div class="flex items-center gap-2">
                     <button class="btn-secondary text-sm" onclick="updateCartQuantity(${item.id}, -1)">-</button>
                     <span>${item.quantity}</span>
-                    <button class="btn-secondary text-sm" onclick="updateCartQuantity(${item.id}, 1)">+</button>
+                    <button class="btn-secondary text-sm ${item.quantity >= (item.max_stock || 999) ? 'opacity-50 cursor-not-allowed' : ''}" 
+                            onclick="updateCartQuantity(${item.id}, 1)"
+                            ${item.quantity >= (item.max_stock || 999) ? 'disabled' : ''}>+</button>
                     <button class="btn-danger text-sm ml-2" onclick="removeFromCart(${item.id})">Remove</button>
                 </div>
             </div>
@@ -275,17 +293,26 @@ function showCart() {
     modal.classList.add('active');
 }
 
-// Update cart quantity
+// Update cart quantity with stock validation
 function updateCartQuantity(productId, change) {
   const item = cart.find(i => i.id === productId);
   if (item) {
-    item.quantity += change;
-    if (item.quantity <= 0) removeFromCart(productId);
-    else {
-      localStorage.setItem(getCartKey(), JSON.stringify(cart));
-      showCart();
-      updateCartCount();
+    const newQuantity = item.quantity + change;
+    
+    if (newQuantity <= 0) {
+      removeFromCart(productId);
+      return;
     }
+    
+    if (item.max_stock && newQuantity > item.max_stock) {
+      showNotification(`Only ${item.max_stock} units available in stock`, 'error');
+      return;
+    }
+    
+    item.quantity = newQuantity;
+    localStorage.setItem(getCartKey(), JSON.stringify(cart));
+    showCart();
+    updateCartCount();
   }
 }
 
@@ -376,13 +403,19 @@ function showPaymentForm(paymentMethod) {
                     <label for="mpesaPhone">M-Pesa Phone Number</label>
                     <input type="tel" id="mpesaPhone" placeholder="254712345678" required>
                 </div>
-                <div class="bg-blue-50 p-3 rounded">
-                    <h5 class="font-medium text-blue-800 mb-2">Payment Instructions:</h5>
-                    <ol class="text-sm text-blue-700 list-decimal list-inside space-y-1">
-                        <li>You will receive an STK push notification</li>
-                        <li>Enter your M-Pesa PIN to complete payment</li>
-                        <li>You will receive confirmation via SMS</li>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <h5 class="font-medium text-green-800 mb-2">Payment Instructions:</h5>
+                    <ol class="text-sm text-green-700 list-decimal list-inside space-y-1">
+                        <li>Enter your M-Pesa registered phone number above</li>
+                        <li>You will receive an STK push notification on your phone</li>
+                        <li>Enter your M-Pesa PIN to complete the payment</li>
+                        <li>You will receive a confirmation SMS from M-Pesa</li>
                     </ol>
+                    <div class="mt-3 p-3 bg-green-100 rounded border-l-4 border-green-500">
+                        <p class="text-sm font-medium text-green-800">
+                            Total Amount: Ksh${cart.reduce((sum, i) => sum + (i.price * i.quantity), 0) + 50}
+                        </p>
+                    </div>
                 </div>
             </div>
         `;
@@ -414,7 +447,7 @@ async function placeOrder(event) {
             })),
             delivery_address: document.getElementById('deliveryAddress').value,
             phone: document.getElementById('phoneNumber').value,
-            payment_method: paymentMethod,
+            payment_method: paymentMethod === 'mpesa' ? 'mobile_money' : paymentMethod, // Map mpesa to mobile_money for backend
             total_amount: cart.reduce((sum, i) => sum + (i.price * i.quantity), 0) + 50
         };
 
@@ -434,11 +467,11 @@ async function placeOrder(event) {
         
         // Handle M-Pesa STK push
         if (paymentMethod === 'mpesa') {
-            showNotification('STK push sent to your phone. Please complete payment.', 'info');
-            // You can add STK push status checking here
+            showNotification('STK push sent to your phone. Please complete payment on your device.', 'info');
+        } else {
+            showNotification('Order placed successfully!', 'success');
         }
         
-        showNotification('Order placed successfully!', 'success');
         cart = [];
         localStorage.removeItem(getCartKey());
         updateCartCount();
@@ -448,7 +481,11 @@ async function placeOrder(event) {
         
     } catch (error) {
         console.error('Error placing order:', error);
-        showNotification('Failed to place order: ' + error.message, 'error');
+        let errorMessage = 'Failed to place order';
+        if (error.message.includes('Insufficient stock')) {
+            errorMessage = 'Some items in your cart are no longer available. Please check stock and try again.';
+        }
+        showNotification(errorMessage + ': ' + error.message, 'error');
     } finally {
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
