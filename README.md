@@ -75,27 +75,7 @@ AgriLink is a multi-role agricultural platform built with vanilla HTML, CSS, and
 ### File Serving
 Make sure all files are served from a web server (not file:// protocol) to avoid CORS issues with local storage and script loading.
 
-## Deployment
 
-Since this is a static web application, it can be deployed to:
-- GitHub Pages
-- Netlify
-- Vercel
-- Any static hosting service
-
-## Browser Compatibility
-
-- Modern browsers (Chrome, Firefox, Safari, Edge)
-- ES6+ features used
-- Local Storage API required
-
-## Future Enhancements
-
-- Backend integration for real data persistence
-- API integration for real-time market data
-- Enhanced security with proper authentication
-- Mobile app development
-- Real-time notifications
 
 ## Contributing
 
