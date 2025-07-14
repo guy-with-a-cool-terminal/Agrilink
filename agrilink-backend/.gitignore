@@ -41,3 +41,5 @@ Homestead.yaml
 
 # Windows system files
 Thumbs.db
+.env.docker
+.env.docker

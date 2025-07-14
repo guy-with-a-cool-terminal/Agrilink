@@ -25,3 +25,4 @@ dist-ssr
 vendor/
 vendor
 storage
+.env.docker
