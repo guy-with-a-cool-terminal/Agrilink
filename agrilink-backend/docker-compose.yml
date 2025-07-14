@@ -1,0 +1,59 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: laravel-app
+    container_name: laravel-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    ports:
+      - "8000:8000"                # <-- changed from "8000:9000"
+    command: php artisan serve --host=0.0.0.0 --port=8000  # <-- added this line
+    networks:
+      - laravel-network
+    # depends_on:
+    #   - mysql
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # mysql:
+  #   image: mysql:8.0
+  #   container_name: laravel-mysql
+  #   restart: unless-stopped
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+  #     MYSQL_DATABASE: ${DB_DATABASE}
+  #     MYSQL_USER: ${DB_USERNAME}
+  #     MYSQL_PASSWORD: ${DB_PASSWORD}
+  #   ports:
+  #     - "3307:3306"
+  #   volumes:
+  #     - mysql-data:/var/lib/mysql
+  #   networks:
+  #     - laravel-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: laravel-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: host.docker.internal
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    ports:
+      - "8080:80"
+    # depends_on:
+    #   - mysql
+    networks:
+      - laravel-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+# volumes:
+#   mysql-data:
+
+networks:
+  laravel-network:
+    driver: bridge

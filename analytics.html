@@ -1,69 +1,68 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analytics Dashboard - AgriLink</title>
+    <link rel="stylesheet" href="styles/tailwind-output.css">
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/dashboard.css">
 </head>
-<body>
+<body class="bg-gray-50">
     <div class="dashboard active">
         <header class="dashboard-header">
             <nav class="dashboard-nav">
                 <h1 class="dashboard-title">📊 Analytics Dashboard</h1>
                 <div class="user-info">
                     <button class="btn-secondary" onclick="window.close()" style="margin-right: 10px;">Close</button>
-                    <span>Analytics View</span>
+                    <span class="text-gray-700 font-medium">Analytics View</span>
                 </div>
             </nav>
         </header>
 
         <div class="dashboard-content">
             <!-- Time Range Filter -->
-            <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
-                    <label>Time Range:</label>
-                    <select id="timeRange" onchange="updateCharts()">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+                <div class="flex flex-wrap gap-4 items-center">
+                    <label class="font-medium text-gray-700">Time Range:</label>
+                    <select id="timeRange" onchange="updateCharts()" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
                         <option value="7">Last 7 Days</option>
                         <option value="30" selected>Last 30 Days</option>
                         <option value="90">Last 3 Months</option>
                         <option value="365">Last Year</option>
                     </select>
-                    <button class="btn-primary" onclick="refreshData()" style="padding: 8px 16px;">Refresh Data</button>
-                    <button class="btn-secondary" onclick="exportAnalytics()" style="padding: 8px 16px;">Export Report</button>
+                    <button class="btn-primary" onclick="refreshData()">Refresh Data</button>
+                    <button class="btn-secondary" onclick="exportAnalytics()">Export Report</button>
                 </div>
             </div>
 
             <!-- Key Metrics -->
             <div class="stats-grid">
                 <div class="stat-card">
-                    <h3 id="totalSales">Ksh4,25,680</h3>
-                    <p>Total Sales</p>
-                    <small style="color: #28a745;">↑ 12.5% from last month</small>
+                    <h3 id="totalSales" class="text-3xl font-bold text-gray-900">Ksh4,25,680</h3>
+                    <p class="text-gray-600">Total Sales</p>
+                    <small class="text-green-600 font-medium">↑ 12.5% from last month</small>
                 </div>
                 <div class="stat-card">
-                    <h3 id="totalOrders">1,347</h3>
-                    <p>Total Orders</p>
-                    <small style="color: #28a745;">↑ 8.3% from last month</small>
+                    <h3 id="totalOrders" class="text-3xl font-bold text-gray-900">1,347</h3>
+                    <p class="text-gray-600">Total Orders</p>
+                    <small class="text-green-600 font-medium">↑ 8.3% from last month</small>
                 </div>
                 <div class="stat-card">
-                    <h3 id="activeUsers">2,156</h3>
-                    <p>Active Users</p>
-                    <small style="color: #28a745;">↑ 15.2% from last month</small>
+                    <h3 id="activeUsers" class="text-3xl font-bold text-gray-900">2,156</h3>
+                    <p class="text-gray-600">Active Users</p>
+                    <small class="text-green-600 font-medium">↑ 15.2% from last month</small>
                 </div>
                 <div class="stat-card">
-                    <h3 id="avgOrderValue">Ksh316</h3>
-                    <p>Avg Order Value</p>
-                    <small style="color: #dc3545;">↓ 2.1% from last month</small>
+                    <h3 id="avgOrderValue" class="text-3xl font-bold text-gray-900">Ksh316</h3>
+                    <p class="text-gray-600">Avg Order Value</p>
+                    <small class="text-red-600 font-medium">↓ 2.1% from last month</small>
                 </div>
             </div>
 
             <!-- Sales Trend Chart -->
             <div class="chart-container">
-                <h3 style="margin-bottom: 20px;">Sales Trend</h3>
-                <div class="chart-placeholder">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">Sales Trend</h3>
+                <div class="chart-placeholder h-80">
                     📈 Interactive Line Chart<br>
                     <small>Shows daily/weekly/monthly sales trends<br>
                     Integration: Chart.js, D3.js, or similar charting library</small>
@@ -71,11 +70,11 @@
             </div>
 
             <!-- Charts Grid -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 30px; margin-bottom: 30px;">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                 <!-- Product Categories Chart -->
                 <div class="chart-container">
-                    <h3 style="margin-bottom: 20px;">Top Product Categories</h3>
-                    <div class="chart-placeholder" style="height: 250px;">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-6">Top Product Categories</h3>
+                    <div class="chart-placeholder h-64">
                         🥧 Pie Chart<br>
                         <small>Vegetables: 35%<br>Fruits: 28%<br>Grains: 20%<br>Dairy: 12%<br>Spices: 5%</small>
                     </div>
@@ -83,8 +82,8 @@
 
                 <!-- User Growth Chart -->
                 <div class="chart-container">
-                    <h3 style="margin-bottom: 20px;">User Growth</h3>
-                    <div class="chart-placeholder" style="height: 250px;">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-6">User Growth</h3>
+                    <div class="chart-placeholder h-64">
                         📊 Bar Chart<br>
                         <small>Monthly new user registrations<br>by role and region</small>
                     </div>
@@ -238,6 +237,7 @@
         </div>
     </div>
 
+    <script src="scripts/api-client.js"></script>
     <script src="scripts/analytics.js"></script>
 </body>
 </html>

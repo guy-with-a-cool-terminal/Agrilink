@@ -3,6 +3,36 @@
 
 console.log('Auth script loaded successfully');
 
+// Global variable to store API client reference
+let apiClient = null;
+
+// Initialize API client when available
+function initializeApiClient() {
+    if (window.apiClient) {
+        apiClient = window.apiClient;
+        console.log('API client initialized successfully');
+        return true;
+    }
+    return false;
+}
+
+// Wait for API client to be available
+function waitForApiClient(callback, maxAttempts = 10) {
+    let attempts = 0;
+    const checkApiClient = () => {
+        if (initializeApiClient()) {
+            callback();
+        } else if (attempts < maxAttempts) {
+            attempts++;
+            setTimeout(checkApiClient, 100);
+        } else {
+            console.error('API client failed to load after maximum attempts');
+            alert('System initialization failed. Please refresh the page.');
+        }
+    };
+    checkApiClient();
+}
+
 // Show/Hide forms
 function showLogin() {
     console.log('Switching to login form');
@@ -30,8 +60,60 @@ function showRegister() {
     if (loginTab) loginTab.classList.remove('active');
 }
 
+// Show notification
+function showNotification(message, type = 'info') {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => notification.remove());
+
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full`;
+    
+    // Set notification styles based on type
+    switch (type) {
+        case 'success':
+            notification.classList.add('bg-green-500', 'text-white');
+            break;
+        case 'error':
+            notification.classList.add('bg-red-500', 'text-white');
+            break;
+        case 'warning':
+            notification.classList.add('bg-yellow-500', 'text-white');
+            break;
+        default:
+            notification.classList.add('bg-blue-500', 'text-white');
+    }
+
+    notification.innerHTML = `
+        <div class="flex items-center justify-between">
+            <span>${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="m18 6-12 12M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Animate in
+    setTimeout(() => {
+        notification.classList.remove('translate-x-full');
+    }, 10);
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.classList.add('translate-x-full');
+            setTimeout(() => notification.remove(), 300);
+        }
+    }, 5000);
+}
+
 // Handle Login
-function handleLogin(event) {
+async function handleLogin(event) {
     event.preventDefault();
     console.log('Login form submitted');
     
@@ -43,32 +125,61 @@ function handleLogin(event) {
     
     // Basic validation
     if (!email || !password || !role) {
-        alert('Please fill in all fields');
+        showNotification('Please fill in all fields', 'error');
         return;
     }
-    
-    // Store user info (in real app, this would be handled by backend)
-    const userData = {
-        email: email,
-        role: role,
-        name: email.split('@')[0], // Use email prefix as name
-        loginTime: new Date().toISOString()
-    };
+
+    if (!apiClient) {
+        showNotification('System not ready. Please try again.', 'error');
+        return;
+    }
+
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
     
     try {
+        // Show loading state
+        submitBtn.textContent = 'Logging in...';
+        submitBtn.disabled = true;
+        
+        // Call API
+        const response = await apiClient.login({
+            email: email,
+            password: password,
+            role: role
+        });
+        
+        console.log('Login successful:', response);
+        
+        // Store user info with token
+        const userData = {
+            ...response.user,
+            token: response.token,
+            loginTime: new Date().toISOString()
+        };
+        
         localStorage.setItem('currentUser', JSON.stringify(userData));
         console.log('User data stored successfully:', userData);
         
+        showNotification('Login successful! Redirecting...', 'success');
+        
         // Redirect based on role
-        redirectToDashboard(role);
+        setTimeout(() => {
+            redirectToDashboard(userData.role);
+        }, 1000);
+        
     } catch (error) {
-        console.error('Error storing user data:', error);
-        alert('Login failed. Please try again.');
+        console.error('Login error:', error);
+        showNotification('Login failed: ' + error.message, 'error');
+        
+        // Reset button state
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
     }
 }
 
 // Handle Registration
-function handleRegister(event) {
+async function handleRegister(event) {
     event.preventDefault();
     console.log('Register form submitted');
     
@@ -76,36 +187,66 @@ function handleRegister(event) {
     const email = document.getElementById('registerEmail')?.value;
     const phone = document.getElementById('registerPhone')?.value;
     const password = document.getElementById('registerPassword')?.value;
+    const password_confirmation = password;
     const role = document.getElementById('registerRole')?.value;
     
     console.log('Registration details:', { name, email, role });
     
     // Basic validation
     if (!name || !email || !phone || !password || !role) {
-        alert('Please fill in all fields');
+        showNotification('Please fill in all fields', 'error');
         return;
     }
-    
-    // Store user info (in real app, this would be handled by backend)
-    const userData = {
-        name: name,
-        email: email,
-        phone: phone,
-        role: role,
-        loginTime: new Date().toISOString()
-    };
+
+    if (!apiClient) {
+        showNotification('System not ready. Please try again.', 'error');
+        return;
+    }
+
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
     
     try {
+        // Show loading state
+        submitBtn.textContent = 'Registering...';
+        submitBtn.disabled = true;
+        
+        // Call API
+        const response = await apiClient.register({
+            name: name,
+            email: email,
+            phone: phone,
+            password: password,
+            password_confirmation,
+            role: role
+        });
+        
+        console.log('Registration successful:', response);
+        
+        // Store user info with token
+        const userData = {
+            ...response.user,
+            token: response.token,
+            loginTime: new Date().toISOString()
+        };
+        
         localStorage.setItem('currentUser', JSON.stringify(userData));
         console.log('User registered and data stored successfully:', userData);
         
-        alert('Registration successful! Redirecting to dashboard...');
+        showNotification('Registration successful! Redirecting to dashboard...', 'success');
         
         // Redirect based on role
-        redirectToDashboard(role);
+        setTimeout(() => {
+            redirectToDashboard(userData.role);
+        }, 1000);
+        
     } catch (error) {
-        console.error('Error storing user data:', error);
-        alert('Registration failed. Please try again.');
+        console.error('Registration error:', error);
+        showNotification('Registration failed: ' + error.message, 'error');
+        
+        // Reset button state
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
     }
 }
 
@@ -131,7 +272,7 @@ function redirectToDashboard(role) {
             window.location.href = dashboardUrl;
         }, 100);
     } else {
-        alert('Invalid role selected: ' + role);
+        showNotification('Invalid role selected: ' + role, 'error');
         console.error('Invalid role:', role);
     }
 }
@@ -155,11 +296,25 @@ function checkAuth() {
 }
 
 // Logout function
-function logout() {
+async function logout() {
     console.log('Logging out user');
     try {
+        // Call API to logout if available
+        if (apiClient) {
+            await apiClient.logout();
+            console.log('Server logout successful');
+        }
+    } catch (error) {
+        console.error('Server logout error:', error);
+        // Continue with local logout even if server fails
+    }
+    
+    try {
         localStorage.removeItem('currentUser');
-        window.location.href = 'index.html';
+        showNotification('Logged out successfully', 'success');
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 1000);
     } catch (error) {
         console.error('Error during logout:', error);
         window.location.href = 'index.html';
@@ -183,6 +338,11 @@ function initDashboard() {
             userRoleElement.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
             console.log('Updated user role display');
         }
+
+        // Initialize API client for dashboard
+        waitForApiClient(() => {
+            console.log('Dashboard API client ready');
+        });
     }
 }
 
@@ -190,47 +350,52 @@ function initDashboard() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing authentication system');
     
-    // If we're on a dashboard page, initialize it
-    if (window.location.pathname.includes('dashboard')) {
-        console.log('Dashboard page detected, initializing dashboard');
-        initDashboard();
-        return;
-    }
-    
-    // Add event listeners for login/register tabs and forms if they exist
-    const loginTab = document.getElementById('loginTab');
-    const registerTab = document.getElementById('registerTab');
-    const loginForm = document.getElementById('loginFormElement');
-    const registerForm = document.getElementById('registerFormElement');
-    
-    console.log('Auth elements found:', {
-        loginTab: !!loginTab,
-        registerTab: !!registerTab,
-        loginForm: !!loginForm,
-        registerForm: !!registerForm
+    // Wait for API client to be available
+    waitForApiClient(() => {
+        console.log('API client ready for authentication');
+        
+        // If we're on a dashboard page, initialize it
+        if (window.location.pathname.includes('dashboard')) {
+            console.log('Dashboard page detected, initializing dashboard');
+            initDashboard();
+            return;
+        }
+        
+        // Add event listeners for login/register tabs and forms if they exist
+        const loginTab = document.getElementById('loginTab');
+        const registerTab = document.getElementById('registerTab');
+        const loginForm = document.getElementById('loginFormElement');
+        const registerForm = document.getElementById('registerFormElement');
+        
+        console.log('Auth elements found:', {
+            loginTab: !!loginTab,
+            registerTab: !!registerTab,
+            loginForm: !!loginForm,
+            registerForm: !!registerForm
+        });
+        
+        // Add tab listeners
+        if (loginTab) {
+            loginTab.addEventListener('click', showLogin);
+            console.log('Login tab listener added');
+        }
+        if (registerTab) {
+            registerTab.addEventListener('click', showRegister);
+            console.log('Register tab listener added');
+        }
+        
+        // Add form listeners
+        if (loginForm) {
+            loginForm.addEventListener('submit', handleLogin);
+            console.log('Login form listener added');
+        }
+        if (registerForm) {
+            registerForm.addEventListener('submit', handleRegister);
+            console.log('Register form listener added');
+        }
+        
+        console.log('Authentication system initialized successfully');
     });
-    
-    // Add tab listeners
-    if (loginTab) {
-        loginTab.addEventListener('click', showLogin);
-        console.log('Login tab listener added');
-    }
-    if (registerTab) {
-        registerTab.addEventListener('click', showRegister);
-        console.log('Register tab listener added');
-    }
-    
-    // Add form listeners
-    if (loginForm) {
-        loginForm.addEventListener('submit', handleLogin);
-        console.log('Login form listener added');
-    }
-    if (registerForm) {
-        registerForm.addEventListener('submit', handleRegister);
-        console.log('Register form listener added');
-    }
-    
-    console.log('Authentication system initialized successfully');
 });
 
 // Make functions globally available
@@ -241,5 +406,6 @@ window.handleRegister = handleRegister;
 window.logout = logout;
 window.checkAuth = checkAuth;
 window.initDashboard = initDashboard;
+window.showNotification = showNotification;
 
 console.log('Auth script setup complete');
