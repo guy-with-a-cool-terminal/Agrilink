@@ -10,6 +10,7 @@ use App\Models\Promotion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class AdminController extends Controller
 {
@@ -123,18 +124,36 @@ class AdminController extends Controller
     public function updateUserStatus(Request $request, User $user): JsonResponse
     {
         try {
-            $validatedData = $request->validate([
-                'status' => 'required|in:active,inactive,suspended'
+            // Validate the request
+            $request->validate([
+                'status' => 'required|string|in:active,inactive,suspended'
             ]);
 
-            $user->update($validatedData);
+            // Prevent admins from suspending themselves
+            if ($user->id === auth()->id() && $request->status !== 'active') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You cannot change your own status'
+                ], 403);
+            }
+
+            // Update the user status
+            $user->update([
+                'status' => $request->status
+            ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'User status updated successfully',
-                'user' => $user
+                'user' => $user->fresh()
             ]);
 
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

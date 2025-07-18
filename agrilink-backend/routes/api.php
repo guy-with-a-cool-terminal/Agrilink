@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ use App\Http\Controllers\PromotionController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 // Public product routes (for browsing without authentication)
 Route::get('/products', [ProductController::class, 'index']);
@@ -124,4 +125,3 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/orders', [AdminController::class, 'orders']);
     });
 });
-

@@ -1,284 +1,336 @@
-// Centralized API Client - Single source of truth
+// API Client for AgriLink Application
+// Handles all API communication with proper error handling and token management
+
 class ApiClient {
     constructor() {
-        this.baseURL = 'http://127.0.0.1:8000/api';
-        this.endpoints = {
-            // Authentication
-            LOGIN: '/login',
-            REGISTER: '/register',
-            LOGOUT: '/logout',
-            USER: '/user',
-            
-            // Products
-            PRODUCTS: '/products',
-            PRODUCT: (id) => `/products/${id}`,
-            
-            // Orders
-            ORDERS: '/orders',
-            ORDER: (id) => `/orders/${id}`,
-            ORDER_STATUS: (id) => `/orders/${id}/status`,
-            
-            // Deliveries
-            DELIVERIES: '/deliveries',
-            DELIVERY: (id) => `/deliveries/${id}`,
-            DELIVERY_STATUS: (id) => `/deliveries/${id}/status`,
-            
-            // Admin
-            ADMIN_USERS: '/admin/users',
-            ADMIN_ANALYTICS: '/admin/analytics',
-            
-            // Promotions
-            PROMOTIONS: '/promotions'
-        };
-    }
-
-    getAuthToken() {
-        const user = localStorage.getItem('currentUser');
-        return user ? JSON.parse(user).token : null;
-    }
-
-    getHeaders(includeAuth = true) {
-        const headers = {
+        this.baseURL = 'http://localhost:8000/api';
+        this.token = localStorage.getItem('authToken');
+        
+        // Set up default headers
+        this.defaultHeaders = {
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
         };
-
-        if (includeAuth) {
-            const token = this.getAuthToken();
-            if (token) {
-                headers.Authorization = `Bearer ${token}`;
-            }
+        
+        if (this.token) {
+            this.defaultHeaders['Authorization'] = `Bearer ${this.token}`;
         }
-
-        return headers;
     }
 
-    async request(endpoint, options = {}) {
+    // Set authentication token
+    setToken(token) {
+        this.token = token;
+        localStorage.setItem('authToken', token);
+        this.defaultHeaders['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Remove authentication token
+    removeToken() {
+        this.token = null;
+        localStorage.removeItem('authToken');
+        delete this.defaultHeaders['Authorization'];
+    }
+
+    // Generic method to make API requests
+    async makeRequest(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
+        
         const config = {
-            ...options,
-            headers: this.getHeaders(options.auth !== false)
+            headers: { ...this.defaultHeaders, ...options.headers },
+            ...options
         };
 
         try {
-            console.log(`API Request: ${config.method || 'GET'} ${url}`);
+            console.log(`Making ${config.method || 'GET'} request to:`, url);
             const response = await fetch(url, config);
             
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            // Handle different response types
+            const contentType = response.headers.get('content-type');
+            let data;
+            
+            if (contentType && contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                data = await response.text();
             }
 
-            const data = await response.json();
-            console.log(`API Response:`, data);
+            console.log('API Response:', { status: response.status, data });
+
+            if (!response.ok) {
+                const error = new Error(data.message || data.error || `HTTP ${response.status}`);
+                error.status = response.status;
+                error.response = data;
+                throw error;
+            }
+
             return data;
         } catch (error) {
-            console.error('API Request Error:', error);
+            console.error('API Error:', error);
+            
+            // Handle network errors
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                throw new Error('Network error: Please check your connection and try again.');
+            }
+            
+            // Handle authentication errors
+            if (error.status === 401) {
+                this.removeToken();
+                window.location.href = 'index.html';
+                return;
+            }
+            
             throw error;
         }
     }
 
-    // Helper method to extract array data from nested responses, including pagination
-    extractArrayData(response, key = 'data') {
-    // 1. Direct array response
-    if (Array.isArray(response)) {
-        return response;
+    // Helper method to extract array data from various response formats
+    extractArrayData(response) {
+        if (Array.isArray(response)) {
+            return response;
+        }
+        
+        if (response && typeof response === 'object') {
+            // Check common array property names
+            const arrayProperties = ['data', 'items', 'results', 'users', 'products', 'orders'];
+            
+            for (const prop of arrayProperties) {
+                if (Array.isArray(response[prop])) {
+                    return response[prop];
+                }
+            }
+            
+            // If response has pagination structure
+            if (response.data && Array.isArray(response.data.data)) {
+                return response.data.data;
+            }
+        }
+        
+        console.warn('Could not extract array from response:', response);
+        return [];
     }
 
-    // 2. Laravel pagination: { data: [...] }
-    if (response?.data && Array.isArray(response.data)) {
-        return response.data;
-    }
-
-    // 3. Nested Laravel-style: { data: { items: [...] } }
-    if (response?.data?.items && Array.isArray(response.data.items)) {
-        return response.data.items;
-    }
-
-    // 4. Products: { products: { data: [...] } }
-    if (response?.products?.data && Array.isArray(response.products.data)) {
-        return response.products.data;
-    }
-
-    // 5. Users: { users: { data: [...] } }
-    if (response?.users?.data && Array.isArray(response.users.data)) {
-        return response.users.data;
-    }
-
-    // 6. Direct key-based array
-    if (response && Array.isArray(response[key])) {
-        return response[key];
-    }
-
-    // 7. Fallback: top-level key holding paginated data
-    if (response?.[key]?.data && Array.isArray(response[key].data)) {
-        return response[key].data;
-    }
-
-    console.warn('Expected array data but received:', response);
-    return [];
-}
-
-    // Authentication methods
-    async login(credentials) {
-        return this.request(this.endpoints.LOGIN, {
-            method: 'POST',
-            body: JSON.stringify(credentials),
-            auth: false
-        });
-    }
-
+    // Authentication
     async register(userData) {
-        return this.request(this.endpoints.REGISTER, {
+        return this.makeRequest('/register', {
             method: 'POST',
-            body: JSON.stringify(userData),
-            auth: false
+            body: JSON.stringify(userData)
         });
+    }
+
+    async login(credentials) {
+        return this.makeRequest('/login', {
+            method: 'POST',
+            body: JSON.stringify(credentials)
+        });
+    }
+
+    async logout() {
+        const result = await this.makeRequest('/logout', { method: 'POST' });
+        this.removeToken();
+        return result;
     }
 
     async getUser() {
-        return this.request(this.endpoints.USER);
+        return this.makeRequest('/user');
     }
 
-    // Products methods
-    async getProducts() {
-        return this.request(this.endpoints.PRODUCTS);
-    }
-
-    async createProduct(productData) {
-        return this.request(this.endpoints.PRODUCTS, {
-            method: 'POST',
-            body: JSON.stringify(productData)
-        });
-    }
-
-    async updateProduct(id, productData) {
-        return this.request(this.endpoints.PRODUCT(id), {
-            method: 'PUT',
-            body: JSON.stringify(productData)
-        });
-    }
-
-    async deleteProduct(id) {
-        return this.request(this.endpoints.PRODUCT(id), {
-            method: 'DELETE'
-        });
-    }
-
-    // Orders methods
-    async getOrders() {
-        return this.request(this.endpoints.ORDERS);
-    }
-
-    async createOrder(orderData) {
-        try {
-            console.log('Creating order with data:', orderData);
-            const response = await this.request(this.endpoints.ORDERS, {
-                method: 'POST',
-                body: JSON.stringify(orderData)
-            });
-            console.log('Order created successfully:', response);
-            return response;
-        } catch (error) {
-            console.error('Error creating order:', error);
-            throw error;
-        }
-    }
-
-    async updateOrderStatus(id, status) {
-        return this.request(this.endpoints.ORDER_STATUS(id), {
-            method: 'PUT',
-            body: JSON.stringify({ status })
-        });
-    }
-
-    // Deliveries methods
-    async getDeliveries() {
-        return this.request(this.endpoints.DELIVERIES);
-    }
-
-    async updateDeliveryStatus(id, statusData) {
-        return this.request(this.endpoints.DELIVERY_STATUS(id), {
-            method: 'PUT',
-            body: JSON.stringify(statusData)
-        });
-    }
-
-    // Analytics methods
-    async getAnalytics() {
-        return this.request(this.endpoints.ADMIN_ANALYTICS);
-    }
-
-    // Admin methods - Fixed to use correct endpoint
+    // Users
     async getUsers() {
-        return this.request(this.endpoints.ADMIN_USERS);
-    }
-
-    async toggleUserStatus(userId) {
-        return this.request(`${this.endpoints.ADMIN_USERS}/${userId}/status`, {
-            method: 'PUT'
-        });
-    }
-
-    async deleteUser(userId) {
-        return this.request(`${this.endpoints.ADMIN_USERS}/${userId}`, {
-            method: 'DELETE'
-        });
+        return this.makeRequest('/admin/users');
     }
 
     async createUser(userData) {
-        return this.request(this.endpoints.ADMIN_USERS, {
+        return this.makeRequest('/register', {
             method: 'POST',
             body: JSON.stringify(userData)
         });
     }
 
     async updateUser(userId, userData) {
-        return this.request(`${this.endpoints.ADMIN_USERS}/${userId}`, {
+        return this.makeRequest(`/admin/users/${userId}`, {
             method: 'PUT',
             body: JSON.stringify(userData)
         });
     }
 
-    // Maintenance mode methods
+    async updateUserStatus(userId, status) {
+        return this.makeRequest(`/admin/users/${userId}/status`, {
+            method: 'PUT',
+            body: JSON.stringify({ status })
+        });
+    }
+
+    async deleteUser(userId) {
+        return this.makeRequest(`/admin/users/${userId}`, {
+            method: 'DELETE'
+        });
+    }
+
+    // Products
+    async getProducts() {
+        return this.makeRequest('/products');
+    }
+
+    async getProduct(productId) {
+        return this.makeRequest(`/products/${productId}`);
+    }
+
+    async createProduct(productData) {
+        return this.makeRequest('/products', {
+            method: 'POST',
+            body: JSON.stringify(productData)
+        });
+    }
+
+    async updateProduct(productId, productData) {
+        return this.makeRequest(`/products/${productId}`, {
+            method: 'PUT',
+            body: JSON.stringify(productData)
+        });
+    }
+
+    async deleteProduct(productId) {
+        return this.makeRequest(`/products/${productId}`, {
+            method: 'DELETE'
+        });
+    }
+
+    // Orders
+    async getOrders() {
+        return this.makeRequest('/orders');
+    }
+
+    async getOrder(orderId) {
+        return this.makeRequest(`/orders/${orderId}`);
+    }
+
+    async createOrder(orderData) {
+        return this.makeRequest('/orders', {
+            method: 'POST',
+            body: JSON.stringify(orderData)
+        });
+    }
+
+    async updateOrder(orderId, updateData) {
+        return this.makeRequest(`/orders/${orderId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updateData)
+        });
+    }
+
+    async cancelOrder(orderId) {
+        return this.makeRequest(`/orders/${orderId}/cancel`, {
+            method: 'POST'
+        });
+    }
+
+    // Deliveries
+    async getDeliveries() {
+        return this.makeRequest('/deliveries');
+    }
+
+    async trackDelivery(trackingNumber) {
+        return this.makeRequest(`/deliveries/track/${trackingNumber}`);
+    }
+
+    async assignDelivery(deliveryId, assignmentData) {
+        return this.makeRequest(`/deliveries/${deliveryId}/assign`, {
+            method: 'POST',
+            body: JSON.stringify(assignmentData)
+        });
+    }
+
+    async updateDeliveryStatus(deliveryId, statusData) {
+        return this.makeRequest(`/deliveries/${deliveryId}/status`, {
+            method: 'POST',
+            body: JSON.stringify(statusData)
+        });
+    }
+
+    // Promotions
+    async getPromotions() {
+        return this.makeRequest('/promotions');
+    }
+
+    async getPromotion(promotionId) {
+        return this.makeRequest(`/promotions/${promotionId}`);
+    }
+
+    async createPromotion(promotionData) {
+        return this.makeRequest('/promotions', {
+            method: 'POST',
+            body: JSON.stringify(promotionData)
+        });
+    }
+
+    async updatePromotion(promotionId, promotionData) {
+        return this.makeRequest(`/promotions/${promotionId}`, {
+            method: 'PUT',
+            body: JSON.stringify(promotionData)
+        });
+    }
+
+    async deletePromotion(promotionId) {
+        return this.makeRequest(`/promotions/${promotionId}`, {
+            method: 'DELETE'
+        });
+    }
+
+    async calculateDiscount(discountData) {
+        return this.makeRequest('/promotions/calculate-discount', {
+            method: 'POST',
+            body: JSON.stringify(discountData)
+        });
+    }
+
+    // Analytics
+    async getAnalytics() {
+        return this.makeRequest('/admin/analytics');
+    }
+
+    // Maintenance Mode
+    async getMaintenanceStatus() {
+        return this.makeRequest('/admin/maintenance/status');
+    }
+
     async enableMaintenanceMode() {
-        return this.request('/admin/maintenance/enable', {
+        return this.makeRequest('/admin/maintenance/enable', {
             method: 'POST'
         });
     }
 
     async disableMaintenanceMode() {
-        return this.request('/admin/maintenance/disable', {
+        return this.makeRequest('/admin/maintenance/disable', {
             method: 'POST'
         });
-    
     }
-     async getMaintenanceStatus() {
-        return this.request('/admin/maintenance/status', {
-            method: 'GET'
-        });
-    
-    }
-    
-    
 
-    // Messaging methods
-    async sendMessage(userId, message) {
-        return this.request(`/admin/messages`, {
+    // Payment processing
+    async processPayment(paymentData) {
+        return this.makeRequest('/payments/process', {
             method: 'POST',
-            body: JSON.stringify({
-                user_id: userId,
-                message: message
-            })
+            body: JSON.stringify(paymentData)
         });
     }
 
-    async getUserMessages() {
-        return this.request('/messages');
+    // Inventory management
+    async updateInventory(productId, inventoryData) {
+        return this.makeRequest(`/products/${productId}/inventory`, {
+            method: 'PUT',
+            body: JSON.stringify(inventoryData)
+        });
     }
 }
 
-// Prevent redeclaration by checking if already exists
-if (typeof window.apiClient === 'undefined') {
-    window.apiClient = new ApiClient();
+// Create and export a global instance
+const apiClient = new ApiClient();
+
+// Make it available globally for backward compatibility
+if (typeof window !== 'undefined') {
+    window.apiClient = apiClient;
+}
+
+// For module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = apiClient;
 }
