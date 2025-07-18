@@ -424,7 +424,7 @@ function showPaymentForm(paymentMethod) {
     checkoutForm.appendChild(formContainer);
 }
 
-// Place order with enhanced payment processing
+// Place order with enhanced payment processing and stock management
 async function placeOrder(event) {
     event.preventDefault();
     if (cart.length === 0) return showNotification('Your cart is empty','error');
@@ -438,6 +438,14 @@ async function placeOrder(event) {
     submitBtn.disabled = true;
 
     try {
+        // Validate stock availability before placing order
+        for (const item of cart) {
+            const product = products.find(p => p.id === item.id);
+            if (!product || product.quantity < item.quantity) {
+                throw new Error(`Insufficient stock for ${item.name}. Available: ${product?.quantity || 0}, Requested: ${item.quantity}`);
+            }
+        }
+
         const orderData = {
             items: cart.map(i => ({
                 product_id: i.product_id || i.id,
@@ -447,7 +455,9 @@ async function placeOrder(event) {
             })),
             delivery_address: document.getElementById('deliveryAddress').value,
             phone: document.getElementById('phoneNumber').value,
-            payment_method: paymentMethod === 'mpesa' ? 'mobile_money' : paymentMethod, // Map mpesa to mobile_money for backend
+            payment_method: paymentMethod === 'cod' ? 'cash_on_delivery' : 
+                          paymentMethod === 'mpesa' ? 'mobile_money' : 
+                          paymentMethod,
             total_amount: cart.reduce((sum, i) => sum + (i.price * i.quantity), 0) + 50
         };
 
@@ -468,24 +478,32 @@ async function placeOrder(event) {
         // Handle M-Pesa STK push
         if (paymentMethod === 'mpesa') {
             showNotification('STK push sent to your phone. Please complete payment on your device.', 'info');
+        } else if (paymentMethod === 'cod') {
+            showNotification('Order placed successfully! You will pay on delivery.', 'success');
         } else {
             showNotification('Order placed successfully!', 'success');
         }
         
+        // Clear cart and refresh data
         cart = [];
         localStorage.removeItem(getCartKey());
         updateCartCount();
         closeModal('checkoutModal');
         event.target.reset();
+        
+        // Reload products to reflect updated stock
+        await loadProducts();
         await loadConsumerStats();
         
     } catch (error) {
         console.error('Error placing order:', error);
         let errorMessage = 'Failed to place order';
         if (error.message.includes('Insufficient stock')) {
-            errorMessage = 'Some items in your cart are no longer available. Please check stock and try again.';
+            errorMessage = error.message;
+        } else if (error.message.includes('Invalid payment method')) {
+            errorMessage = 'Invalid payment method selected. Please choose a valid payment option.';
         }
-        showNotification(errorMessage + ': ' + error.message, 'error');
+        showNotification(errorMessage, 'error');
     } finally {
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
@@ -521,6 +539,57 @@ function showNotification(message, type = 'info') {
     setTimeout(() => {
         notification.remove();
     }, 5000);
+}
+
+// Display products in grid with enhanced stock visibility
+function displayProducts(productsToShow) {
+    const productGrid = document.getElementById('productGrid');
+    if (!productGrid) return;
+    
+    if (!Array.isArray(productsToShow) || productsToShow.length === 0) {
+        productGrid.innerHTML = `
+            <div class="col-span-full text-center py-12">
+                <div class="text-gray-400 text-4xl mb-4">🛒</div>
+                <p class="text-gray-600">No products available at the moment.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Filter out products with zero stock
+    const availableProducts = productsToShow.filter(product => (product.quantity || 0) > 0);
+    
+    if (availableProducts.length === 0) {
+        productGrid.innerHTML = `
+            <div class="col-span-full text-center py-12">
+                <div class="text-gray-400 text-4xl mb-4">📦</div>
+                <p class="text-gray-600">All products are currently out of stock. Please check back later.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    productGrid.innerHTML = availableProducts.map(product => `
+        <div class="product-card bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="product-image text-center text-4xl mb-3">🥬</div>
+            <h3 class="font-semibold text-lg mb-2">${product.name || 'Unnamed Product'}</h3>
+            <p class="text-gray-600 text-sm mb-3">${product.description || 'No description available'}</p>
+            <div class="flex justify-between items-center mb-3">
+                <span class="font-bold text-lg text-green-600">Ksh${parseFloat(product.price || 0).toFixed(2)}</span>
+                <span class="text-sm ${product.quantity > 5 ? 'text-gray-500' : 'text-orange-500'}">
+                    Stock: ${product.quantity || 0}
+                </span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-500 capitalize">${product.category || 'Uncategorized'}</span>
+                <button class="btn-primary text-sm" onclick="addToCart(${product.id})">
+                    Add to Cart
+                </button>
+            </div>
+            ${product.quantity <= 5 && product.quantity > 0 ? 
+                `<div class="mt-2 text-xs text-orange-600 bg-orange-50 p-2 rounded">⚠️ Only ${product.quantity} left!</div>` : ''}
+        </div>
+    `).join('');
 }
 
 // Make functions globally available

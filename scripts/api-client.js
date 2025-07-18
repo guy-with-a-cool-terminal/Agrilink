@@ -1,4 +1,3 @@
-
 // Centralized API Client - Single source of truth
 class ApiClient {
     constructor() {
@@ -120,8 +119,6 @@ class ApiClient {
     return [];
 }
 
-
-
     // Authentication methods
     async login(credentials) {
         return this.request(this.endpoints.LOGIN, {
@@ -174,10 +171,18 @@ class ApiClient {
     }
 
     async createOrder(orderData) {
-        return this.request(this.endpoints.ORDERS, {
-            method: 'POST',
-            body: JSON.stringify(orderData)
-        });
+        try {
+            console.log('Creating order with data:', orderData);
+            const response = await this.request(this.endpoints.ORDERS, {
+                method: 'POST',
+                body: JSON.stringify(orderData)
+            });
+            console.log('Order created successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error creating order:', error);
+            throw error;
+        }
     }
 
     async updateOrderStatus(id, status) {
@@ -213,6 +218,54 @@ class ApiClient {
         return this.request(`${this.endpoints.ADMIN_USERS}/${userId}/status`, {
             method: 'PUT'
         });
+    }
+
+    async deleteUser(userId) {
+        return this.request(`${this.endpoints.ADMIN_USERS}/${userId}`, {
+            method: 'DELETE'
+        });
+    }
+
+    async createUser(userData) {
+        return this.request(this.endpoints.ADMIN_USERS, {
+            method: 'POST',
+            body: JSON.stringify(userData)
+        });
+    }
+
+    async updateUser(userId, userData) {
+        return this.request(`${this.endpoints.ADMIN_USERS}/${userId}`, {
+            method: 'PUT',
+            body: JSON.stringify(userData)
+        });
+    }
+
+    // Maintenance mode methods
+    async enableMaintenanceMode() {
+        return this.request('/admin/maintenance/enable', {
+            method: 'POST'
+        });
+    }
+
+    async disableMaintenanceMode() {
+        return this.request('/admin/maintenance/disable', {
+            method: 'POST'
+        });
+    }
+
+    // Messaging methods
+    async sendMessage(userId, message) {
+        return this.request(`/admin/messages`, {
+            method: 'POST',
+            body: JSON.stringify({
+                user_id: userId,
+                message: message
+            })
+        });
+    }
+
+    async getUserMessages() {
+        return this.request('/messages');
     }
 }
 
