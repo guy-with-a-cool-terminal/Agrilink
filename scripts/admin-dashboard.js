@@ -25,15 +25,15 @@ async function initDashboard() {
         window.location.href = 'index.html';
         return;
     }
-    
+
     try {
         currentUser = JSON.parse(user);
-        console.log('Current user:', currentUser);
         if (currentUser.role !== 'admin') {
             alert('Access denied. Admin privileges required.');
             window.location.href = 'index.html';
             return;
         }
+        await checkMaintenanceStatus();
     } catch (error) {
         console.error('Error parsing user data:', error);
         window.location.href = 'index.html';
@@ -404,32 +404,39 @@ async function deleteUser(userId) {
 // Maintenance mode toggle
 async function toggleMaintenanceMode() {
     try {
-        maintenanceMode = !maintenanceMode;
-        
-        if (maintenanceMode) {
+        const action = maintenanceMode ? 'disable' : 'enable';
+        if (action === 'enable') {
             await apiClient.enableMaintenanceMode();
-            showNotification('Maintenance mode enabled. Users will see maintenance message.', 'info');
+            showNotification('Maintenance mode enabled.', 'info');
         } else {
             await apiClient.disableMaintenanceMode();
-            showNotification('Maintenance mode disabled. Application is now accessible.', 'success');
+            showNotification('Maintenance mode disabled.', 'success');
         }
-        
+
+        maintenanceMode = !maintenanceMode;
         updateMaintenanceButton();
-        
     } catch (error) {
         console.error('Error toggling maintenance mode:', error);
-        showNotification('Failed to toggle maintenance mode: ' + error.message, 'error');
-        maintenanceMode = !maintenanceMode; // Revert on error
+        showNotification(`Error: ${error.message}`, 'error');
     }
 }
 
-// Update maintenance button text
-function updateMaintenanceButton() {
-    const button = document.getElementById('maintenanceToggle');
-    if (button) {
-        button.textContent = maintenanceMode ? '🔧 Disable Maintenance' : '🔧 Enable Maintenance';
-        button.className = maintenanceMode ? 'btn-primary' : 'btn-secondary';
+// Call this on dashboard load
+async function checkMaintenanceStatus() {
+    try {
+        const status = await apiClient.getMaintenanceStatus();
+        maintenanceMode = !!status.maintenance;
+        updateMaintenanceButton();
+    } catch (error) {
+        console.error('Could not fetch maintenance status:', error);
     }
+}
+
+function updateMaintenanceButton() {
+    const btn = document.getElementById('maintenanceToggle');
+    if (!btn) return;
+    btn.textContent = maintenanceMode ? '🔧 Disable Maintenance' : '🔧 Enable Maintenance';
+    btn.className = maintenanceMode ? 'btn-primary' : 'btn-secondary';
 }
 
 // Show notification system

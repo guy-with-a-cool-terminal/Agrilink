@@ -251,7 +251,16 @@ class ApiClient {
         return this.request('/admin/maintenance/disable', {
             method: 'POST'
         });
+    
     }
+     async getMaintenanceStatus() {
+        return this.request('/admin/maintenance/status', {
+            method: 'GET'
+        });
+    
+    }
+    
+    
 
     // Messaging methods
     async sendMessage(userId, message) {

@@ -2,19 +2,14 @@
 
 namespace App\Http\Middleware;
 
-use Closure;
+use Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance as Middleware;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 
-class PreventRequestsDuringMaintenance
+class PreventRequestsDuringMaintenance extends Middleware
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
-    public function handle(Request $request, Closure $next): Response
+    protected function shouldPassThrough(Request $request): bool
     {
-        return $next($request);
+        return parent::shouldPassThrough($request)
+            || $request->is('api/admin/maintenance/disable');
     }
 }
