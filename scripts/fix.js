@@ -1,3 +1,4 @@
+// Centralized API Client - Single source of truth
 class ApiClient {
     constructor() {
         this.baseURL = 'http://127.0.0.1:8000/api';
@@ -77,7 +78,7 @@ class ApiClient {
         }
     }
 
-   // Helper method to extract array data from nested responses, including pagination
+    // Helper method to extract array data from nested responses, including pagination
     extractArrayData(response, key = 'data') {
     // 1. Direct array response
     if (Array.isArray(response)) {
@@ -118,9 +119,9 @@ class ApiClient {
     return [];
 }
 
- // Authentication
+    // Authentication methods
     async login(credentials) {
-        return this.request('/login', {
+        return this.request(this.endpoints.LOGIN, {
             method: 'POST',
             body: JSON.stringify(credentials),
             auth: false
@@ -128,52 +129,20 @@ class ApiClient {
     }
 
     async register(userData) {
-        return this.request('/register', {
+        return this.request(this.endpoints.REGISTER, {
             method: 'POST',
             body: JSON.stringify(userData),
             auth: false
         });
     }
 
-    
-
-    async logout() {
-        const result = await this.request('/logout', { method: 'POST' });
-        this.removeToken();
-        return result;
-    }
-
     async getUser() {
         return this.request(this.endpoints.USER);
     }
 
-    async updateUser(userId, userData) {
-        return this.request(`/admin/users/${userId}`, {
-            method: 'PUT',
-            body: JSON.stringify(userData)
-        });
-    }
-
-    async updateUserStatus(userId, status) {
-        return this.request(`/admin/users/${userId}/status`, {
-            method: 'PUT',
-            body: JSON.stringify({ status })
-        });
-    }
-
-    async deleteUser(userId) {
-        return this.request(`/admin/users/${userId}`, {
-            method: 'DELETE'
-        });
-    }
-
-    // Products
+    // Products methods
     async getProducts() {
         return this.request(this.endpoints.PRODUCTS);
-    }
-
-    async getProduct(productId) {
-        return this.request(`/products/${productId}`);
     }
 
     async createProduct(productData) {
@@ -196,13 +165,9 @@ class ApiClient {
         });
     }
 
-    // Orders
+    // Orders methods
     async getOrders() {
         return this.request(this.endpoints.ORDERS);
-    }
-
-    async getOrder(orderId) {
-        return this.request(`/orders/${orderId}`);
     }
 
     async createOrder(orderData) {
@@ -227,13 +192,7 @@ class ApiClient {
         });
     }
 
-    async cancelOrder(orderId) {
-        return this.request(`/orders/${orderId}/cancel`, {
-            method: 'POST'
-        });
-    }
-
-    // Deliveries
+    // Deliveries methods
     async getDeliveries() {
         return this.request(this.endpoints.DELIVERIES);
     }
@@ -245,65 +204,11 @@ class ApiClient {
         });
     }
 
-    async trackDelivery(trackingNumber) {
-        return this.request(this.endpoints.trackingNumber);
-    }
-
-    async assignDelivery(deliveryId, assignmentData) {
-        return this.request(`/deliveries/${deliveryId}/assign`, {
-            method: 'POST',
-            body: JSON.stringify(assignmentData)
-        });
-    }
-
-    async updateDeliveryStatus(deliveryId, statusData) {
-        return this.request(`/deliveries/${deliveryId}/status`, {
-            method: 'POST',
-            body: JSON.stringify(statusData)
-        });
-    }
-
-    // Promotions
-    async getPromotions() {
-        return this.request('/promotions');
-    }
-
-    async getPromotion(promotionId) {
-        return this.request(`/promotions/${promotionId}`);
-    }
-
-    async createPromotion(promotionData) {
-        return this.request('/promotions', {
-            method: 'POST',
-            body: JSON.stringify(promotionData)
-        });
-    }
-
-    async updatePromotion(promotionId, promotionData) {
-        return this.request(`/promotions/${promotionId}`, {
-            method: 'PUT',
-            body: JSON.stringify(promotionData)
-        });
-    }
-
-    async deletePromotion(promotionId) {
-        return this.request(`/promotions/${promotionId}`, {
-            method: 'DELETE'
-        });
-    }
-
-    async calculateDiscount(discountData) {
-        return this.request('/promotions/calculate-discount', {
-            method: 'POST',
-            body: JSON.stringify(discountData)
-        });
-    }
-
     // Analytics methods
     async getAnalytics() {
         return this.request(this.endpoints.ADMIN_ANALYTICS);
     }
-    
+
     // Admin methods - Fixed to use correct endpoint
     async getUsers() {
         return this.request(this.endpoints.ADMIN_USERS);
@@ -335,11 +240,7 @@ class ApiClient {
         });
     }
 
-    // Maintenance Mode
-    async getMaintenanceStatus() {
-        return this.request('/admin/maintenance/status');
-    }
-
+    // Maintenance mode methods
     async enableMaintenanceMode() {
         return this.request('/admin/maintenance/enable', {
             method: 'POST'
@@ -350,38 +251,34 @@ class ApiClient {
         return this.request('/admin/maintenance/disable', {
             method: 'POST'
         });
+    
     }
+     async getMaintenanceStatus() {
+        return this.request('/admin/maintenance/status', {
+            method: 'GET'
+        });
+    
+    }
+    
+    
 
-    // Payment processing
-    async processPayment(paymentData) {
-        return this.request('/payments/process', {
+    // Messaging methods
+    async sendMessage(userId, message) {
+        return this.request(`/admin/messages`, {
             method: 'POST',
-            body: JSON.stringify(paymentData)
+            body: JSON.stringify({
+                user_id: userId,
+                message: message
+            })
         });
     }
 
-    // Inventory management
-    async updateInventory(productId, inventoryData) {
-        return this.request(`/products/${productId}/inventory`, {
-            method: 'PUT',
-            body: JSON.stringify(inventoryData)
-        });
+    async getUserMessages() {
+        return this.request('/messages');
     }
 }
 
-// Create and export a global instance
-// const apiClient = new ApiClient();
-
-// Make it available globally for backward compatibility
-// if (typeof window !== 'undefined') {
-//     window.apiClient = apiClient;
-// }
-
+// Prevent redeclaration by checking if already exists
 if (typeof window.apiClient === 'undefined') {
     window.apiClient = new ApiClient();
-}
-
-// For module systems
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = apiClient;
 }
