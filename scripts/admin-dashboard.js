@@ -481,6 +481,21 @@ function showUsersError() {
         `;
     }
 }
+// Refresh all data
+async function refreshData() {
+    try {
+        await Promise.all([
+            loadRealTimeAnalytics(),
+            loadUsers(),
+            loadOrders(),
+            loadProducts()
+        ]);
+        showNotification('System Data refreshed with latest information!', 'success');
+    } catch (error) {
+        console.error('Error refreshing data:', error);
+        showNotification('Failed to refresh System Data!', 'error');
+    }
+}
 
 // Logout function
 function logout() {
@@ -495,6 +510,7 @@ window.deleteUser = deleteUser;
 window.toggleMaintenanceMode = toggleMaintenanceMode;
 window.viewOrderDetails = viewOrderDetails;
 window.updateOrderStatus = updateOrderStatus;
+window.refreshData = refreshData;
 window.refreshData = refreshData;
 window.loadUsers = loadUsers;
 window.logout = logout;
