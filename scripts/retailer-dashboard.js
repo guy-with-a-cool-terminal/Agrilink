@@ -271,9 +271,10 @@ async function placeBulkOrder(event) {
     const deliveryDate = document.getElementById('deliveryDate').value;
     const budgetRange = document.getElementById('budgetRange').value;
     const specialRequirements = document.getElementById('specialRequirements').value;
+    const paymentMethod = document.getElementById('bulkPaymentMethod').value;
     
-    if (!productId || !quantity || !deliveryDate || !budgetRange) {
-        showNotification('Please fill in all required fields', 'error');
+    if (!productId || !quantity || !deliveryDate || !budgetRange || !paymentMethod) {
+        showNotification('Please fill in all required fields including payment method', 'error');
         return;
     }
     
@@ -296,14 +297,21 @@ async function placeBulkOrder(event) {
         return;
     }
     
+    // Calculate and validate total cost
+    const totalAmount = quantity * parseFloat(selectedProduct.price);
+    const budgetMax = getBudgetMaximum(budgetRange);
+    
+    if (totalAmount > budgetMax) {
+        showNotification(`Total cost (Ksh${totalAmount.toLocaleString()}) exceeds your budget range. Please adjust quantity or budget.`, 'error');
+        return;
+    }
+    
     const submitBtn = event.target.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
     submitBtn.textContent = 'Placing Order...';
     submitBtn.disabled = true;
     
     try {
-        const totalAmount = quantity * parseFloat(selectedProduct.price);
-        
         const orderData = {
             items: [{
                 product_id: selectedProduct.id,
@@ -314,7 +322,9 @@ async function placeBulkOrder(event) {
             delivery_address: `Bulk delivery - Budget: ${budgetRange}${specialRequirements ? '. Requirements: ' + specialRequirements : ''}`,
             delivery_date: deliveryDate,
             phone: currentUser.phone || '254700000000',
-            payment_method: 'mpesa', // Default to M-Pesa for bulk orders
+            payment_method: paymentMethod === 'cod' ? 'cash_on_delivery' : 
+                          paymentMethod === 'mpesa' ? 'mobile_money' : 
+                          paymentMethod,
             total_amount: totalAmount,
             notes: `Bulk order for retail - ${specialRequirements || 'Standard bulk order'}`
         };
@@ -324,7 +334,13 @@ async function placeBulkOrder(event) {
         const response = await apiClient.createOrder(orderData);
         console.log('Bulk order created:', response);
         
-        showNotification('Bulk order placed successfully! You will receive M-Pesa payment instructions.', 'success');
+        if (paymentMethod === 'mpesa') {
+            showNotification('Bulk order placed successfully! STK push sent to your phone for payment.', 'success');
+        } else if (paymentMethod === 'cod') {
+            showNotification('Bulk order placed successfully! You will pay on delivery.', 'success');
+        } else {
+            showNotification('Bulk order placed successfully!', 'success');
+        }
         
         // Reset form
         event.target.reset();
@@ -332,14 +348,17 @@ async function placeBulkOrder(event) {
         // Reload data
         await loadRetailerData();
         
+        // Show delivery scheduling option
+        showDeliveryScheduling(response.order?.id);
+        
     } catch (error) {
         console.error('Error placing bulk order:', error);
         let errorMessage = 'Failed to place bulk order';
         
         if (error.message.includes('Insufficient stock')) {
             errorMessage = 'Insufficient stock available. Please check availability and try again.';
-        } else if (error.message.includes('payment method')) {
-            errorMessage = 'Payment method error. Please try again or contact support.';
+        } else if (error.message.includes('Invalid payment method')) {
+            errorMessage = 'Invalid payment method selected. Please choose a valid payment option.';
         } else if (error.message.includes('validation')) {
             errorMessage = 'Please check all fields and try again.';
         }
@@ -348,6 +367,39 @@ async function placeBulkOrder(event) {
     } finally {
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
+    }
+}
+
+// Get budget maximum value for validation
+function getBudgetMaximum(budgetRange) {
+    const budgetMap = {
+        '5000-10000': 10000,
+        '10000-25000': 25000,
+        '25000-50000': 50000,
+        '50000+': 100000
+    };
+    return budgetMap[budgetRange] || 10000;
+}
+
+// Show delivery scheduling form after successful order
+function showDeliveryScheduling(orderId) {
+    if (!orderId) return;
+    
+    const orderSelect = document.getElementById('orderSelect');
+    if (orderSelect) {
+        // Add the new order to the select dropdown
+        const option = document.createElement('option');
+        option.value = orderId;
+        option.textContent = `Order #${orderId} - Just Placed`;
+        option.selected = true;
+        orderSelect.appendChild(option);
+        
+        // Scroll to delivery scheduling section
+        document.querySelector('[onsubmit="scheduleDelivery(event)"]')?.scrollIntoView({ 
+            behavior: 'smooth' 
+        });
+        
+        showNotification('You can now schedule delivery for your order below.', 'info');
     }
 }
 

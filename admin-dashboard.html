@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,6 +16,9 @@
                 <div class="user-info">
                     <button class="btn-secondary" onclick="window.open('analytics.html', '_blank')" style="margin-right: 10px;">
                         📊 Analytics
+                    </button>
+                    <button id="maintenanceToggle" class="btn-secondary" onclick="toggleMaintenanceMode()" style="margin-right: 10px;">
+                        🔧 Enable Maintenance
                     </button>
                     <button class="btn-secondary" onclick="refreshData()" style="margin-right: 10px;">
                         🔄 Refresh
@@ -88,6 +92,9 @@
             <div class="table-container">
                 <div class="table-header">
                     <h3>Users Management</h3>
+                    <button class="btn-primary" onclick="showCreateUserModal()">
+                        + Create User
+                    </button>
                 </div>
                 <div class="overflow-x-auto">
                     <table id="usersTable">

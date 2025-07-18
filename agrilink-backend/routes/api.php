@@ -2,6 +2,9 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Cache;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OrderController;
@@ -26,6 +29,38 @@ Route::get('/products/categories', [ProductController::class, 'categories']);
 
 // Public delivery tracking
 Route::get('/deliveries/track/{trackingNumber}', [DeliveryController::class, 'track']);
+
+// 🔧 Custom Maintenance Mode Routes (moved outside auth - status should be public)
+Route::get('/admin/maintenance/status', function () {
+    // Use cache to store maintenance mode state instead of Laravel's built-in
+    $maintenance = Cache::get('maintenance_mode', false);
+    return response()->json([
+        'maintenance' => $maintenance
+    ]);
+});
+
+// Maintenance control routes (require admin auth)
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::post('/admin/maintenance/enable', function () {
+        // Store maintenance mode state in cache
+        Cache::put('maintenance_mode', true, now()->addDays(30));
+        
+        return response()->json([
+            'message' => 'Maintenance mode enabled',
+            'maintenance' => true
+        ]);
+    });
+
+    Route::post('/admin/maintenance/disable', function () {
+        // Remove maintenance mode state from cache
+        Cache::forget('maintenance_mode');
+        
+        return response()->json([
+            'message' => 'Maintenance mode disabled',
+            'maintenance' => false
+        ]);
+    });
+});
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -89,3 +124,4 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/orders', [AdminController::class, 'orders']);
     });
 });
+
