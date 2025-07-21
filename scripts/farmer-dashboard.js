@@ -78,11 +78,8 @@ async function loadDashboardData() {
         if (productsContainer) productsContainer.style.display = 'none';
         if (ordersContainer) ordersContainer.style.display = 'none';
         
-        await Promise.all([
-            loadProducts(),
-            loadFarmerOrders(),
-            loadFarmerStats()
-        ]);
+        await loadProducts();
+        await loadFarmerStats();
 
         // Hide loading state and show content
         if (loadingState) loadingState.style.display = 'none';
@@ -155,102 +152,23 @@ function displayProducts(productsToShow) {
     });
 }
 
-// Load farmer's orders
-async function loadFarmerOrders() {
-    try {
-        console.log('Loading farmer orders...');
-        const response = await apiClient.getOrders();
-        const allOrders = apiClient.extractArrayData(response) || [];
-        
-        // Filter orders that contain farmer's products
-        const farmerOrders = allOrders.filter(order => {
-            if (!order.order_items && !order.items) return false;
-            
-            const orderItems = order.order_items || order.items || [];
-            return orderItems.some(item => {
-                const product = products.find(p => p.id == item.product_id);
-                return product && product.farmer_id == currentUser.id;
-            });
-        });
-        
-        console.log('Farmer orders loaded:', farmerOrders);
-        displayFarmerOrders(farmerOrders);
-        
-        return farmerOrders;
-    } catch (error) {
-        console.error('Error loading farmer orders:', error);
-        displayFarmerOrders([]);
-        return [];
-    }
-}
-
-// Display farmer orders
-function displayFarmerOrders(ordersToShow) {
-    const ordersTableBody = document.querySelector('#farmerOrdersTable tbody');
-    if (!ordersTableBody) return;
-
-    ordersTableBody.innerHTML = '';
-
-    if (!Array.isArray(ordersToShow) || ordersToShow.length === 0) {
-        ordersTableBody.innerHTML = `
-            <tr>
-                <td colspan="5" class="text-center py-8">
-                    <div class="text-gray-400 text-4xl mb-4">📦</div>
-                    <p class="text-gray-500">No orders for your products yet</p>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-
-    ordersToShow.forEach(order => {
-        const row = document.createElement('tr');
-        const customerName = order.user?.name || 'Unknown Customer';
-        const orderDate = new Date(order.created_at).toLocaleDateString();
-        const statusClass = getOrderStatusClass(order.status);
-        
-        // Get farmer's products from this order
-        const orderItems = order.order_items || order.items || [];
-        const farmerItems = orderItems.filter(item => {
-            const product = products.find(p => p.id == item.product_id);
-            return product && product.farmer_id == currentUser.id;
-        });
-        
-        const itemsText = farmerItems.length === 1 
-            ? farmerItems[0].product?.name || 'Product'
-            : `${farmerItems.length} items`;
-        
-        row.innerHTML = `
-            <td>#${order.id}</td>
-            <td>${customerName}</td>
-            <td>${itemsText}</td>
-            <td><span class="status-${order.status} ${statusClass}">${order.status}</span></td>
-            <td>${orderDate}</td>
-        `;
-        ordersTableBody.appendChild(row);
-    });
-}
-
-// Get order status class
-function getOrderStatusClass(status) {
-    const statusClasses = {
-        'pending': 'bg-yellow-100 text-yellow-800',
-        'confirmed': 'bg-blue-100 text-blue-800',
-        'processing': 'bg-purple-100 text-purple-800',
-        'shipped': 'bg-orange-100 text-orange-800',
-        'delivered': 'bg-green-100 text-green-800',
-        'cancelled': 'bg-red-100 text-red-800'
-    };
-    return statusClasses[status] || 'bg-gray-100 text-gray-800';
-}
-
-// Load farmer-specific statistics
+// Load farmer-specific statistics (no admin analytics)
 async function loadFarmerStats() {
     try {
         console.log('Loading farmer stats...');
         
-        // Get farmer orders
-        const farmerOrders = await loadFarmerOrders();
+        // Get orders to calculate farmer-specific sales data
+        const ordersResponse = await apiClient.getOrders();
+        const ordersList = apiClient.extractArrayData(ordersResponse) || [];
+        
+        // Filter orders that contain farmer's products
+        const farmerOrders = ordersList.filter(order => {
+            if (!order.items) return false;
+            return order.items.some(item => {
+                const product = products.find(p => p.id == item.product_id);
+                return product && product.farmer_id == currentUser.id;
+            });
+        });
         
         // Calculate farmer-specific metrics
         const totalProducts = products.length;
@@ -264,20 +182,11 @@ async function loadFarmerStats() {
         
         farmerOrders.forEach(order => {
             const orderDate = new Date(order.created_at);
-            const orderItems = order.order_items || order.items || [];
-            
-            // Calculate farmer's portion of this order
-            const farmerAmount = orderItems
-                .filter(item => {
-                    const product = products.find(p => p.id == item.product_id);
-                    return product && product.farmer_id == currentUser.id;
-                })
-                .reduce((sum, item) => sum + parseFloat(item.total_price || 0), 0);
-            
-            totalSales += farmerAmount;
+            const orderAmount = parseFloat(order.total_amount) || 0;
+            totalSales += orderAmount;
             
             if (orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear) {
-                monthlyRevenue += farmerAmount;
+                monthlyRevenue += orderAmount;
             }
         });
         
@@ -285,7 +194,7 @@ async function loadFarmerStats() {
             ['pending', 'confirmed', 'processing'].includes(order.status)
         ).length;
 
-        // Update stats display
+        // Update stats display with farmer-specific data
         updateStatCard('totalProducts', totalProducts);
         updateStatCard('totalSales', `Ksh${totalSales.toFixed(2)}`);
         updateStatCard('pendingOrders', pendingOrders);
@@ -294,14 +203,16 @@ async function loadFarmerStats() {
         console.log('Farmer stats updated successfully');
     } catch (error) {
         console.error('Error loading farmer stats:', error);
-        // Fallback calculations
+        // Calculate basic stats from products only
         const totalProducts = products.length;
         const totalRevenue = products.reduce((sum, p) => sum + (parseFloat(p.price || 0) * parseInt(p.quantity || 0)), 0);
         
         updateStatCard('totalProducts', totalProducts);
-        updateStatCard('totalSales', `Ksh${(totalRevenue * 0.1).toFixed(2)}`);
+        updateStatCard('totalSales', `Ksh${(totalRevenue * 0.1).toFixed(2)}`); // Estimate 10% sold
         updateStatCard('pendingOrders', Math.floor(Math.random() * 5) + 1);
-        updateStatCard('monthlyRevenue', `Ksh${(totalRevenue * 0.05).toFixed(2)}`);
+        updateStatCard('monthlyRevenue', `Ksh${(totalRevenue * 0.05).toFixed(2)}`); // Estimate 5% monthly
+        
+        showNotification('Using estimated statistics - connect to get real sales data', 'info');
     }
 }
 
@@ -392,10 +303,8 @@ window.showAddProductModal = showAddProductModal;
 window.closeModal = closeModal;
 window.editProduct = editProduct;
 window.deleteProduct = deleteProduct;
-window.displayFarmerOrders = displayFarmerOrders;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', initializeFarmerDashboard);
 
 console.log('Farmer dashboard script setup complete');
-
