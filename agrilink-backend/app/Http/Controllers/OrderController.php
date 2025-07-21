@@ -20,7 +20,7 @@ class OrderController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Order::with(['user', 'orderItems.product', 'payment', 'delivery']);
+            $query = Order::with(['user', 'orderItems.product.farmer', 'payment', 'delivery']);
 
             // Filter by user (for user's own orders)
             if (auth()->user()->role !== 'admin') {
@@ -57,10 +57,11 @@ class OrderController extends Controller
         try {
             DB::beginTransaction();
 
-            // Create the order
+            // Create the order with proper defaults
             $order = Order::create([
                 'user_id' => auth()->id(),
                 'total_amount' => 0, // Will be calculated below
+                'status' => Order::STATUS_PENDING,
                 'delivery_address' => $request->delivery_address,
                 'delivery_date' => $request->delivery_date,
                 'notes' => $request->notes,
@@ -77,12 +78,13 @@ class OrderController extends Controller
                     throw new \Exception("Insufficient stock for product: {$product->name}");
                 }
 
-                // Create order item
+                // Create order item with proper total calculation
                 $orderItem = OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $product->id,
                     'quantity' => $item['quantity'],
                     'unit_price' => $product->price,
+                    'total_price' => $product->price * $item['quantity'],
                 ]);
 
                 $totalAmount += $orderItem->total_price;
@@ -92,15 +94,15 @@ class OrderController extends Controller
                 
                 // Update product status if out of stock
                 if ($product->quantity <= 0) {
-                    $product->update(['status' => 'out_of_stock']);
+                    $product->update(['status' => Product::STATUS_OUT_OF_STOCK]);
                 }
             }
 
             // Update order total
             $order->update(['total_amount' => $totalAmount]);
 
-            // Create payment record
-            if ($request->has('payment_method')) {
+            // Create payment record if payment method is provided
+            if ($request->has('payment_method') && $request->payment_method) {
                 Payment::create([
                     'order_id' => $order->id,
                     'payment_method' => $request->payment_method,
@@ -109,22 +111,31 @@ class OrderController extends Controller
                 ]);
             }
 
-            // Create delivery record
-            Delivery::create([
+            // Create delivery record - This is crucial for logistics dashboard
+            $delivery = Delivery::create([
                 'order_id' => $order->id,
                 'delivery_address' => $request->delivery_address,
-                'scheduled_date' => $request->delivery_date,
-                'priority' => $request->priority ?? 'medium',
+                'scheduled_date' => $request->delivery_date ?? now()->addDays(1),
+                'status' => Delivery::STATUS_ASSIGNED,
+                'priority' => $request->priority ?? Delivery::PRIORITY_MEDIUM,
+                'notes' => $request->notes,
             ]);
 
             DB::commit();
 
-            $order->load(['orderItems.product', 'payment', 'delivery']);
+            // Load all relationships for complete response
+            $order->load([
+                'user',
+                'orderItems.product.farmer',
+                'payment',
+                'delivery'
+            ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Order placed successfully',
-                'order' => $order
+                'order' => $order,
+                'delivery' => $delivery
             ], 201);
 
         } catch (\Exception $e) {
