@@ -66,10 +66,15 @@ class Order extends Model
     }
 
     // Generate order number
-    public static function generateOrderNumber()
-    {
-        return 'ORD-' . now()->format('Y') . '-' . str_pad(static::count() + 1, 6, '0', STR_PAD_LEFT);
-    }
+   public static function generateUniqueOrderNumber()
+{
+    do {
+        $number = 'ORD-' . now()->format('Y') . '-' . str_pad(rand(1, 999999), 6, '0', STR_PAD_LEFT);
+    } while (self::where('order_number', $number)->exists());
+
+    return $number;
+}
+
 
     // Calculate total amount from order items
     public function calculateTotal()
@@ -86,8 +91,9 @@ class Order extends Model
 
         static::creating(function ($order) {
             if (!$order->order_number) {
-                $order->order_number = static::generateOrderNumber();
+                $order->order_number = self::generateUniqueOrderNumber();
             }
         });
     }
+
 }
