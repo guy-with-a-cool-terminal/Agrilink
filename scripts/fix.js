@@ -1,4 +1,3 @@
-// Centralized API Client - Single source of truth
 class ApiClient {
     constructor() {
         this.baseURL = 'http://127.0.0.1:8000/api';
@@ -12,23 +11,39 @@ class ApiClient {
             // Products
             PRODUCTS: '/products',
             PRODUCT: (id) => `/products/${id}`,
+            PRODUCT_INVENTORY: (id) => `/products/${id}/inventory`,
             
             // Orders
             ORDERS: '/orders',
             ORDER: (id) => `/orders/${id}`,
             ORDER_STATUS: (id) => `/orders/${id}/status`,
+            ORDER_CANCEL: (id) => `/orders/${id}/cancel`,
             
             // Deliveries
             DELIVERIES: '/deliveries',
             DELIVERY: (id) => `/deliveries/${id}`,
             DELIVERY_STATUS: (id) => `/deliveries/${id}/status`,
+            DELIVERY_ASSIGN: (id) => `/deliveries/${id}/assign`,
+            DELIVERY_TRACK: '/deliveries/track',
             
             // Admin
             ADMIN_USERS: '/admin/users',
+            ADMIN_USER: (id) => `/admin/users/${id}`,
+            ADMIN_USER_STATUS: (id) => `/admin/users/${id}/status`,
             ADMIN_ANALYTICS: '/admin/analytics',
             
+            // Maintenance
+            MAINTENANCE_STATUS: '/admin/maintenance/status',
+            MAINTENANCE_ENABLE: '/admin/maintenance/enable',
+            MAINTENANCE_DISABLE: '/admin/maintenance/disable',
+            
+            // Payments
+            PAYMENTS_PROCESS: '/payments/process',
+            
             // Promotions
-            PROMOTIONS: '/promotions'
+            PROMOTIONS: '/promotions',
+            PROMOTION: (id) => `/promotions/${id}`,
+            PROMOTIONS_CALCULATE_DISCOUNT: '/promotions/calculate-discount'
         };
     }
 
@@ -78,7 +93,7 @@ class ApiClient {
         }
     }
 
-    // Helper method to extract array data from nested responses, including pagination
+   // Helper method to extract array data from nested responses, including pagination
     extractArrayData(response, key = 'data') {
     // 1. Direct array response
     if (Array.isArray(response)) {
@@ -119,7 +134,7 @@ class ApiClient {
     return [];
 }
 
-    // Authentication methods
+ // Authentication
     async login(credentials) {
         return this.request(this.endpoints.LOGIN, {
             method: 'POST',
@@ -136,13 +151,43 @@ class ApiClient {
         });
     }
 
+    async logout() {
+        const result = await this.request(this.endpoints.LOGOUT, { method: 'POST' });
+        this.removeToken();
+        return result;
+    }
+
     async getUser() {
         return this.request(this.endpoints.USER);
     }
 
-    // Products methods
+    async updateUser(userId, userData) {
+        return this.request(this.endpoints.ADMIN_USER(userId), {
+            method: 'PUT',
+            body: JSON.stringify(userData)
+        });
+    }
+
+    async updateUserStatus(userId, status) {
+        return this.request(this.endpoints.ADMIN_USER_STATUS(userId), {
+            method: 'PUT',
+            body: JSON.stringify({ status })
+        });
+    }
+
+    async deleteUser(userId) {
+        return this.request(this.endpoints.ADMIN_USER(userId), {
+            method: 'DELETE'
+        });
+    }
+
+    // Products
     async getProducts() {
         return this.request(this.endpoints.PRODUCTS);
+    }
+
+    async getProduct(productId) {
+        return this.request(this.endpoints.PRODUCT(productId));
     }
 
     async createProduct(productData) {
@@ -165,9 +210,13 @@ class ApiClient {
         });
     }
 
-    // Orders methods
+    // Orders
     async getOrders() {
         return this.request(this.endpoints.ORDERS);
+    }
+
+    async getOrder(orderId) {
+        return this.request(this.endpoints.ORDER(orderId));
     }
 
     async createOrder(orderData) {
@@ -192,7 +241,13 @@ class ApiClient {
         });
     }
 
-    // Deliveries methods
+    async cancelOrder(orderId) {
+        return this.request(this.endpoints.ORDER_CANCEL(orderId), {
+            method: 'POST'
+        });
+    }
+
+    // Deliveries
     async getDeliveries() {
         return this.request(this.endpoints.DELIVERIES);
     }
@@ -204,25 +259,66 @@ class ApiClient {
         });
     }
 
+    async trackDelivery(trackingNumber) {
+        return this.request(this.endpoints.DELIVERY_TRACK);
+    }
+
+    async assignDelivery(deliveryId, assignmentData) {
+        return this.request(this.endpoints.DELIVERY_ASSIGN(deliveryId), {
+            method: 'POST',
+            body: JSON.stringify(assignmentData)
+        });
+    }
+
+    // Promotions
+    async getPromotions() {
+        return this.request(this.endpoints.PROMOTIONS);
+    }
+
+    async getPromotion(promotionId) {
+        return this.request(this.endpoints.PROMOTION(promotionId));
+    }
+
+    async createPromotion(promotionData) {
+        return this.request(this.endpoints.PROMOTIONS, {
+            method: 'POST',
+            body: JSON.stringify(promotionData)
+        });
+    }
+
+    async updatePromotion(promotionId, promotionData) {
+        return this.request(this.endpoints.PROMOTION(promotionId), {
+            method: 'PUT',
+            body: JSON.stringify(promotionData)
+        });
+    }
+
+    async deletePromotion(promotionId) {
+        return this.request(this.endpoints.PROMOTION(promotionId), {
+            method: 'DELETE'
+        });
+    }
+
+    async calculateDiscount(discountData) {
+        return this.request(this.endpoints.PROMOTIONS_CALCULATE_DISCOUNT, {
+            method: 'POST',
+            body: JSON.stringify(discountData)
+        });
+    }
+
     // Analytics methods
     async getAnalytics() {
         return this.request(this.endpoints.ADMIN_ANALYTICS);
     }
-
+    
     // Admin methods - Fixed to use correct endpoint
     async getUsers() {
         return this.request(this.endpoints.ADMIN_USERS);
     }
 
     async toggleUserStatus(userId) {
-        return this.request(`${this.endpoints.ADMIN_USERS}/${userId}/status`, {
+        return this.request(this.endpoints.ADMIN_USER_STATUS(userId), {
             method: 'PUT'
-        });
-    }
-
-    async deleteUser(userId) {
-        return this.request(`${this.endpoints.ADMIN_USERS}/${userId}`, {
-            method: 'DELETE'
         });
     }
 
@@ -233,52 +329,40 @@ class ApiClient {
         });
     }
 
-    async updateUser(userId, userData) {
-        return this.request(`${this.endpoints.ADMIN_USERS}/${userId}`, {
-            method: 'PUT',
-            body: JSON.stringify(userData)
-        });
+    // Maintenance Mode
+    async getMaintenanceStatus() {
+        return this.request(this.endpoints.MAINTENANCE_STATUS);
     }
 
-    // Maintenance mode methods
     async enableMaintenanceMode() {
-        return this.request('/admin/maintenance/enable', {
+        return this.request(this.endpoints.MAINTENANCE_ENABLE, {
             method: 'POST'
         });
     }
 
     async disableMaintenanceMode() {
-        return this.request('/admin/maintenance/disable', {
+        return this.request(this.endpoints.MAINTENANCE_DISABLE, {
             method: 'POST'
         });
-    
     }
-     async getMaintenanceStatus() {
-        return this.request('/admin/maintenance/status', {
-            method: 'GET'
-        });
-    
-    }
-    
-    
 
-    // Messaging methods
-    async sendMessage(userId, message) {
-        return this.request(`/admin/messages`, {
+    // Payment processing
+    async processPayment(paymentData) {
+        return this.request(this.endpoints.PAYMENTS_PROCESS, {
             method: 'POST',
-            body: JSON.stringify({
-                user_id: userId,
-                message: message
-            })
+            body: JSON.stringify(paymentData)
         });
     }
 
-    async getUserMessages() {
-        return this.request('/messages');
+    // Inventory management
+    async updateInventory(productId, inventoryData) {
+        return this.request(this.endpoints.PRODUCT_INVENTORY(productId), {
+            method: 'PUT',
+            body: JSON.stringify(inventoryData)
+        });
     }
 }
 
-// Prevent redeclaration by checking if already exists
 if (typeof window.apiClient === 'undefined') {
     window.apiClient = new ApiClient();
 }

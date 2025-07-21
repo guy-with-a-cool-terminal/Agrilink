@@ -74,6 +74,7 @@ async function loadRealTimeAnalytics() {
         
         const totalOrders = ordersList.length;
         const totalUsers = usersList.length;
+        
         const totalProducts = productsList.length;
         
         // Calculate monthly revenue (current month)
@@ -95,7 +96,17 @@ async function loadRealTimeAnalytics() {
         // Update dashboard stats with real data
         document.getElementById('totalSales').textContent = `Ksh${totalSales.toLocaleString()}`;
         document.getElementById('totalOrders').textContent = totalOrders.toLocaleString();
+
         document.getElementById('totalUsers').textContent = totalUsers.toLocaleString();
+        // const activeUsersCount = usersList.filter(user => user.status === 'active').length;
+        // document.getElementById('totalUsers').textContent = activeUsersCount.toLocaleString();
+
+        console.log('Total users from API:', totalUsers);
+        const totalUsersElement = document.getElementById('totalUsers');
+        console.log('Element for #totalUsers:', totalUsersElement);
+        if (!totalUsersElement) {
+            console.warn('⚠️ Element with id="totalUsers" not found in the DOM');
+        }
         document.getElementById('monthlyRevenue').textContent = `Ksh${monthlyRevenue.toLocaleString()}`;
         document.getElementById('pendingOrders').textContent = pendingOrders.toLocaleString();
         document.getElementById('totalProducts').textContent = totalProducts.toLocaleString();
@@ -356,15 +367,15 @@ function showCreateUserModal() {
                 <form id="createUserForm">
                     <div class="form-group mb-4">
                         <label for="userName">Name</label>
-                        <input type="text" id="userName" required class="w-full p-2 border rounded">
+                        <input type="text" id="newUserName" required class="w-full p-2 border rounded">
                     </div>
                     <div class="form-group mb-4">
                         <label for="userEmail">Email</label>
-                        <input type="email" id="userEmail" required class="w-full p-2 border rounded">
+                        <input type="email" id="newUserEmail" required class="w-full p-2 border rounded">
                     </div>
                     <div class="form-group mb-4">
                         <label for="userRole">Role</label>
-                        <select id="userRole" required class="w-full p-2 border rounded">
+                        <select id="newUserRole" required class="w-full p-2 border rounded">
                             <option value="">Select Role</option>
                             <option value="farmer">Farmer</option>
                             <option value="consumer">Consumer</option>
@@ -374,7 +385,7 @@ function showCreateUserModal() {
                     </div>
                     <div class="form-group mb-4">
                         <label for="userPhone">Phone</label>
-                        <input type="tel" id="userPhone" class="w-full p-2 border rounded">
+                        <input type="tel" id="newUserPhone" class="w-full p-2 border rounded">
                     </div>
                     <div class="flex space-x-2">
                         <button type="submit" class="btn-primary flex-1">Create User</button>
@@ -386,19 +397,28 @@ function showCreateUserModal() {
     `;
     
     document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    console.log('Modal inserted:', document.getElementById('userModal'));
+    console.log('userName input found:', document.getElementById('userName'));
+    console.log('userRole input found:', document.getElementById('userRole'));
     
     document.getElementById('createUserForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        const userData = {
-            name: document.getElementById('userName').value,
-            email: document.getElementById('userEmail').value,
-            role: document.getElementById('userRole').value,
-            phone: document.getElementById('userPhone').value,
-            password: 'DefaultPassword123!' // Default password for admin-created users
-        };
+    const userData = {
+        name: document.getElementById('newUserName').value,
+        email: document.getElementById('newUserEmail').value,
+        role: document.getElementById('newUserRole').value,
+        phone: document.getElementById('newUserPhone').value,
+        password: 'DefaultPassword123!',
+        password_confirmation: 'DefaultPassword123!',
+        status: 'active'
+}
+   console.log('userData being sent:', userData);
+
         
         try {
+            console.log('Sending userData:', userData);
             await apiClient.createUser(userData);
             showNotification('User created successfully!', 'success');
             closeUserModal();

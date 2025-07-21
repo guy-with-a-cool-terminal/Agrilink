@@ -10,7 +10,9 @@ use App\Models\Promotion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class AdminController extends Controller
 {
@@ -22,7 +24,7 @@ class AdminController extends Controller
         try {
             $analytics = [
                 'users' => [
-                    'total' => User::count(),
+                    'total' => User::where('status', 'active')->whereNull('deleted_at')->count(),
                     'farmers' => User::where('role', 'farmer')->count(),
                     'consumers' => User::where('role', 'consumer')->count(),
                     'retailers' => User::where('role', 'retailer')->count(),
@@ -113,6 +115,121 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch users',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+public function createUser(Request $request): JsonResponse
+{
+    try {
+        $validatedData = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8|confirmed',
+            'role' => 'required|in:admin,farmer,consumer,retailer,logistics',
+            'status' => 'required|in:active,inactive,suspended'
+        ]);
+
+        $user = User::create([
+            'name' => $validatedData['name'],
+            'email' => $validatedData['email'],
+            'password' => Hash::make($validatedData['password']),
+            'role' => $validatedData['role'],
+            'status' => $validatedData['status'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User created successfully',
+            'user' => $user
+        ], 201);
+
+    } catch (ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $e->errors()
+        ], 422);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred while creating the user',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+    /**
+     * Update user
+     */
+    public function updateUser(Request $request, $id): JsonResponse
+    {
+        try {
+            // Validate the request data
+            $validatedData = $request->validate([
+                'name' => 'sometimes|required|string|max:255',
+                'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $id,
+                'role' => 'sometimes|required|string|in:admin,farmer,consumer,retailer,logistics',
+                'status' => 'sometimes|required|string|in:active,inactive,suspended',
+                'password' => 'sometimes|nullable|string|min:8|confirmed',
+            ]);
+
+            // Find the user
+            $user = User::findOrFail($id);
+
+            // Prevent admins from changing their own role
+            if ($user->id === auth()->id() && isset($validatedData['role']) && $validatedData['role'] !== 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You cannot change your own role'
+                ], 403);
+            }
+
+            // Update user fields
+            if (isset($validatedData['name'])) {
+                $user->name = $validatedData['name'];
+            }
+            
+            if (isset($validatedData['email'])) {
+                $user->email = $validatedData['email'];
+            }
+            
+            if (isset($validatedData['role'])) {
+                $user->role = $validatedData['role'];
+            }
+
+            if (isset($validatedData['status'])) {
+                $user->status = $validatedData['status'];
+            }
+
+            // Handle password update if provided
+            if (isset($validatedData['password']) && !empty($validatedData['password'])) {
+                $user->password = Hash::make($validatedData['password']);
+            }
+
+            // Save the user
+            $user->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User updated successfully',
+                'user' => $user->fresh()
+            ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while updating the user',
                 'error' => $e->getMessage()
             ], 500);
         }
