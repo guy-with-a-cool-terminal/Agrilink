@@ -57,7 +57,7 @@ async function loadLogisticsData() {
         
         // Refresh map after data loads
         if (typeof refreshDeliveryMap === 'function') {
-            setTimeout(refreshDeliveryMap, 1000); // Give time for data to be available
+            setTimeout(refreshDeliveryMap, 1000);
         }
         
         console.log('Logistics data loaded successfully');
@@ -67,14 +67,42 @@ async function loadLogisticsData() {
     }
 }
 
-// Load deliveries
+// Load deliveries - Fixed to get all deliveries including new ones
 async function loadDeliveries() {
     try {
+        console.log('Loading deliveries...');
         const response = await apiClient.getDeliveries();
         deliveries = apiClient.extractArrayData(response) || [];
         console.log('Deliveries loaded:', deliveries);
+        
+        // If no deliveries from API, also check orders for delivery data
+        if (deliveries.length === 0) {
+            const ordersResponse = await apiClient.getOrders();
+            const allOrders = apiClient.extractArrayData(ordersResponse) || [];
+            
+            // Extract delivery information from orders
+            allOrders.forEach(order => {
+                if (order.delivery) {
+                    deliveries.push({
+                        id: order.delivery.id || order.id,
+                        order_id: order.id,
+                        delivery_address: order.delivery_address,
+                        status: order.delivery.status || 'assigned',
+                        priority: order.delivery.priority || 'medium',
+                        scheduled_date: order.delivery_date,
+                        created_at: order.created_at,
+                        updated_at: order.updated_at,
+                        notes: order.notes
+                    });
+                }
+            });
+            
+            console.log('Deliveries extracted from orders:', deliveries);
+        }
+        
     } catch (error) {
         console.error('Error loading deliveries:', error);
+        deliveries = [];
         showNotification('Failed to load deliveries', 'error');
     }
 }
