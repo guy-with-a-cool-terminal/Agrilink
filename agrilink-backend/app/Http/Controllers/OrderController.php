@@ -60,6 +60,7 @@ class OrderController extends Controller
             // Create the order
             $order = Order::create([
                 'user_id' => auth()->id(),
+                'status' => Order::STATUS_PENDING,
                 'total_amount' => 0, // Will be calculated below
                 'delivery_address' => $request->delivery_address,
                 'delivery_date' => $request->delivery_date,
