@@ -1,3 +1,4 @@
+
 // Farmer Dashboard Logic
 console.log('Farmer dashboard script loaded');
 
@@ -397,3 +398,4 @@ window.displayFarmerOrders = displayFarmerOrders;
 document.addEventListener('DOMContentLoaded', initializeFarmerDashboard);
 
 console.log('Farmer dashboard script setup complete');
+

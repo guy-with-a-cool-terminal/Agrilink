@@ -1,4 +1,5 @@
 
+
 // Consumer Dashboard Logic
 console.log('Consumer dashboard script loaded');
 
@@ -392,3 +393,4 @@ window.searchProducts = searchProducts;
 document.addEventListener('DOMContentLoaded', initializeConsumerDashboard);
 
 console.log('Consumer dashboard script setup complete');
+

@@ -1,3 +1,4 @@
+
 // Admin Dashboard JavaScript
 
 let currentUser = null;
@@ -323,6 +324,7 @@ async function editUser(userId) {
             await apiClient.updateUser(userId, { ...user, status: newStatus.toLowerCase() });
             showNotification('User updated successfully!', 'success');
             await loadUsers();
+            await loadAdminStats(); // Refresh stats after user update
         } catch (error) {
             console.error('Error updating user:', error);
             showNotification('Failed to update user: ' + error.message, 'error');
@@ -337,6 +339,7 @@ async function deleteUser(userId) {
             await apiClient.deleteUser(userId);
             showNotification('User deleted successfully!', 'success');
             await loadUsers();
+            await loadAdminStats(); // Refresh stats after user deletion
         } catch (error) {
             console.error('Error deleting user:', error);
             showNotification('Failed to delete user: ' + error.message, 'error');
@@ -376,8 +379,8 @@ function viewOrderDetails(orderId) {
     alert(details);
 }
 
-// Show add user modal
-function showAddUserModal() {
+// Show create user modal
+function showCreateUserModal() {
     const modal = document.getElementById('addUserModal');
     if (modal) {
         modal.classList.add('active');
@@ -402,6 +405,7 @@ async function handleAddUser(event) {
         name: formData.get('name'),
         email: formData.get('email'),
         password: formData.get('password'),
+        password_confirmation: formData.get('password'),
         role: formData.get('role'),
         status: 'active'
     };
@@ -418,8 +422,9 @@ async function handleAddUser(event) {
         closeModal('addUserModal');
         event.target.reset();
         
-        // Immediately reload users
+        // Immediately reload users and stats
         await loadUsers();
+        await loadAdminStats();
         
     } catch (error) {
         console.error('Error creating user:', error);
@@ -453,8 +458,9 @@ function showNotification(message, type = 'info') {
 // Make functions globally available
 window.editUser = editUser;
 window.deleteUser = deleteUser;
-window.showAddUserModal = showAddUserModal;
+window.showCreateUserModal = showCreateUserModal;
 window.closeModal = closeModal;
 window.handleAddUser = handleAddUser;
 window.viewOrderDetails = viewOrderDetails;
 window.logout = logout;
+
