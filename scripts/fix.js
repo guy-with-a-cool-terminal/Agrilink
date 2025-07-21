@@ -116,12 +116,8 @@ class ApiClient {
     }
 
     // 5. Users: { users: { data: [...] } }
-    // 5. Users: { users: { data: [...] } } or { users: [...] }
     if (response?.users?.data && Array.isArray(response.users.data)) {
         return response.users.data;
-    }
-    if (Array.isArray(response?.users)) {
-        return response.users;
     }
 
     // 6. Direct key-based array
@@ -166,7 +162,6 @@ class ApiClient {
     }
 
     async updateUser(userId, userData) {
-        console.log('Updating user with data:', userData);
         return this.request(this.endpoints.ADMIN_USER(userId), {
             method: 'PUT',
             body: JSON.stringify(userData)

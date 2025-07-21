@@ -74,6 +74,7 @@ async function loadRealTimeAnalytics() {
         
         const totalOrders = ordersList.length;
         const totalUsers = usersList.length;
+        
         const totalProducts = productsList.length;
         
         // Calculate monthly revenue (current month)
@@ -95,7 +96,17 @@ async function loadRealTimeAnalytics() {
         // Update dashboard stats with real data
         document.getElementById('totalSales').textContent = `Ksh${totalSales.toLocaleString()}`;
         document.getElementById('totalOrders').textContent = totalOrders.toLocaleString();
+
         document.getElementById('totalUsers').textContent = totalUsers.toLocaleString();
+        // const activeUsersCount = usersList.filter(user => user.status === 'active').length;
+        // document.getElementById('totalUsers').textContent = activeUsersCount.toLocaleString();
+
+        console.log('Total users from API:', totalUsers);
+        const totalUsersElement = document.getElementById('totalUsers');
+        console.log('Element for #totalUsers:', totalUsersElement);
+        if (!totalUsersElement) {
+            console.warn('⚠️ Element with id="totalUsers" not found in the DOM');
+        }
         document.getElementById('monthlyRevenue').textContent = `Ksh${monthlyRevenue.toLocaleString()}`;
         document.getElementById('pendingOrders').textContent = pendingOrders.toLocaleString();
         document.getElementById('totalProducts').textContent = totalProducts.toLocaleString();
@@ -347,6 +358,164 @@ function updateProductAnalytics() {
     }
 }
 
+// Show create user modal
+function showCreateUserModal() {
+    const modalHtml = `
+        <div id="userModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold mb-4">Create New User</h3>
+                <form id="createUserForm">
+                    <div class="form-group mb-4">
+                        <label for="userName">Name</label>
+                        <input type="text" id="newUserName" required class="w-full p-2 border rounded">
+                    </div>
+                    <div class="form-group mb-4">
+                        <label for="userEmail">Email</label>
+                        <input type="email" id="newUserEmail" required class="w-full p-2 border rounded">
+                    </div>
+                    <div class="form-group mb-4">
+                        <label for="userRole">Role</label>
+                        <select id="newUserRole" required class="w-full p-2 border rounded">
+                            <option value="">Select Role</option>
+                            <option value="farmer">Farmer</option>
+                            <option value="consumer">Consumer</option>
+                            <option value="retailer">Retailer</option>
+                            <option value="logistics">Logistics</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-4">
+                        <label for="userPhone">Phone</label>
+                        <input type="tel" id="newUserPhone" class="w-full p-2 border rounded">
+                    </div>
+                    <div class="flex space-x-2">
+                        <button type="submit" class="btn-primary flex-1">Create User</button>
+                        <button type="button" onclick="closeUserModal()" class="btn-secondary flex-1">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    console.log('Modal inserted:', document.getElementById('userModal'));
+    console.log('userName input found:', document.getElementById('userName'));
+    console.log('userRole input found:', document.getElementById('userRole'));
+    
+    document.getElementById('createUserForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+    const userData = {
+        name: document.getElementById('newUserName').value,
+        email: document.getElementById('newUserEmail').value,
+        role: document.getElementById('newUserRole').value,
+        phone: document.getElementById('newUserPhone').value,
+        password: 'DefaultPassword123!',
+        password_confirmation: 'DefaultPassword123!',
+        status: 'active'
+}
+   console.log('userData being sent:', userData);
+
+        
+        try {
+            console.log('Sending userData:', userData);
+            await apiClient.createUser(userData);
+            showNotification('User created successfully!', 'success');
+            closeUserModal();
+            await loadUsers();
+            await loadRealTimeAnalytics(); // Update user count
+        } catch (error) {
+            console.error('Error creating user:', error);
+            showNotification('Failed to create user: ' + error.message, 'error');
+        }
+    });
+}
+
+// Edit user modal
+function editUser(userId) {
+    const user = users.find(u => u.id == userId);
+    if (!user) {
+        showNotification('User not found', 'error');
+        return;
+    }
+    
+    const modalHtml = `
+        <div id="userModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold mb-4">Edit User</h3>
+                <form id="editUserForm">
+                    <div class="form-group mb-4">
+                        <label for="userName">Name</label>
+                        <input type="text" id="userName" required class="w-full p-2 border rounded" value="${user.name || ''}">
+                    </div>
+                    <div class="form-group mb-4">
+                        <label for="userEmail">Email</label>
+                        <input type="email" id="userEmail" required class="w-full p-2 border rounded" value="${user.email}">
+                    </div>
+                    <div class="form-group mb-4">
+                        <label for="userRole">Role</label>
+                        <select id="userRole" required class="w-full p-2 border rounded">
+                            <option value="farmer" ${user.role === 'farmer' ? 'selected' : ''}>Farmer</option>
+                            <option value="consumer" ${user.role === 'consumer' ? 'selected' : ''}>Consumer</option>
+                            <option value="retailer" ${user.role === 'retailer' ? 'selected' : ''}>Retailer</option>
+                            <option value="logistics" ${user.role === 'logistics' ? 'selected' : ''}>Logistics</option>
+                            <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-4">
+                        <label for="userPhone">Phone</label>
+                        <input type="tel" id="userPhone" class="w-full p-2 border rounded" value="${user.phone || ''}">
+                    </div>
+                    <div class="form-group mb-4">
+                        <label for="userStatus">Status</label>
+                        <select id="userStatus" required class="w-full p-2 border rounded">
+                            <option value="active" ${user.status === 'active' ? 'selected' : ''}>Active</option>
+                            <option value="inactive" ${user.status === 'inactive' ? 'selected' : ''}>Inactive</option>
+                            <option value="suspended" ${user.status === 'suspended' ? 'selected' : ''}>Suspended</option>
+                        </select>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button type="submit" class="btn-primary flex-1">Update User</button>
+                        <button type="button" onclick="closeUserModal()" class="btn-secondary flex-1">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    document.getElementById('editUserForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const userData = {
+            name: document.getElementById('userName').value,
+            email: document.getElementById('userEmail').value,
+            role: document.getElementById('userRole').value,
+            phone: document.getElementById('userPhone').value,
+            status: document.getElementById('userStatus').value
+        };
+        
+        try {
+            await apiClient.updateUser(userId, userData);
+            showNotification('User updated successfully!', 'success');
+            closeUserModal();
+            await loadUsers();
+        } catch (error) {
+            console.error('Error updating user:', error);
+            showNotification('Failed to update user: ' + error.message, 'error');
+        }
+    });
+}
+
+// Close user modal
+function closeUserModal() {
+    const modal = document.getElementById('userModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
 // View user details
 function viewUserDetails(userId) {
     const user = users.find(u => u.id == userId);
@@ -371,14 +540,17 @@ Location: ${user.location || 'N/A'}`);
 // Toggle user status with proper API integration
 async function toggleUserStatus(userId, isCurrentlyActive) {
     const action = isCurrentlyActive ? 'suspend' : 'activate';
+    const newStatus = isCurrentlyActive ? 'suspended' : 'active';
+    
     if (!confirm(`Are you sure you want to ${action} this user?`)) {
         return;
     }
     
     try {
-        await apiClient.toggleUserStatus(userId);
+        await apiClient.updateUserStatus(userId, newStatus);
         showNotification(`User ${action}d successfully.`, 'success');
         await loadUsers(); // Refresh user list
+        await loadRealTimeAnalytics(); // Update user count
     } catch (error) {
         console.error('Error toggling user status:', error);
         showNotification('Failed to update user status: ' + error.message, 'error');
@@ -395,6 +567,7 @@ async function deleteUser(userId) {
         await apiClient.deleteUser(userId);
         showNotification('User deleted successfully.', 'success');
         await loadUsers(); // Refresh user list
+        await loadRealTimeAnalytics(); // Update user count immediately
     } catch (error) {
         console.error('Error deleting user:', error);
         showNotification('Failed to delete user: ' + error.message, 'error');
@@ -481,6 +654,7 @@ function showUsersError() {
         `;
     }
 }
+
 // Refresh all data
 async function refreshData() {
     try {
@@ -504,13 +678,15 @@ function logout() {
 }
 
 // Make functions globally available
+window.showCreateUserModal = showCreateUserModal;
+window.editUser = editUser;
+window.closeUserModal = closeUserModal;
 window.viewUserDetails = viewUserDetails;
 window.toggleUserStatus = toggleUserStatus;
 window.deleteUser = deleteUser;
 window.toggleMaintenanceMode = toggleMaintenanceMode;
 window.viewOrderDetails = viewOrderDetails;
 window.updateOrderStatus = updateOrderStatus;
-window.refreshData = refreshData;
 window.refreshData = refreshData;
 window.loadUsers = loadUsers;
 window.logout = logout;

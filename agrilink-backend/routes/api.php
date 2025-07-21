@@ -20,7 +20,7 @@ use App\Http\Controllers\PromotionController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 // Public product routes (for browsing without authentication)
 Route::get('/products', [ProductController::class, 'index']);
@@ -118,10 +118,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Admin routes
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::get('/analytics', [AdminController::class, 'analytics']);
+        Route::post('/users', [AdminController::class, 'createUser']);
         Route::get('/users', [AdminController::class, 'users']);
+        Route::put('/users/{user}', [AdminController::class, 'updateUser']); // ADDED: General user update route for CRUD functionality
         Route::put('/users/{user}/status', [AdminController::class, 'updateUserStatus']);
         Route::delete('/users/{user}', [AdminController::class, 'deleteUser']);
         Route::get('/orders', [AdminController::class, 'orders']);
     });
 });
-

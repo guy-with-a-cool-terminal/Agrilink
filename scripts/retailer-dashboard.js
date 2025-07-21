@@ -95,7 +95,7 @@ function populateProductSelect() {
         productSelect.appendChild(option);
     });
     
-    // Add change listener to show stock info
+    // Add change listener to show stock info and update order summary
     productSelect.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         const quantityInput = document.getElementById('bulkQuantity');
@@ -112,7 +112,50 @@ function populateProductSelect() {
                 quantityInput.disabled = false;
             }
         }
+        
+        updateOrderSummary();
     });
+    
+    // Add quantity change listener
+    const quantityInput = document.getElementById('bulkQuantity');
+    if (quantityInput) {
+        quantityInput.addEventListener('input', updateOrderSummary);
+    }
+}
+
+// Update order summary calculation
+function updateOrderSummary() {
+    const productSelect = document.getElementById('productSelect');
+    const quantityInput = document.getElementById('bulkQuantity');
+    const orderSummary = document.getElementById('orderSummary');
+    
+    if (!productSelect || !quantityInput || !orderSummary) return;
+    
+    const selectedOption = productSelect.options[productSelect.selectedIndex];
+    const quantity = parseInt(quantityInput.value || 0);
+    
+    if (!selectedOption.value || quantity <= 0) {
+        orderSummary.textContent = 'Select a product and quantity to see the total cost.';
+        return;
+    }
+    
+    const unitPrice = parseFloat(selectedOption.dataset.price || 0);
+    const totalCost = unitPrice * quantity;
+    const stock = parseInt(selectedOption.dataset.stock || 0);
+    
+    let summaryText = `Product: ${selectedOption.textContent.split(' (Stock:')[0]}\n`;
+    summaryText += `Quantity: ${quantity} units\n`;
+    summaryText += `Unit Price: Ksh${unitPrice.toFixed(2)}\n`;
+    summaryText += `Total Cost: Ksh${totalCost.toLocaleString()}`;
+    
+    if (quantity > stock) {
+        summaryText += `\n⚠️ Warning: Only ${stock} units available in stock!`;
+        orderSummary.className = 'text-sm text-red-600 whitespace-pre-line';
+    } else {
+        orderSummary.className = 'text-sm text-gray-600 whitespace-pre-line';
+    }
+    
+    orderSummary.textContent = summaryText;
 }
 
 // Load orders
@@ -271,9 +314,9 @@ async function placeBulkOrder(event) {
     const deliveryDate = document.getElementById('deliveryDate').value;
     const budgetRange = document.getElementById('budgetRange').value;
     const specialRequirements = document.getElementById('specialRequirements').value;
-    const paymentMethod = document.getElementById('bulkPaymentMethod').value;
+    const bulkPaymentMethod = document.getElementById('bulkPaymentMethod').value;
     
-    if (!productId || !quantity || !deliveryDate || !budgetRange || !paymentMethod) {
+    if (!productId || !quantity || !deliveryDate || !budgetRange || !bulkPaymentMethod) {
         showNotification('Please fill in all required fields including payment method', 'error');
         return;
     }
@@ -306,27 +349,219 @@ async function placeBulkOrder(event) {
         return;
     }
     
-    const submitBtn = event.target.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = 'Placing Order...';
-    submitBtn.disabled = true;
+    // Show payment modal based on selected payment method
+    if (bulkPaymentMethod === 'mpesa') {
+        showMpesaPaymentModal(totalAmount, {
+            productId,
+            quantity,
+            deliveryDate,
+            budgetRange,
+            specialRequirements,
+            selectedProduct
+        });
+    } else if (bulkPaymentMethod === 'card') {
+        showCardPaymentModal(totalAmount, {
+            productId,
+            quantity,
+            deliveryDate,
+            budgetRange,
+            specialRequirements,
+            selectedProduct
+        });
+    } else {
+        // For cash on delivery, proceed directly
+        await processBulkOrder({
+            productId,
+            quantity,
+            deliveryDate,
+            budgetRange,
+            specialRequirements,
+            selectedProduct,
+            paymentMethod: 'cash_on_delivery',
+            totalAmount
+        });
+    }
+}
+
+// Show M-Pesa payment modal
+function showMpesaPaymentModal(amount, orderData) {
+    const modalHtml = `
+        <div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold mb-4">M-Pesa Payment</h3>
+                <div class="mb-4">
+                    <p class="text-gray-600 mb-2">Amount: <span class="font-semibold">Ksh${amount.toLocaleString()}</span></p>
+                    <p class="text-sm text-gray-500 mb-4">You will receive an STK push on your phone to complete the payment.</p>
+                </div>
+                <form id="mpesaPaymentForm">
+                    <div class="form-group mb-4">
+                        <label for="mpesaPhone">M-Pesa Phone Number</label>
+                        <input type="tel" id="mpesaPhone" required class="w-full p-2 border rounded" 
+                               placeholder="254712345678" value="${currentUser.phone || ''}">
+                        <small class="text-gray-500">Format: 254XXXXXXXXX</small>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button type="submit" class="btn-primary flex-1">Pay with M-Pesa</button>
+                        <button type="button" onclick="closePaymentModal()" class="btn-secondary flex-1">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    document.getElementById('mpesaPaymentForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const phone = document.getElementById('mpesaPhone').value;
+        if (!phone.match(/^254\d{9}$/)) {
+            showNotification('Please enter a valid M-Pesa number (254XXXXXXXXX)', 'error');
+            return;
+        }
+        
+        await processBulkOrder({
+            ...orderData,
+            paymentMethod: 'mobile_money',
+            totalAmount: amount,
+            mpesaPhone: phone
+        });
+        
+        closePaymentModal();
+    });
+}
+
+// Show card payment modal
+function showCardPaymentModal(amount, orderData) {
+    const modalHtml = `
+        <div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold mb-4">Card Payment</h3>
+                <div class="mb-4">
+                    <p class="text-gray-600 mb-2">Amount: <span class="font-semibold">Ksh${amount.toLocaleString()}</span></p>
+                </div>
+                <form id="cardPaymentForm">
+                    <div class="form-group mb-4">
+                        <label for="cardNumber">Card Number</label>
+                        <input type="text" id="cardNumber" required class="w-full p-2 border rounded" 
+                               placeholder="1234 5678 9012 3456" maxlength="19">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="form-group mb-4">
+                            <label for="expiryDate">Expiry Date</label>
+                            <input type="text" id="expiryDate" required class="w-full p-2 border rounded" 
+                                   placeholder="MM/YY" maxlength="5">
+                        </div>
+                        <div class="form-group mb-4">
+                            <label for="cvv">CVV</label>
+                            <input type="text" id="cvv" required class="w-full p-2 border rounded" 
+                                   placeholder="123" maxlength="4">
+                        </div>
+                    </div>
+                    <div class="form-group mb-4">
+                        <label for="cardholderName">Cardholder Name</label>
+                        <input type="text" id="cardholderName" required class="w-full p-2 border rounded" 
+                               placeholder="John Doe" value="${currentUser.name || ''}">
+                    </div>
+                    <div class="flex space-x-2">
+                        <button type="submit" class="btn-primary flex-1">Pay with Card</button>
+                        <button type="button" onclick="closePaymentModal()" class="btn-secondary flex-1">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Add card number formatting
+    const cardNumberInput = document.getElementById('cardNumber');
+    cardNumberInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+        let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+        e.target.value = formattedValue;
+    });
+    
+    // Add expiry date formatting
+    const expiryInput = document.getElementById('expiryDate');
+    expiryInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length >= 2) {
+            value = value.substring(0, 2) + '/' + value.substring(2, 4);
+        }
+        e.target.value = value;
+    });
+    
+    document.getElementById('cardPaymentForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const cardNumber = document.getElementById('cardNumber').value.replace(/\s/g, '');
+        const expiryDate = document.getElementById('expiryDate').value;
+        const cvv = document.getElementById('cvv').value;
+        const cardholderName = document.getElementById('cardholderName').value;
+        
+        if (cardNumber.length !== 16) {
+            showNotification('Please enter a valid 16-digit card number', 'error');
+            return;
+        }
+        
+        if (!expiryDate.match(/^\d{2}\/\d{2}$/)) {
+            showNotification('Please enter a valid expiry date (MM/YY)', 'error');
+            return;
+        }
+        
+        if (cvv.length < 3) {
+            showNotification('Please enter a valid CVV', 'error');
+            return;
+        }
+        
+        await processBulkOrder({
+            ...orderData,
+            paymentMethod: 'card',
+            totalAmount: amount,
+            cardDetails: {
+                cardNumber: cardNumber.replace(/\d{12}(\d{4})/, '**** **** **** $1'), // Mask for security
+                expiryDate,
+                cardholderName
+            }
+        });
+        
+        closePaymentModal();
+    });
+}
+
+// Close payment modal
+function closePaymentModal() {
+    const modal = document.getElementById('paymentModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Process bulk order after payment details are collected
+async function processBulkOrder(orderDetails) {
+    const submitBtn = document.querySelector('form[onsubmit="placeBulkOrder(event)"] button[type="submit"]');
+    const originalText = submitBtn ? submitBtn.textContent : '';
+    
+    if (submitBtn) {
+        submitBtn.textContent = 'Processing Order...';
+        submitBtn.disabled = true;
+    }
     
     try {
         const orderData = {
             items: [{
-                product_id: selectedProduct.id,
-                name: selectedProduct.name,
-                quantity: quantity,
-                unit_price: selectedProduct.price
+                product_id: orderDetails.selectedProduct.id,
+                name: orderDetails.selectedProduct.name,
+                quantity: orderDetails.quantity,
+                unit_price: orderDetails.selectedProduct.price
             }],
-            delivery_address: `Bulk delivery - Budget: ${budgetRange}${specialRequirements ? '. Requirements: ' + specialRequirements : ''}`,
-            delivery_date: deliveryDate,
-            phone: currentUser.phone || '254700000000',
-            payment_method: paymentMethod === 'cod' ? 'cash_on_delivery' : 
-                          paymentMethod === 'mpesa' ? 'mobile_money' : 
-                          paymentMethod,
-            total_amount: totalAmount,
-            notes: `Bulk order for retail - ${specialRequirements || 'Standard bulk order'}`
+            delivery_address: `Bulk delivery - Budget: ${orderDetails.budgetRange}${orderDetails.specialRequirements ? '. Requirements: ' + orderDetails.specialRequirements : ''}`,
+            delivery_date: orderDetails.deliveryDate,
+            phone: orderDetails.mpesaPhone || currentUser.phone || '254700000000',
+            payment_method: orderDetails.paymentMethod,
+            total_amount: orderDetails.totalAmount,
+            notes: `Bulk order for retail - ${orderDetails.specialRequirements || 'Standard bulk order'}`
         };
         
         console.log('Submitting bulk order:', orderData);
@@ -334,16 +569,25 @@ async function placeBulkOrder(event) {
         const response = await apiClient.createOrder(orderData);
         console.log('Bulk order created:', response);
         
-        if (paymentMethod === 'mpesa') {
+        if (orderDetails.paymentMethod === 'mobile_money') {
             showNotification('Bulk order placed successfully! STK push sent to your phone for payment.', 'success');
-        } else if (paymentMethod === 'cod') {
+        } else if (orderDetails.paymentMethod === 'cash_on_delivery') {
             showNotification('Bulk order placed successfully! You will pay on delivery.', 'success');
+        } else if (orderDetails.paymentMethod === 'card') {
+            showNotification('Bulk order placed successfully! Payment processed.', 'success');
         } else {
             showNotification('Bulk order placed successfully!', 'success');
         }
         
         // Reset form
-        event.target.reset();
+        const form = document.querySelector('form[onsubmit="placeBulkOrder(event)"]');
+        if (form) form.reset();
+        
+        // Clear order summary
+        const orderSummary = document.getElementById('orderSummary');
+        if (orderSummary) {
+            orderSummary.textContent = 'Select a product and quantity to see the total cost.';
+        }
         
         // Reload data
         await loadRetailerData();
@@ -365,8 +609,10 @@ async function placeBulkOrder(event) {
         
         showNotification(errorMessage + ': ' + error.message, 'error');
     } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
+        if (submitBtn) {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
     }
 }
 
@@ -497,6 +743,9 @@ function showNotification(message, type = 'info') {
 
 // Make functions globally available
 window.placeBulkOrder = placeBulkOrder;
+window.showMpesaPaymentModal = showMpesaPaymentModal;
+window.showCardPaymentModal = showCardPaymentModal;
+window.closePaymentModal = closePaymentModal;
 window.scheduleDelivery = scheduleDelivery;
 window.viewOrderDetails = viewOrderDetails;
 window.logout = logout;
