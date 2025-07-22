@@ -20,14 +20,40 @@ class OrderController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Order::with(['user', 'orderItems.product', 'payment', 'delivery']);
+            $user = auth()->user();
+            $query = Order::with(['user', 'orderItems.product.farmer', 'payment', 'delivery']);
 
-            // Filter by user (for user's own orders)
-            if (auth()->user()->role !== 'admin') {
-                $query->where('user_id', auth()->id());
+            // Role-based filtering
+            switch ($user->role) {
+                case 'admin':
+                    // Admin sees all orders - no filtering needed
+                    break;
+                    
+                case 'logistics':
+                    // Logistics sees all orders for delivery management
+                    // No additional filtering needed
+                    break;
+                    
+                case 'farmer':
+                    // Farmers only see orders that contain their products
+                    $query->whereHas('orderItems.product', function ($q) use ($user) {
+                        $q->where('farmer_id', $user->id);
+                    });
+                    break;
+                    
+                case 'consumer':
+                case 'retailer':
+                    // Consumers and retailers only see their own orders
+                    $query->where('user_id', $user->id);
+                    break;
+                    
+                default:
+                    // For any other role, restrict to their own orders
+                    $query->where('user_id', $user->id);
+                    break;
             }
 
-            // Filter by status
+            // Filter by status if provided
             if ($request->has('status') && $request->status) {
                 $query->where('status', $request->status);
             }
@@ -57,9 +83,10 @@ class OrderController extends Controller
         try {
             DB::beginTransaction();
 
-            // Create the order
+            // Create the order with proper defaults
             $order = Order::create([
                 'user_id' => auth()->id(),
+                'status' => Order::STATUS_PENDING,
                 'total_amount' => 0, // Will be calculated below
                 'delivery_address' => $request->delivery_address,
                 'delivery_date' => $request->delivery_date,
@@ -77,12 +104,13 @@ class OrderController extends Controller
                     throw new \Exception("Insufficient stock for product: {$product->name}");
                 }
 
-                // Create order item
+                // Create order item with proper total calculation
                 $orderItem = OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $product->id,
                     'quantity' => $item['quantity'],
                     'unit_price' => $product->price,
+                    'total_price' => $product->price * $item['quantity'],
                 ]);
 
                 $totalAmount += $orderItem->total_price;
@@ -92,15 +120,15 @@ class OrderController extends Controller
                 
                 // Update product status if out of stock
                 if ($product->quantity <= 0) {
-                    $product->update(['status' => 'out_of_stock']);
+                    $product->update(['status' => Product::STATUS_OUT_OF_STOCK]);
                 }
             }
 
             // Update order total
             $order->update(['total_amount' => $totalAmount]);
 
-            // Create payment record
-            if ($request->has('payment_method')) {
+            // Create payment record if payment method is provided
+            if ($request->has('payment_method') && $request->payment_method) {
                 Payment::create([
                     'order_id' => $order->id,
                     'payment_method' => $request->payment_method,
@@ -109,22 +137,31 @@ class OrderController extends Controller
                 ]);
             }
 
-            // Create delivery record
-            Delivery::create([
+            // Create delivery record - This is crucial for logistics dashboard
+            $delivery = Delivery::create([
                 'order_id' => $order->id,
                 'delivery_address' => $request->delivery_address,
-                'scheduled_date' => $request->delivery_date,
-                'priority' => $request->priority ?? 'medium',
+                'scheduled_date' => $request->delivery_date ?? now()->addDays(1),
+                'status' => Delivery::STATUS_ASSIGNED,
+                'priority' => $request->priority ?? Delivery::PRIORITY_MEDIUM,
+                'notes' => $request->notes,
             ]);
 
             DB::commit();
 
-            $order->load(['orderItems.product', 'payment', 'delivery']);
+            // Load all relationships for complete response
+            $order->load([
+                'user',
+                'orderItems.product.farmer',
+                'payment',
+                'delivery'
+            ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Order placed successfully',
-                'order' => $order
+                'order' => $order,
+                'delivery' => $delivery
             ], 201);
 
         } catch (\Exception $e) {
@@ -144,8 +181,33 @@ class OrderController extends Controller
     public function show(Order $order): JsonResponse
     {
         try {
-            // Check if user can view this order
-            if (auth()->user()->role !== 'admin' && $order->user_id !== auth()->id()) {
+            $user = auth()->user();
+            
+            // Check if user can view this order based on their role
+            $canView = false;
+            
+            switch ($user->role) {
+                case 'admin':
+                case 'logistics':
+                    // Admin and logistics can view any order
+                    $canView = true;
+                    break;
+                    
+                case 'farmer':
+                    // Farmers can view orders that contain their products
+                    $canView = $order->orderItems()->whereHas('product', function ($q) use ($user) {
+                        $q->where('farmer_id', $user->id);
+                    })->exists();
+                    break;
+                    
+                case 'consumer':
+                case 'retailer':
+                    // Consumers and retailers can only view their own orders
+                    $canView = ($order->user_id === $user->id);
+                    break;
+            }
+            
+            if (!$canView) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized to view this order'
@@ -174,8 +236,35 @@ class OrderController extends Controller
     public function update(Request $request, Order $order): JsonResponse
     {
         try {
-            // Only allow status updates by admins or logistics managers
-            if (!in_array(auth()->user()->role, ['admin', 'logistics'])) {
+            $user = auth()->user();
+            
+            // Check permissions based on role
+            $canUpdate = false;
+            
+            switch ($user->role) {
+                case 'admin':
+                    // Admin can update any order
+                    $canUpdate = true;
+                    break;
+                    
+                case 'logistics':
+                    // Logistics can update order status for delivery management
+                    $canUpdate = true;
+                    break;
+                    
+                case 'farmer':
+                    // Farmers can update orders containing their products (limited updates)
+                    $canUpdate = $order->orderItems()->whereHas('product', function ($q) use ($user) {
+                        $q->where('farmer_id', $user->id);
+                    })->exists();
+                    break;
+                    
+                default:
+                    $canUpdate = false;
+                    break;
+            }
+            
+            if (!$canUpdate) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized to update order'
@@ -210,8 +299,28 @@ class OrderController extends Controller
     public function cancel(Order $order): JsonResponse
     {
         try {
+            $user = auth()->user();
+            
             // Check if user can cancel this order
-            if (auth()->user()->role !== 'admin' && $order->user_id !== auth()->id()) {
+            $canCancel = false;
+            
+            switch ($user->role) {
+                case 'admin':
+                    $canCancel = true;
+                    break;
+                    
+                case 'consumer':
+                case 'retailer':
+                    // Users can cancel their own orders
+                    $canCancel = ($order->user_id === $user->id);
+                    break;
+                    
+                default:
+                    $canCancel = false;
+                    break;
+            }
+            
+            if (!$canCancel) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized to cancel this order'

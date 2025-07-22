@@ -22,6 +22,12 @@ class DeliveryController extends Controller
                 $query->where('assigned_to', auth()->id());
             }
 
+            if (auth()->user()->role === 'retailer' || auth()->user()->role === 'consumer') {
+                $query->whereHas('order', function ($q) {
+                    $q->where('user_id', auth()->id());
+                });
+            }
+            
             // Filter by status
             if ($request->has('status') && $request->status) {
                 $query->where('status', $request->status);
