@@ -1,39 +1,19 @@
-public function createUser(Request $request): JsonResponse
-{
-    try {
-        $validatedData = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:admin,farmer,consumer,retailer,logistics',
-            'status' => 'required|in:active,inactive,suspended'
-        ]);
+$query = Delivery::with(['order.user', 'logisticsManager']);
 
-        $user = User::create([
-            'name' => $validatedData['name'],
-            'email' => $validatedData['email'],
-            'password' => Hash::make($validatedData['password']),
-            'role' => $validatedData['role'],
-            'status' => $validatedData['status'],
-        ]);
+// Filter by assigned logistics manager
+if (auth()->user()->role === 'logistics') {
+    $query->where('assigned_to', auth()->id());
+}
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User created successfully',
-            'user' => $user
-        ], 201);
+// 🔽 Add this block right here
+if (auth()->user()->role === 'retailer' || auth()->user()->role === 'consumer') {
+    $query->whereHas('order', function ($q) {
+        $q->where('user_id', auth()->id());
+    });
+}
+// 🔼 End of inserted block
 
-    } catch (ValidationException $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Validation failed',
-            'errors' => $e->errors()
-        ], 422);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'An error occurred while creating the user',
-            'error' => $e->getMessage()
-        ], 500);
-    }
+// Filter by status
+if ($request->has('status') && $request->status) {
+    $query->where('status', $request->status);
 }

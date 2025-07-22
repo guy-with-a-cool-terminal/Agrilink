@@ -115,8 +115,15 @@ class ApiClient {
         return response.products.data;
     }
 
-    // 5. Users: { users: { data: [...] } }
-    // 5. Users: { users: { data: [...] } } or { users: [...] }
+    // 5. Orders: { orders: { data: [...] } } or { orders: [...] }
+    if (response?.orders?.data && Array.isArray(response.orders.data)) {
+        return response.orders.data;
+    }
+    if (Array.isArray(response?.orders)) {
+        return response.orders;
+    }
+
+    // 6. Users: { users: { data: [...] } } or { users: [...] }
     if (response?.users?.data && Array.isArray(response.users.data)) {
         return response.users.data;
     }
@@ -124,12 +131,20 @@ class ApiClient {
         return response.users;
     }
 
-    // 6. Direct key-based array
+    // 7. Deliveries: { deliveries: { data: [...] } } or { deliveries: [...] }
+    if (response?.deliveries?.data && Array.isArray(response.deliveries.data)) {
+        return response.deliveries.data;
+    }
+    if (Array.isArray(response?.deliveries)) {
+        return response.deliveries;
+    }
+
+    // 8. Direct key-based array
     if (response && Array.isArray(response[key])) {
         return response[key];
     }
 
-    // 7. Fallback: top-level key holding paginated data
+    // 9. Fallback: top-level key holding paginated data
     if (response?.[key]?.data && Array.isArray(response[key].data)) {
         return response[key].data;
     }
