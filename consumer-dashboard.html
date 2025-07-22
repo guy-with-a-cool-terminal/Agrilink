@@ -5,139 +5,171 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consumer Dashboard - AgriLink</title>
-    <link href="styles/tailwind-output.css" rel="stylesheet">
-    <link href="styles/dashboard.css" rel="stylesheet">
-    <link href="styles/main.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles/tailwind-output.css">
+    <link rel="stylesheet" href="styles/main.css">
 </head>
 <body class="bg-gray-50">
-    <div class="flex h-screen">
-
-        <!-- Left Navigation -->
-        <div class="w-64 bg-gray-100 border-r border-gray-200">
-            <div class="p-4">
-                <img src="images/logo.png" alt="AgriLink Logo" class="w-32">
-            </div>
-            <nav class="mt-6">
-                <a href="#" class="block py-2 px-4 text-gray-800 hover:bg-gray-200">Dashboard</a>
-                <a href="#" class="block py-2 px-4 text-gray-800 hover:bg-gray-200">Products</a>
-                <a href="#" class="block py-2 px-4 text-gray-800 hover:bg-gray-200">Orders</a>
-                <a href="#" class="block py-2 px-4 text-gray-800 hover:bg-gray-200">Cart</a>
-                <a href="#" class="block py-2 px-4 text-gray-800 hover:bg-gray-200">Settings</a>
-                <a href="#" onclick="logout()" class="block py-2 px-4 text-red-600 hover:bg-gray-200">Logout</a>
+    <div class="dashboard active">
+        <header class="dashboard-header">
+            <nav class="dashboard-nav">
+                <h1 class="dashboard-title">🛒 Consumer Dashboard</h1>
+                <div class="user-info">
+                    <button class="btn-secondary" onclick="showCart()" style="margin-right: 10px;">
+                        🛒 Cart (<span id="cartCount">0</span>)
+                    </button>
+                    <span id="userName" class="text-gray-700 font-medium">Loading...</span>
+                    <span class="role-badge" id="userRole">Consumer</span>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
             </nav>
-        </div>
+        </header>
 
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-            <!-- Header -->
-            <header class="bg-white shadow">
-                <div class="flex items-center justify-between p-4">
-                    <div class="flex items-center">
-                        <h2 class="text-xl font-semibold text-gray-800 mr-4">Consumer Dashboard</h2>
-                        <span id="userName" class="text-gray-600"></span>
-                        <span id="userRole" class="text-gray-600"></span>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <div class="relative">
-                            <input type="text" id="searchInput" placeholder="Search products..." class="px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:border-blue-500">
-                            <button onclick="searchProducts()" class="absolute right-0 top-0 mt-1 mr-2 px-4 py-1 text-white bg-blue-500 rounded-full hover:bg-blue-700 focus:outline-none">
-                                Search
-                            </button>
-                        </div>
-                        <button onclick="showCart()" class="relative">
-                            <img src="images/cart-icon.svg" alt="Cart" class="w-6 h-6">
-                            <span id="cartCount" class="absolute top-0 right-0 flex items-center justify-center w-4 h-4 bg-red-500 text-white rounded-full text-xs">0</span>
-                        </button>
-                    </div>
+        <div class="dashboard-content">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 id="totalOrders">0</h3>
+                    <p>Total Orders</p>
                 </div>
-            </header>
+                <div class="stat-card">
+                    <h3 id="totalSpent">Ksh0</h3>
+                    <p>Total Spent</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="activeOrders">0</h3>
+                    <p>Active Orders</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="favoriteProducts">0</h3>
+                    <p>Favorite Products</p>
+                </div>
+            </div>
 
-            <!-- Main Content Area -->
-            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
-                <!-- Loading State -->
-                <div id="loadingState" class="fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-50">
-                    <div class="text-center">
-                        <div class="text-4xl text-blue-500 mb-4">
-                            Loading...
-                        </div>
-                        <p class="text-gray-600">Fetching the latest products and offers for you.</p>
-                    </div>
+            <!-- Search and Filter -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+                <div class="flex flex-wrap gap-4">
+                    <input type="text" id="searchInput" placeholder="Search products..." 
+                           class="flex-1 min-w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <select id="categoryFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <option value="">All Categories</option>
+                        <option value="vegetables">Vegetables</option>
+                        <option value="fruits">Fruits</option>
+                        <option value="grains">Grains</option>
+                        <option value="dairy">Dairy</option>
+                        <option value="spices">Spices</option>
+                    </select>
+                    <button class="btn-primary" onclick="searchProducts()">Search</button>
                 </div>
+            </div>
 
-                <!-- Product Grid -->
-                <div id="productGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- Products will be loaded here -->
+            <!-- Order History Table -->
+            <div class="table-container mb-8">
+                <div class="table-header">
+                    <h3>My Orders</h3>
+                    <button class="btn-secondary" onclick="refreshOrders()">🔄 Refresh</button>
                 </div>
-            </main>
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Products</th>
+                                <th>Total Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderHistoryTable">
+                            <!-- Orders will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-12">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+                <p class="text-gray-600 mt-4">Loading products...</p>
+            </div>
+
+            <!-- Product Catalog -->
+            <div class="product-grid" id="productGrid">
+                <!-- Products will be loaded here dynamically -->
+            </div>
         </div>
     </div>
 
     <!-- Cart Modal -->
     <div id="cartModal" class="modal">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">Shopping Cart</h3>
-                <button onclick="closeModal('cartModal')" class="text-gray-500 hover:text-gray-700">✕</button>
+        <div class="modal-content max-w-2xl">
+            <div class="modal-header">
+                <h3>Shopping Cart</h3>
+                <button class="close-btn" onclick="closeModal('cartModal')">&times;</button>
             </div>
-            <div id="cartItems" class="space-y-4">
-                <!-- Cart items will be dynamically added here -->
+            <div id="cartItems" class="max-h-96 overflow-y-auto">
+                <!-- Cart items will be loaded here -->
             </div>
-            <div class="mt-6 flex justify-between items-center">
-                <div class="text-gray-700">
-                    Subtotal: <span id="subtotal" class="font-semibold">Ksh0</span><br>
-                    Delivery: <span class="font-semibold">Ksh50</span><br>
-                    Total: <span id="total" class="font-semibold">Ksh0</span>
+            <div class="cart-summary">
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span id="subtotal">Ksh0</span>
                 </div>
-                <div class="space-x-2">
-                    <button onclick="closeModal('cartModal')" class="btn-secondary">Continue Shopping</button>
-                    <button onclick="proceedToCheckout()" class="btn-primary">Proceed to Checkout</button>
+                <div class="summary-row">
+                    <span>Delivery:</span>
+                    <span>Ksh50</span>
                 </div>
+                <div class="summary-row total">
+                    <span>Total:</span>
+                    <span id="total">Ksh50</span>
+                </div>
+                <button class="btn-primary w-full mt-4" onclick="proceedToCheckout()">
+                    Proceed to Checkout
+                </button>
             </div>
         </div>
     </div>
 
     <!-- Checkout Modal -->
     <div id="checkoutModal" class="modal">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">Checkout</h3>
-                <button onclick="closeModal('checkoutModal')" class="text-gray-500 hover:text-gray-700">✕</button>
+        <div class="modal-content max-w-2xl">
+            <div class="modal-header">
+                <h3>Checkout</h3>
+                <button class="close-btn" onclick="closeModal('checkoutModal')">&times;</button>
             </div>
-            <form id="checkoutForm">
-                <div class="form-group">
-                    <label for="deliveryAddress">Delivery Address</label>
-                    <textarea id="deliveryAddress" rows="3" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="paymentMethod">Payment Method</label>
-                    <select id="paymentMethod" required>
-                        <option value="">Select Payment Method</option>
-                        <option value="card">Credit Card</option>
-                        <option value="mpesa">M-Pesa</option>
-                        <option value="cash">Cash on Delivery</option>
-                    </select>
-                </div>
-                <div class="flex justify-between items-center">
-                    <div class="text-gray-700">
-                        Total: <span id="checkoutTotal" class="font-semibold">Ksh0</span>
+            <div class="p-6">
+                <form onsubmit="placeOrder(event)">
+                    <div class="form-group">
+                        <label for="deliveryAddress">Delivery Address</label>
+                        <textarea id="deliveryAddress" rows="3" required placeholder="Enter your complete address"></textarea>
                     </div>
-                    <button type="submit" onclick="placeOrder(event)" class="btn-primary">Place Order</button>
-                </div>
-            </form>
+                    <div class="form-group">
+                        <label for="phoneNumber">Phone Number</label>
+                        <input type="tel" id="phoneNumber" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="paymentMethod">Payment Method</label>
+                        <select id="paymentMethod" required>
+                            <option value="">Select Payment Method</option>
+                            <option value="cod">Cash on Delivery</option>
+                            <option value="mpesa">M-Pesa</option>
+                            <option value="card">Credit/Debit Card</option>
+                        </select>
+                    </div>
+                    <div class="cart-summary mb-4">
+                        <div class="summary-row total">
+                            <span>Total Amount:</span>
+                            <span id="checkoutTotal">Ksh0</span>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary w-full">Place Order</button>
+                </form>
+            </div>
         </div>
     </div>
 
-    <!-- Scripts - Load modules first, then main dashboard -->
-    <script src="scripts/auth.js"></script>
     <script src="scripts/api-client.js"></script>
-    
-    <!-- Consumer modules -->
-    <script src="scripts/consumer/product-management.js"></script>
-    <script src="scripts/consumer/cart-management.js"></script>
-    <script src="scripts/consumer/order-management.js"></script>
-    <script src="scripts/consumer/stats-management.js"></script>
-    
-    <!-- Main consumer dashboard -->
+    <script src="scripts/auth.js"></script>
     <script src="scripts/consumer-dashboard.js"></script>
 </body>
 </html>

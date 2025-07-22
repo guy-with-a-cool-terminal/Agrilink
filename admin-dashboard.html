@@ -5,186 +5,144 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - AgriLink</title>
-    <link href="styles/tailwind-output.css" rel="stylesheet">
-    <link href="styles/dashboard.css" rel="stylesheet">
-    <link href="styles/main.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles/tailwind-output.css">
+    <link rel="stylesheet" href="styles/main.css">
 </head>
 <body class="bg-gray-50">
-    <div class="flex h-screen">
+    <div class="dashboard active">
+        <header class="dashboard-header">
+            <nav class="dashboard-nav">
+                <h1 class="dashboard-title">⚙️ Admin Dashboard</h1>
+                <div class="user-info">
+                    <button class="btn-secondary" onclick="window.open('analytics.html', '_blank')" style="margin-right: 10px;">
+                        📊 Analytics
+                    </button>
+                    <button id="maintenanceToggle" class="btn-secondary" onclick="toggleMaintenanceMode()" style="margin-right: 10px;">
+                        🔧 Enable Maintenance
+                    </button>
+                    <button class="btn-secondary" onclick="refreshData()" style="margin-right: 10px;">
+                        🔄 Refresh
+                    </button>
+                    <span id="userName" class="text-gray-700 font-medium">Loading...</span>
+                    <span class="role-badge bg-purple-100 text-purple-800" id="userRole">Admin</span>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </nav>
+        </header>
 
-        <!-- Sidebar -->
-        <div class="w-64 bg-gray-100 border-r border-gray-200">
-            <div class="p-4">
-                <img src="images/logo.png" alt="AgriLink Logo" class="w-32">
+        <div class="dashboard-content">
+            <!-- Real-time Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 id="totalSales" class="text-3xl font-bold text-gray-900">Loading...</h3>
+                    <p class="text-gray-600">Total Sales</p>
+                    <small id="salesGrowth" class="text-green-600 font-medium">Loading...</small>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalOrders" class="text-3xl font-bold text-gray-900">Loading...</h3>
+                    <p class="text-gray-600">Total Orders</p>
+                    <small id="orderGrowth" class="text-green-600 font-medium">Loading...</small>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalUsers" class="text-3xl font-bold text-gray-900">Loading...</h3>
+                    <p class="text-gray-600">Total Users</p>
+                    <small id="userGrowth" class="text-green-600 font-medium">Loading...</small>
+                </div>
+                <div class="stat-card">
+                    <h3 id="monthlyRevenue" class="text-3xl font-bold text-gray-900">Loading...</h3>
+                    <p class="text-gray-600">Monthly Revenue</p>
+                    <small id="revenueGrowth" class="text-green-600 font-medium">Loading...</small>
+                </div>
+                <div class="stat-card">
+                    <h3 id="pendingOrders" class="text-3xl font-bold text-gray-900">Loading...</h3>
+                    <p class="text-gray-600">Pending Orders</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalProducts" class="text-3xl font-bold text-gray-900">Loading...</h3>
+                    <p class="text-gray-600">Total Products</p>
+                </div>
             </div>
-            <ul class="p-4 space-y-2">
-                <li>
-                    <a href="#" class="block p-2 rounded hover:bg-gray-200">Dashboard</a>
-                </li>
-                <li>
-                    <a href="#" class="block p-2 rounded hover:bg-gray-200">Users</a>
-                </li>
-                <li>
-                    <a href="#" class="block p-2 rounded hover:bg-gray-200">Products</a>
-                </li>
-                <li>
-                    <a href="#" class="block p-2 rounded hover:bg-gray-200">Orders</a>
-                </li>
-                <li>
-                    <a href="#" class="block p-2 rounded hover:bg-gray-200">Reports</a>
-                </li>
-                <li>
-                    <a href="#" class="block p-2 rounded hover:bg-gray-200">Settings</a>
-                </li>
-                <li>
-                    <a href="#" onclick="logout()" class="block p-2 rounded hover:bg-gray-200">Logout</a>
-                </li>
-            </ul>
-        </div>
 
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-            <!-- Header -->
-            <header class="bg-white shadow">
-                <div class="flex items-center justify-between p-4">
-                    <h2 class="text-xl font-semibold text-gray-800">Admin Dashboard</h2>
-                    <div class="flex items-center space-x-4">
-                        <span id="userName" class="text-gray-600">Welcome, Admin</span>
-                        <button id="maintenanceToggle" onclick="toggleMaintenanceMode()" class="btn-secondary">🔧 Maintenance Mode</button>
-                        <button onclick="refreshData()" class="btn-primary">Refresh Data</button>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Content -->
-            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
-                <!-- Real-time Analytics -->
-                <section class="mb-8">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-4">Real-Time Analytics</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div class="bg-white shadow-md rounded-lg p-4">
-                            <h4 class="text-sm font-medium text-gray-600">Total Users</h4>
-                            <p id="totalUsers" class="text-2xl font-semibold text-blue-600">1,234</p>
+            <!-- Product Analytics -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">Product Analytics</h3>
+                <div id="productMetrics">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-blue-800">Total Products</h4>
+                            <p class="text-2xl font-bold text-blue-600">Loading...</p>
                         </div>
-                        <div class="bg-white shadow-md rounded-lg p-4">
-                            <h4 class="text-sm font-medium text-gray-600">Total Orders</h4>
-                            <p id="totalOrders" class="text-2xl font-semibold text-green-600">567</p>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-green-800">Active Products</h4>
+                            <p class="text-2xl font-bold text-green-600">Loading...</p>
                         </div>
-                        <div class="bg-white shadow-md rounded-lg p-4">
-                            <h4 class="text-sm font-medium text-gray-600">Total Revenue</h4>
-                            <p id="totalRevenue" class="text-2xl font-semibold text-yellow-600">Ksh89,012</p>
+                        <div class="bg-yellow-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-yellow-800">Low Stock</h4>
+                            <p class="text-2xl font-bold text-yellow-600">Loading...</p>
                         </div>
-                        <div class="bg-white shadow-md rounded-lg p-4">
-                            <h4 class="text-sm font-medium text-gray-600">Active Products</h4>
-                            <p id="activeProducts" class="text-2xl font-semibold text-indigo-600">89</p>
+                        <div class="bg-red-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-red-800">Out of Stock</h4>
+                            <p class="text-2xl font-bold text-red-600">Loading...</p>
                         </div>
                     </div>
-                </section>
-
-                <!-- User Management -->
-                <section class="mb-8">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-gray-700">User Management</h3>
-                        <button onclick="showCreateUserModal()" class="btn-primary">Create New User</button>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full bg-white rounded-lg shadow-md overflow-hidden">
-                            <thead class="bg-gray-50">
-                                <tr class="text-left text-gray-700">
-                                    <th class="py-3 px-4 font-semibold text-sm">Name</th>
-                                    <th class="py-3 px-4 font-semibold text-sm">Email</th>
-                                    <th class="py-3 px-4 font-semibold text-sm">Role</th>
-                                    <th class="py-3 px-4 font-semibold text-sm">Status</th>
-                                    <th class="py-3 px-4 font-semibold text-sm">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="usersTable">
-                                <!-- User data will be loaded here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <!-- Order Management -->
-                <section>
-                    <h3 class="text-lg font-semibold text-gray-700 mb-4">Recent Orders</h3>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full bg-white rounded-lg shadow-md overflow-hidden">
-                            <thead class="bg-gray-50">
-                                <tr class="text-left text-gray-700">
-                                    <th class="py-3 px-4 font-semibold text-sm">Order ID</th>
-                                    <th class="py-3 px-4 font-semibold text-sm">Customer</th>
-                                    <th class="py-3 px-4 font-semibold text-sm">Amount</th>
-                                    <th class="py-3 px-4 font-semibold text-sm">Status</th>
-                                    <th class="py-3 px-4 font-semibold text-sm">Date</th>
-                                    <th class="py-3 px-4 font-semibold text-sm">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ordersTable">
-                                <!-- Order data will be loaded here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-            </main>
-        </div>
-    </div>
-
-    <!-- User Modal -->
-    <div id="userModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeUserModal()">&times;</span>
-            <h2 id="userModalTitle">Create User</h2>
-            <form id="userForm">
-                <div class="form-group">
-                    <label for="userName">Name:</label>
-                    <input type="text" id="userNameInput" name="name" required>
                 </div>
-                <div class="form-group">
-                    <label for="userEmail">Email:</label>
-                    <input type="email" id="userEmail" name="email" required>
-                </div>
-                <div class="form-group">
-                    <label for="userRole">Role:</label>
-                    <select id="userRole" name="role" required>
-                        <option value="">Select Role</option>
-                        <option value="admin">Admin</option>
-                        <option value="farmer">Farmer</option>
-                        <option value="consumer">Consumer</option>
-                        <option value="retailer">Retailer</option>
-                        <option value="logistics">Logistics</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="userPassword">Password:</label>
-                    <input type="password" id="userPassword" name="password" required>
-                </div>
-                <button type="submit">Save User</button>
-            </form>
-        </div>
-    </div>
+            </div>
 
-    <!-- Order Details Modal -->
-    <div id="orderModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal('orderModal')">&times;</span>
-            <h2>Order Details</h2>
-            <div id="orderDetails">
-                <!-- Order details will be loaded here -->
+            <!-- Users Management -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>Users Management</h3>
+                    <button class="btn-primary" onclick="showCreateUserModal()">
+                        + Create User
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Join Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recent Orders -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>Recent Orders</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="ordersTable">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Customer</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Orders will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
-    
-    <!-- Scripts - Load modules first, then main dashboard -->
-    <script src="scripts/auth.js"></script>
+
     <script src="scripts/api-client.js"></script>
-    
-    <!-- Admin modules -->
-    <script src="scripts/admin/user-management.js"></script>
-    <script src="scripts/admin/order-management.js"></script>
-    <script src="scripts/admin/analytics.js"></script>
-    
-    <!-- Main admin dashboard -->
+    <script src="scripts/auth.js"></script>
     <script src="scripts/admin-dashboard.js"></script>
 </body>
 </html>
