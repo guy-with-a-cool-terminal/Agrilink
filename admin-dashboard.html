@@ -1,148 +1,187 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - AgriLink</title>
-    <link rel="stylesheet" href="styles/tailwind-output.css">
-    <link rel="stylesheet" href="styles/main.css">
+    <link href="styles/tailwind-output.css" rel="stylesheet">
+    <link href="styles/dashboard.css" rel="stylesheet">
+    <link href="styles/main.css" rel="stylesheet">
 </head>
 <body class="bg-gray-50">
-    <div class="dashboard active">
-        <header class="dashboard-header">
-            <nav class="dashboard-nav">
-                <h1 class="dashboard-title">⚙️ Admin Dashboard</h1>
-                <div class="user-info">
-                    <button class="btn-secondary" onclick="window.open('analytics.html', '_blank')" style="margin-right: 10px;">
-                        📊 Analytics
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="bg-white w-64 flex-none border-r p-4">
+            <div class="mb-8">
+                <img src="images/logo.png" alt="AgriLink Logo" class="h-8">
+            </div>
+            <ul class="space-y-2">
+                <li>
+                    <a href="admin-dashboard.html" class="block py-2 px-4 rounded hover:bg-gray-100 font-medium text-gray-700">
+                        Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="block py-2 px-4 rounded hover:bg-gray-100 font-medium text-gray-700">
+                        Products
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="block py-2 px-4 rounded hover:bg-gray-100 font-medium text-gray-700">
+                        Orders
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="block py-2 px-4 rounded hover:bg-gray-100 font-medium text-gray-700">
+                        Customers
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="block py-2 px-4 rounded hover:bg-gray-100 font-medium text-gray-700">
+                        Analytics
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="block py-2 px-4 rounded hover:bg-gray-100 font-medium text-gray-700">
+                        Settings
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="logout()" class="block py-2 px-4 rounded hover:bg-gray-100 font-medium text-gray-700">
+                        Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 p-4">
+            <!-- Header -->
+            <header class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-2xl font-semibold text-gray-800">Admin Dashboard</h2>
+                    <p class="text-gray-500">Welcome, <span id="userName">Admin</span> (<span id="userRole"></span>)</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="refreshButton" onclick="refreshData()" class="btn-secondary">
+                        🔄 Refresh Data
                     </button>
-                    <button id="maintenanceToggle" class="btn-secondary" onclick="toggleMaintenanceMode()" style="margin-right: 10px;">
+                    <button id="maintenanceToggle" onclick="toggleMaintenanceMode()" class="btn-primary">
                         🔧 Enable Maintenance
                     </button>
-                    <button class="btn-secondary" onclick="refreshData()" style="margin-right: 10px;">
-                        🔄 Refresh
-                    </button>
-                    <span id="userName" class="text-gray-700 font-medium">Loading...</span>
-                    <span class="role-badge bg-purple-100 text-purple-800" id="userRole">Admin</span>
-                    <button class="logout-btn" onclick="logout()">Logout</button>
                 </div>
-            </nav>
-        </header>
+            </header>
 
-        <div class="dashboard-content">
-            <!-- Real-time Stats Cards -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3 id="totalSales" class="text-3xl font-bold text-gray-900">Loading...</h3>
-                    <p class="text-gray-600">Total Sales</p>
-                    <small id="salesGrowth" class="text-green-600 font-medium">Loading...</small>
-                </div>
-                <div class="stat-card">
-                    <h3 id="totalOrders" class="text-3xl font-bold text-gray-900">Loading...</h3>
-                    <p class="text-gray-600">Total Orders</p>
-                    <small id="orderGrowth" class="text-green-600 font-medium">Loading...</small>
-                </div>
-                <div class="stat-card">
-                    <h3 id="totalUsers" class="text-3xl font-bold text-gray-900">Loading...</h3>
-                    <p class="text-gray-600">Total Users</p>
-                    <small id="userGrowth" class="text-green-600 font-medium">Loading...</small>
-                </div>
-                <div class="stat-card">
-                    <h3 id="monthlyRevenue" class="text-3xl font-bold text-gray-900">Loading...</h3>
-                    <p class="text-gray-600">Monthly Revenue</p>
-                    <small id="revenueGrowth" class="text-green-600 font-medium">Loading...</small>
-                </div>
-                <div class="stat-card">
-                    <h3 id="pendingOrders" class="text-3xl font-bold text-gray-900">Loading...</h3>
-                    <p class="text-gray-600">Pending Orders</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="totalProducts" class="text-3xl font-bold text-gray-900">Loading...</h3>
-                    <p class="text-gray-600">Total Products</p>
-                </div>
-            </div>
-
-            <!-- Product Analytics -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
-                <h3 class="text-lg font-semibold text-gray-900 mb-6">Product Analytics</h3>
-                <div id="productMetrics">
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div class="bg-blue-50 p-4 rounded-lg">
-                            <h4 class="font-semibold text-blue-800">Total Products</h4>
-                            <p class="text-2xl font-bold text-blue-600">Loading...</p>
-                        </div>
-                        <div class="bg-green-50 p-4 rounded-lg">
-                            <h4 class="font-semibold text-green-800">Active Products</h4>
-                            <p class="text-2xl font-bold text-green-600">Loading...</p>
-                        </div>
-                        <div class="bg-yellow-50 p-4 rounded-lg">
-                            <h4 class="font-semibold text-yellow-800">Low Stock</h4>
-                            <p class="text-2xl font-bold text-yellow-600">Loading...</p>
-                        </div>
-                        <div class="bg-red-50 p-4 rounded-lg">
-                            <h4 class="font-semibold text-red-800">Out of Stock</h4>
-                            <p class="text-2xl font-bold text-red-600">Loading...</p>
-                        </div>
+            <!-- Analytics Overview -->
+            <section class="mb-8">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">Analytics Overview</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white shadow rounded-lg p-4">
+                        <h4 class="font-semibold text-gray-600">Total Sales</h4>
+                        <p class="text-2xl font-bold text-green-600" id="totalSales">Ksh 120,000</p>
+                        <p class="text-sm font-medium text-green-600" id="salesGrowth">↑ 12% from last month</p>
+                    </div>
+                    <div class="bg-white shadow rounded-lg p-4">
+                        <h4 class="font-semibold text-gray-600">Total Orders</h4>
+                        <p class="text-2xl font-bold text-blue-600" id="totalOrders">450</p>
+                        <p class="text-sm font-medium text-green-600" id="orderGrowth">↑ 5% from last month</p>
+                    </div>
+                    <div class="bg-white shadow rounded-lg p-4">
+                        <h4 class="font-semibold text-gray-600">Total Users</h4>
+                        <p class="text-2xl font-bold text-indigo-600" id="totalUsers">120</p>
+                        <p class="text-sm font-medium text-red-600" id="userGrowth">↓ 2% from last month</p>
+                    </div>
+                    <div class="bg-white shadow rounded-lg p-4">
+                        <h4 class="font-semibold text-gray-600">Monthly Revenue</h4>
+                        <p class="text-2xl font-bold text-purple-600" id="monthlyRevenue">Ksh 30,000</p>
+                        <p class="text-sm font-medium text-green-600" id="revenueGrowth">↑ 8% from last month</p>
+                    </div>
+                    <div class="bg-white shadow rounded-lg p-4">
+                        <h4 class="font-semibold text-gray-600">Pending Orders</h4>
+                        <p class="text-2xl font-bold text-orange-600" id="pendingOrders">15</p>
+                    </div>
+                    <div class="bg-white shadow rounded-lg p-4">
+                        <h4 class="font-semibold text-gray-600">Total Products</h4>
+                        <p class="text-2xl font-bold text-teal-600" id="totalProducts">250</p>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Users Management -->
-            <div class="table-container">
-                <div class="table-header">
-                    <h3>Users Management</h3>
-                    <button class="btn-primary" onclick="showCreateUserModal()">
-                        + Create User
-                    </button>
+            <!-- Product Metrics -->
+            <section class="mb-8">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">Product Metrics</h3>
+                <div id="productMetrics">
+                    <!-- Product metrics will be loaded here -->
+                    Loading product metrics...
+                </div>
+            </section>
+
+            <!-- User Management Section -->
+            <section class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800">User Management</h3>
+                    <button onclick="showCreateUserModal()" class="btn-primary">➕ Create User</button>
                 </div>
                 <div class="overflow-x-auto">
-                    <table id="usersTable">
-                        <thead>
+                    <table id="usersTable" class="min-w-full bg-white rounded-lg shadow overflow-hidden">
+                        <thead class="bg-gray-50">
                             <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                                <th>Join Date</th>
-                                <th>Actions</th>
+                                <th class="text-left py-3 px-4 font-medium text-gray-600">Name</th>
+                                <th class="text-left py-3 px-4 font-medium text-gray-600">Email</th>
+                                <th class="text-left py-3 px-4 font-medium text-gray-600">Role</th>
+                                <th class="text-left py-3 px-4 font-medium text-gray-600">Status</th>
+                                <th class="text-left py-3 px-4 font-medium text-gray-600">Joined Date</th>
+                                <th class="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- Users will be loaded here -->
+                            <!-- User rows will be dynamically added here -->
+                            <tr>
+                                <td colspan="6" class="text-center py-8">Loading users...</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </section>
 
-            <!-- Recent Orders -->
-            <div class="table-container">
-                <div class="table-header">
-                    <h3>Recent Orders</h3>
-                </div>
+            <!-- Order Management Section -->
+            <section>
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">Order Management</h3>
                 <div class="overflow-x-auto">
-                    <table id="ordersTable">
-                        <thead>
+                    <table id="ordersTable" class="min-w-full bg-white rounded-lg shadow overflow-hidden">
+                        <thead class="bg-gray-50">
                             <tr>
-                                <th>Order ID</th>
-                                <th>Customer</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Date</th>
-                                <th>Actions</th>
+                                <th class="text-left py-3 px-4 font-medium text-gray-600">Order ID</th>
+                                <th class="text-left py-3 px-4 font-medium text-gray-600">Items</th>
+                                <th class="text-left py-3 px-4 font-medium text-gray-600">Customer</th>
+                                <th class="text-left py-3 px-4 font-medium text-gray-600">Amount</th>
+                                <th class="text-left py-3 px-4 font-medium text-gray-600">Status</th>
+                                <th class="text-left py-3 px-4 font-medium text-gray-600">Order Date</th>
+                                <th class="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- Orders will be loaded here -->
+                            <!-- Order rows will be dynamically added here -->
+                            <tr>
+                                <td colspan="7" class="text-center py-8">Loading orders...</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </section>
         </div>
     </div>
-
-    <script src="scripts/api-client.js"></script>
+    
+    <!-- Scripts - Load modules first, then main dashboard -->
     <script src="scripts/auth.js"></script>
+    <script src="scripts/api-client.js"></script>
+    
+    <!-- Admin modules -->
+    <script src="scripts/admin/user-management.js"></script>
+    <script src="scripts/admin/analytics.js"></script>
+    <script src="scripts/admin/order-management.js"></script>
+    
+    <!-- Main admin dashboard -->
     <script src="scripts/admin-dashboard.js"></script>
 </body>
 </html>

@@ -1,137 +1,153 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Logistics Dashboard - AgriLink</title>
-    <link rel="stylesheet" href="styles/tailwind-output.css">
-    <link rel="stylesheet" href="styles/main.css">
+    <link href="styles/tailwind-output.css" rel="stylesheet">
+    <link href="styles/dashboard.css" rel="stylesheet">
+    <link href="styles/main.css" rel="stylesheet">
 </head>
 <body class="bg-gray-50">
-    <div class="dashboard active">
-        <header class="dashboard-header">
-            <nav class="dashboard-nav">
-                <h1 class="dashboard-title">🚚 Logistics Dashboard</h1>
-                <div class="user-info">
-                    <span id="userName" class="text-gray-700 font-medium">Loading...</span>
-                    <span class="role-badge bg-orange-100 text-orange-800" id="userRole">Logistics</span>
-                    <button class="logout-btn" onclick="logout()">Logout</button>
-                </div>
-            </nav>
-        </header>
+    <div class="flex h-screen">
 
-        <div class="dashboard-content">
-            <!-- Stats Cards -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3 id="activeDeliveries">0</h3>
-                    <p>Active Deliveries</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="completedToday">0</h3>
-                    <p>Completed Today</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="totalDistance">0</h3>
-                    <p>KM Traveled</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="efficiency">0%</h3>
-                    <p>Delivery Efficiency</p>
-                </div>
+        <!-- Sidebar -->
+        <div class="w-64 bg-gray-100 border-r border-gray-200">
+            <div class="p-4">
+                <img src="images/logo.png" alt="AgriLink Logo" class="w-32">
             </div>
+            <ul class="p-4 space-y-2">
+                <li>
+                    <a href="#" class="block p-2 rounded hover:bg-gray-200">Dashboard</a>
+                </li>
+                <li>
+                    <a href="#" class="block p-2 rounded hover:bg-gray-200">Deliveries</a>
+                </li>
+                <li>
+                    <a href="#" class="block p-2 rounded hover:bg-gray-200">Inventory</a>
+                </li>
+                <li>
+                    <a href="#" class="block p-2 rounded hover:bg-gray-200">Reports</a>
+                </li>
+                <li>
+                    <a href="#" class="block p-2 rounded hover:bg-gray-200">Settings</a>
+                </li>
+                <li>
+                    <a href="#" onclick="logout()" class="block p-2 rounded hover:bg-gray-200">Logout</a>
+                </li>
+            </ul>
+        </div>
 
-            <!-- Delivery Route Map -->
-            <div class="chart-container">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-lg font-semibold text-gray-900">Delivery Route Map</h3>
-                    <button onclick="refreshDeliveryMap()" class="btn-secondary text-sm">
-                        🔄 Refresh Map
-                    </button>
-                </div>
-                <div id="deliveryMap" class="w-full h-96 rounded-lg border border-gray-200 bg-gray-100">
-                    <div class="flex items-center justify-center h-full">
-                        <div class="text-center">
-                            <div class="text-gray-400 text-2xl mb-2">🗺️</div>
-                            <p class="text-gray-600">Loading delivery map...</p>
-                            <p class="text-gray-500 text-sm mt-1">Google Maps integration</p>
-                        </div>
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <header class="bg-white shadow">
+                <div class="flex items-center justify-between p-4">
+                    <h2 class="text-xl font-semibold text-gray-800">Logistics Dashboard</h2>
+                    <div class="flex items-center space-x-4">
+                        <span id="userName" class="text-gray-600">Welcome, Logistics User</span>
+                        <button onclick="refreshDeliveries()" class="btn-primary">Refresh Deliveries</button>
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <!-- Assigned Deliveries -->
-            <div class="table-container">
-                <div class="table-header">
-                    <h3>Assigned Deliveries</h3>
-                    <button class="btn-primary" onclick="refreshDeliveries()">
-                        🔄 Refresh
-                    </button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Delivery ID</th>
-                                <th>Order Details</th>
-                                <th>Customer</th>
-                                <th>Address</th>
-                                <th>Status</th>
-                                <th>Priority</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="deliveriesTable">
-                            <!-- Deliveries will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Delivery Status Update -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
-                <h3 class="text-lg font-semibold text-gray-900 mb-6">Update Delivery Status</h3>
-                <form onsubmit="updateDeliveryStatus(event)">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="form-group">
-                            <label for="deliverySelect">Select Delivery</label>
-                            <select id="deliverySelect" required>
-                                <option value="">Select Delivery</option>
-                            </select>
+            <!-- Content -->
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+                <!-- Delivery Overview -->
+                <section class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4">Delivery Overview</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="bg-white shadow-md rounded-lg p-4">
+                            <h4 class="text-sm font-medium text-gray-600">Active Deliveries</h4>
+                            <p id="activeDeliveries" class="text-2xl font-semibold text-blue-600">120</p>
                         </div>
-                        <div class="form-group">
-                            <label for="newStatus">New Status</label>
-                            <select id="newStatus" required>
-                                <option value="">Select Status</option>
-                                <option value="picked_up">Picked Up</option>
-                                <option value="in_transit">In Transit</option>
-                                <option value="out_for_delivery">Out for Delivery</option>
-                                <option value="delivered">Delivered</option>
-                                <option value="failed">Delivery Failed</option>
-                            </select>
+                        <div class="bg-white shadow-md rounded-lg p-4">
+                            <h4 class="text-sm font-medium text-gray-600">Completed Today</h4>
+                            <p id="completedToday" class="text-2xl font-semibold text-green-600">45</p>
                         </div>
-                        <div class="form-group">
-                            <label for="location">Current Location</label>
-                            <input type="text" id="location" placeholder="Enter current location">
+                        <div class="bg-white shadow-md rounded-lg p-4">
+                            <h4 class="text-sm font-medium text-gray-600">Total Distance (km)</h4>
+                            <p id="totalDistance" class="text-2xl font-semibold text-yellow-600">15,000</p>
+                        </div>
+                        <div class="bg-white shadow-md rounded-lg p-4">
+                            <h4 class="text-sm font-medium text-gray-600">Efficiency</h4>
+                            <p id="efficiency" class="text-2xl font-semibold text-indigo-600">85%</p>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label for="statusNotes">Notes/Comments</label>
-                        <textarea id="statusNotes" rows="3" placeholder="Any additional notes about the delivery"></textarea>
+                </section>
+
+                <!-- Deliveries Table -->
+                <section class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4">Assigned Deliveries</h3>
+                    <div class="overflow-x-auto">
+                        <table id="deliveriesTable" class="min-w-full bg-white rounded-lg shadow-md overflow-hidden">
+                            <thead class="bg-gray-50">
+                                <tr class="text-left text-gray-700">
+                                    <th class="py-3 px-4 font-semibold text-sm">Delivery ID</th>
+                                    <th class="py-3 px-4 font-semibold text-sm">Order Details</th>
+                                    <th class="py-3 px-4 font-semibold text-sm">Customer</th>
+                                    <th class="py-3 px-4 font-semibold text-sm">Address</th>
+                                    <th class="py-3 px-4 font-semibold text-sm">Status</th>
+                                    <th class="py-3 px-4 font-semibold text-sm">Priority</th>
+                                    <th class="py-3 px-4 font-semibold text-sm">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Deliveries data will be loaded here -->
+                            </tbody>
+                        </table>
                     </div>
-                    <button type="submit" class="btn-primary">Update Status</button>
-                </form>
-            </div>
+                </section>
+
+                <!-- Update Delivery Status Form -->
+                <section>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4">Update Delivery Status</h3>
+                    <form class="bg-white shadow-md rounded-lg p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="deliverySelect" class="block text-sm font-medium text-gray-700">Select Delivery</label>
+                                <select id="deliverySelect" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                    <option value="">Select Delivery</option>
+                                    <!-- Options will be dynamically populated -->
+                                </select>
+                            </div>
+                            <div>
+                                <label for="newStatus" class="block text-sm font-medium text-gray-700">New Status</label>
+                                <select id="newStatus" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                    <option value="pending">Pending</option>
+                                    <option value="in_transit">In Transit</option>
+                                    <option value="delivered">Delivered</option>
+                                    <option value="delayed">Delayed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="location" class="block text-sm font-medium text-gray-700">Location</label>
+                                <input type="text" id="location" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="Current Location">
+                            </div>
+                            <div>
+                                <label for="statusNotes" class="block text-sm font-medium text-gray-700">Status Notes</label>
+                                <textarea id="statusNotes" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="Additional notes"></textarea>
+                            </div>
+                        </div>
+                        <div class="mt-6">
+                            <button type="submit" class="btn-primary">Update Status</button>
+                        </div>
+                    </form>
+                </section>
+            </main>
         </div>
     </div>
-
-    <!-- Google Maps API - Replace YOUR_API_KEY with your actual Google Maps API key -->
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap&libraries=geometry"></script>
     
-    <script src="scripts/api-client.js"></script>
+    <!-- Scripts - Load modules first, then main dashboard -->
     <script src="scripts/auth.js"></script>
+    <script src="scripts/api-client.js"></script>
+    
+    <!-- Logistics modules -->
+    <script src="scripts/logistics/delivery-management.js"></script>
+    <script src="scripts/logistics/stats-management.js"></script>
+    
+    <!-- Main logistics dashboard -->
     <script src="scripts/logistics-dashboard.js"></script>
-    <script src="scripts/maps.js"></script>
 </body>
 </html>

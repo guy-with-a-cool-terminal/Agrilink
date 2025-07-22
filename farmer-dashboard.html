@@ -1,169 +1,182 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Farmer Dashboard - AgriLink</title>
-    <link rel="stylesheet" href="styles/tailwind-output.css">
-    <link rel="stylesheet" href="styles/main.css">
+    <link href="styles/tailwind-output.css" rel="stylesheet">
+    <link href="styles/dashboard.css" rel="stylesheet">
+    <link href="styles/main.css" rel="stylesheet">
 </head>
 <body class="bg-gray-50">
-    <div class="dashboard active">
-        <header class="dashboard-header">
-            <nav class="dashboard-nav">
-                <h1 class="dashboard-title">🌾 Farmer Dashboard</h1>
-                <div class="user-info">
-                    <span id="userName" class="text-gray-700 font-medium">Loading...</span>
-                    <span class="role-badge" id="userRole">Farmer</span>
-                    <button class="logout-btn" onclick="logout()">Logout</button>
-                </div>
-            </nav>
-        </header>
+    <div class="flex h-screen bg-gray-100">
 
-        <div class="dashboard-content">
-            <!-- Stats Cards -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3 id="totalProducts">0</h3>
-                    <p>Products Listed</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="totalSales">Ksh0</h3>
-                    <p>Total Sales</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="pendingOrders">0</h3>
-                    <p>Pending Orders</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="monthlyRevenue">Ksh0</h3>
-                    <p>Monthly Revenue</p>
-                </div>
+        <!-- Left Sidebar (Navigation) -->
+        <div class="w-64 flex-shrink-0 bg-gray-800 text-white py-4 px-6">
+            <div class="mb-8">
+                <h1 class="text-2xl font-bold">AgriLink</h1>
+                <p class="text-sm text-gray-400">Farmer Dashboard</p>
             </div>
 
-            <!-- Add Product Button -->
-            <div class="mb-8">
-                <button class="btn-primary" id="addProductBtn">
-                    + Add New Product
+            <nav>
+                <a href="#" class="block py-2 hover:bg-gray-700 rounded">Dashboard</a>
+                <a href="#" class="block py-2 hover:bg-gray-700 rounded">Products</a>
+                <a href="#" class="block py-2 hover:bg-gray-700 rounded">Orders</a>
+                <a href="#" class="block py-2 hover:bg-gray-700 rounded">Analytics</a>
+                <a href="#" class="block py-2 hover:bg-gray-700 rounded">Settings</a>
+            </nav>
+
+            <div class="mt-8">
+                <button onclick="logout()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                    Logout
                 </button>
             </div>
+        </div>
 
-            <!-- Loading State -->
-            <div id="loadingState" class="text-center py-12">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-                <p class="text-gray-600 mt-4">Loading your products...</p>
-            </div>
+        <!-- Main Content Area -->
+        <div class="flex-1 overflow-x-hidden overflow-y-auto">
+            <!-- Header -->
+            <header class="bg-white py-4 px-6 shadow-md">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold">Welcome, <span id="userName">Farmer</span></h2>
+                        <p class="text-gray-600">Role: <span id="userRole">Farmer</span></p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                            Add Product
+                        </button>
+                        <span class="text-gray-600">Today is: <span id="currentDate"></span></span>
+                    </div>
+                </div>
+            </header>
 
-            <!-- Products Table -->
-            <div class="table-container" id="productsContainer" style="display: none;">
-                <div class="table-header">
-                    <h3>My Products</h3>
+            <!-- Main Content -->
+            <main class="p-6">
+                <!-- Loading state -->
+                <div id="loadingState" class="text-center py-12">
+                    <div class="text-gray-400 text-4xl mb-4 animate-pulse">
+                        ⏳
+                    </div>
+                    <p class="text-gray-600">Loading dashboard data...</p>
                 </div>
-                <div class="overflow-x-auto">
-                    <table id="productsTable">
-                        <thead>
-                            <tr>
-                                <th>Image</th>
-                                <th>Product Name</th>
-                                <th>Category</th>
-                                <th>Stock</th>
-                                <th>Price</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Products will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
 
-            <!-- Recent Orders -->
-            <div class="table-container" id="ordersContainer" style="display: none;">
-                <div class="table-header">
-                    <h3>Recent Orders</h3>
-                </div>
-                <div class="overflow-x-auto">
-                    <table id="ordersTable">
-                        <thead>
-                            <tr>
-                                <th>Order ID</th>
-                                <th>Product</th>
-                                <th>Quantity</th>
-                                <th>Customer</th>
-                                <th>Status</th>
-                                <th>Amount</th>
-                                <th>Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Orders will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                <!-- Farmer Statistics -->
+                <section id="farmerStats" class="mb-8">
+                    <h3 class="text-lg font-semibold mb-4">Your Statistics</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-white shadow-md rounded-lg p-4">
+                            <h4 class="font-semibold text-gray-700">Total Products</h4>
+                            <p class="text-2xl font-bold text-green-600" id="totalProducts">12</p>
+                        </div>
+                        <div class="bg-white shadow-md rounded-lg p-4">
+                            <h4 class="font-semibold text-gray-700">Active Orders</h4>
+                            <p class="text-2xl font-bold text-blue-600" id="activeOrders">5</p>
+                        </div>
+                        <div class="bg-white shadow-md rounded-lg p-4">
+                            <h4 class="font-semibold text-gray-700">Revenue</h4>
+                            <p class="text-2xl font-bold text-yellow-600" id="revenue">Ksh 12,000</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Products Section -->
+                <section id="productsContainer">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold">Your Products</h3>
+                        <button id="addProductBtn" onclick="showAddProductModal()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                            Add New Product
+                        </button>
+                    </div>
+
+                    <!-- Product Grid -->
+                    <div id="productGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Product items will be dynamically added here -->
+                    </div>
+                </section>
+
+                <!-- Orders Section -->
+                <section id="ordersContainer">
+                    <h3 class="text-lg font-semibold mb-4">Recent Orders</h3>
+                    <div class="bg-white shadow-md rounded-lg overflow-x-auto">
+                        <table class="min-w-full leading-normal">
+                            <thead>
+                                <tr>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        Order ID
+                                    </th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        Product
+                                    </th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        Quantity
+                                    </th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        Status
+                                    </th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        Date
+                                    </th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTable">
+                                <!-- Order rows will be dynamically added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
         </div>
     </div>
 
     <!-- Add Product Modal -->
     <div id="addProductModal" class="modal">
-        <div class="modal-content max-w-2xl">
-            <div class="modal-header">
-                <h3 id="modalTitle">Add New Product</h3>
-                <button class="close-btn" id="closeModal">&times;</button>
-            </div>
-            <div class="p-6">
-                <form id="addProductForm">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="form-group">
-                            <label for="productName">Product Name</label>
-                            <input type="text" id="productName" name="name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="productCategory">Category</label>
-                            <select id="productCategory" name="category" required>
-                                <option value="">Select Category</option>
-                                <option value="vegetables">Vegetables</option>
-                                <option value="fruits">Fruits</option>
-                                <option value="grains">Grains</option>
-                                <option value="dairy">Dairy</option>
-                                <option value="spices">Spices</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="productDescription">Description</label>
-                        <textarea id="productDescription" name="description" rows="3" placeholder="Describe your product..."></textarea>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="form-group">
-                            <label for="productStock">Stock Quantity</label>
-                            <input type="number" id="productStock" name="quantity" min="0" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="productUnit">Unit</label>
-                            <select id="productUnit" name="unit" required>
-                                <option value="kg">Kilograms (kg)</option>
-                                <option value="g">Grams (g)</option>
-                                <option value="L">Liters (L)</option>
-                                <option value="pcs">Pieces (pcs)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="productPrice">Price per Unit (Ksh)</label>
-                            <input type="number" id="productPrice" name="price" min="0" step="0.01" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn-primary w-full" id="submitBtn">Add Product</button>
-                </form>
-            </div>
+        <div class="modal-content">
+            <span class="close" id="closeModal" onclick="closeModal('addProductModal')">&times;</span>
+            <h2>Add New Product</h2>
+            <form id="addProductForm">
+                <div class="form-group">
+                    <label for="productName">Product Name:</label>
+                    <input type="text" id="productName" name="productName" required>
+                </div>
+                <div class="form-group">
+                    <label for="productCategory">Category:</label>
+                    <select id="productCategory" name="productCategory" required>
+                        <option value="">Select Category</option>
+                        <option value="fruits">Fruits</option>
+                        <option value="vegetables">Vegetables</option>
+                        <option value="grains">Grains</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="productPrice">Price (per unit):</label>
+                    <input type="number" id="productPrice" name="productPrice" required>
+                </div>
+                <div class="form-group">
+                    <label for="productQuantity">Quantity:</label>
+                    <input type="number" id="productQuantity" name="productQuantity" required>
+                </div>
+                <div class="form-group">
+                    <label for="productDescription">Description:</label>
+                    <textarea id="productDescription" name="productDescription" rows="3"></textarea>
+                </div>
+                <button type="submit">Add Product</button>
+            </form>
         </div>
     </div>
-
-    <script src="scripts/api-client.js"></script>
+    
+    <!-- Scripts - Load modules first, then main dashboard -->
     <script src="scripts/auth.js"></script>
+    <script src="scripts/api-client.js"></script>
+    
+    <!-- Farmer modules -->
+    <script src="scripts/farmer/product-management.js"></script>
+    <script src="scripts/farmer/stats-management.js"></script>
+    
+    <!-- Main farmer dashboard -->
     <script src="scripts/farmer-dashboard.js"></script>
 </body>
 </html>

@@ -4,157 +4,218 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Retailer Dashboard - AgriLink</title>
-    <link rel="stylesheet" href="styles/tailwind-output.css">
-    <link rel="stylesheet" href="styles/main.css">
+    <link href="styles/tailwind-output.css" rel="stylesheet">
+    <link href="styles/dashboard.css" rel="stylesheet">
+    <link href="styles/main.css" rel="stylesheet">
 </head>
 <body class="bg-gray-50">
-    <div class="dashboard active">
-        <header class="dashboard-header">
-            <nav class="dashboard-nav">
-                <h1 class="dashboard-title">🏪 Retailer Dashboard</h1>
-                <div class="user-info">
-                    <span id="userName" class="text-gray-700 font-medium">Loading...</span>
-                    <span class="role-badge bg-blue-100 text-blue-800" id="userRole">Retailer</span>
-                    <button class="logout-btn" onclick="logout()">Logout</button>
-                </div>
+    <div class="flex h-screen">
+
+        <!-- Sidebar -->
+        <div class="w-64 bg-gray-800 text-white py-6 px-3 flex flex-col">
+            <div class="mb-8">
+                <h1 class="text-2xl font-bold text-center">AgriLink</h1>
+                <p class="text-sm text-gray-400 text-center">Retailer Dashboard</p>
+            </div>
+    
+            <nav class="flex-grow">
+                <ul>
+                    <li class="mb-2">
+                        <a href="#" class="block py-2 px-4 hover:bg-gray-700">
+                            <i class="fas fa-home mr-2"></i>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="block py-2 px-4 hover:bg-gray-700">
+                            <i class="fas fa-box-open mr-2"></i>
+                            Products
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="block py-2 px-4 hover:bg-gray-700">
+                            <i class="fas fa-shopping-cart mr-2"></i>
+                            Orders
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="block py-2 px-4 hover:bg-gray-700">
+                            <i class="fas fa-chart-bar mr-2"></i>
+                            Analytics
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="block py-2 px-4 hover:bg-gray-700">
+                            <i class="fas fa-cog mr-2"></i>
+                            Settings
+                        </a>
+                    </li>
+                </ul>
             </nav>
-        </header>
-
-        <div class="dashboard-content">
-            <!-- Stats Cards -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3 id="totalOrders">0</h3>
-                    <p>Bulk Orders</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="totalSpent">Ksh0</h3>
-                    <p>Total Spent</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="activeSuppliers">0</h3>
-                    <p>Active Suppliers</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="pendingDeliveries">0</h3>
-                    <p>Pending Deliveries</p>
-                </div>
-            </div>
-
-            <!-- Bulk Order Form -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
-                <h3 class="text-lg font-semibold text-gray-900 mb-6">Place Bulk Order</h3>
-                <form onsubmit="placeBulkOrder(event)">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div class="form-group">
-                            <label for="productSelect">Product</label>
-                            <select id="productSelect" required>
-                                <option value="">Select Product</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="bulkQuantity">Quantity</label>
-                            <input type="number" id="bulkQuantity" min="10" required placeholder="Minimum 10 units">
-                        </div>
-                        <div class="form-group">
-                            <label for="deliveryDate">Preferred Delivery Date</label>
-                            <input type="date" id="deliveryDate" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="budgetRange">Budget Range</label>
-                            <select id="budgetRange" required>
-                                <option value="">Select Budget</option>
-                                <option value="5000-10000">Ksh5,000 - Ksh10,000</option>
-                                <option value="10000-25000">Ksh10,000 - Ksh25,000</option>
-                                <option value="25000-50000">Ksh25,000 - Ksh50,000</option>
-                                <option value="50000+">Ksh50,000+</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                        <div class="form-group">
-                            <label for="bulkPaymentMethod">Payment Method</label>
-                            <select id="bulkPaymentMethod" required>
-                                <option value="">Select Payment Method</option>
-                                <option value="cod">Cash on Delivery</option>
-                                <option value="mpesa">M-Pesa</option>
-                                <option value="card">Credit/Debit Card</option>
-                                <option value="bank_transfer">Bank Transfer</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="specialRequirements">Special Requirements</label>
-                            <textarea id="specialRequirements" rows="2" placeholder="Any specific requirements or notes"></textarea>
-                        </div>
-                    </div>
-                    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                        <h4 class="font-semibold mb-2">Order Summary</h4>
-                        <div id="orderSummary" class="text-sm text-gray-600">
-                            Select a product and quantity to see the total cost.
-                        </div>
-                    </div>
-                    <button type="submit" class="btn-primary mt-4">Place Bulk Order</button>
-                </form>
-            </div>
-
-            <!-- Delivery Schedule -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
-                <h3 class="text-lg font-semibold text-gray-900 mb-6">Schedule Delivery</h3>
-                <form onsubmit="scheduleDelivery(event)">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="form-group">
-                            <label for="orderSelect">Select Order</label>
-                            <select id="orderSelect" required>
-                                <option value="">Select Order</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="deliveryTime">Delivery Time</label>
-                            <select id="deliveryTime" required>
-                                <option value="">Select Time</option>
-                                <option value="morning">Morning (8AM - 12PM)</option>
-                                <option value="afternoon">Afternoon (12PM - 4PM)</option>
-                                <option value="evening">Evening (4PM - 8PM)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="deliveryAddress">Delivery Address</label>
-                            <textarea id="deliveryAddress" rows="2" required placeholder="Enter delivery address"></textarea>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn-primary">Schedule Delivery</button>
-                </form>
-            </div>
-
-            <!-- Order History -->
-            <div class="table-container">
-                <div class="table-header">
-                    <h3>Bulk Order History</h3>
-                </div>
-                <div class="overflow-x-auto">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Order ID</th>
-                                <th>Product</th>
-                                <th>Quantity</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="orderHistoryTable">
-                            <!-- Orders will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
+    
+            <div>
+                <a href="#" onclick="logout()" class="block py-2 px-4 hover:bg-gray-700">
+                    <i class="fas fa-sign-out-alt mr-2"></i>
+                    Logout
+                </a>
             </div>
         </div>
-    </div>
 
-    <script src="scripts/api-client.js"></script>
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <header class="bg-white shadow">
+                <div class="flex items-center justify-between p-4">
+                    <div class="flex items-center">
+                        <h2 class="text-xl font-semibold text-gray-800 mr-4" id="userName">Retailer Name</h2>
+                        <span class="text-gray-500 text-sm" id="userRole">Retailer</span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button class="btn-primary" onclick="showNotification('Welcome to the Retailer Dashboard!', 'success')">
+                            <i class="fas fa-bell mr-2"></i>
+                            Notifications
+                        </button>
+                        <button class="btn-secondary" onclick="refreshData()">
+                            <i class="fas fa-sync-alt mr-2"></i>
+                            Refresh Data
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content Area -->
+            <main class="flex-1 bg-gray-100 p-4 overflow-y-auto">
+                <!-- Dashboard Overview -->
+                <section class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Dashboard Overview</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-white shadow rounded-lg p-4">
+                            <h4 class="font-semibold text-gray-700">Total Products</h4>
+                            <p class="text-2xl font-bold text-gray-800">560</p>
+                        </div>
+                        <div class="bg-white shadow rounded-lg p-4">
+                            <h4 class="font-semibold text-gray-700">Orders Placed</h4>
+                            <p class="text-2xl font-bold text-gray-800">120</p>
+                        </div>
+                        <div class="bg-white shadow rounded-lg p-4">
+                            <h4 class="font-semibold text-gray-700">Account Balance</h4>
+                            <p class="text-2xl font-bold text-gray-800">Ksh 12,000</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Order Products Section -->
+                <section class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Order Products</h3>
+                    <div class="bg-white shadow rounded-lg p-4">
+                        <form id="bulkOrderForm" onsubmit="placeOrder(event)">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="form-group">
+                                    <label for="productSelect">Select Product</label>
+                                    <select id="productSelect" class="w-full p-2 border rounded">
+                                        <option value="">Loading products...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="bulkQuantity">Quantity (minimum 10)</label>
+                                    <input type="number" id="bulkQuantity" class="w-full p-2 border rounded" min="10" value="10">
+                                </div>
+                                <div class="form-group">
+                                    <label for="deliveryDate">Delivery Date</label>
+                                    <input type="date" id="deliveryDate" class="w-full p-2 border rounded">
+                                </div>
+                                <div class="form-group">
+                                    <label for="budgetRange">Budget Range</label>
+                                    <select id="budgetRange" class="w-full p-2 border rounded">
+                                        <option value="low">Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="bulkPaymentMethod">Payment Method</label>
+                                    <select id="bulkPaymentMethod" class="w-full p-2 border rounded">
+                                        <option value="mpesa">M-Pesa</option>
+                                        <option value="card">Card</option>
+                                        <option value="cash">Cash</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="specialRequirements">Special Requirements</label>
+                                    <textarea id="specialRequirements" class="w-full p-2 border rounded" rows="3"></textarea>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary mt-4">Place Bulk Order</button>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- Order Summary Section -->
+                <section class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Order Summary</h3>
+                    <div class="bg-white shadow rounded-lg p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="font-semibold text-gray-700">Product</h4>
+                                <p id="summaryProductName" class="text-gray-800">Select a product</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-700">Estimated Cost</h4>
+                                <p id="summaryEstimatedCost" class="text-gray-800">Ksh 0.00</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-700">Estimated Delivery</h4>
+                                <p id="summaryEstimatedDelivery" class="text-gray-800">5-7 days</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-700">Order Status</h4>
+                                <p id="summaryOrderStatus" class="text-gray-800">Pending</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Order History Section -->
+                <section>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Order History</h3>
+                    <div class="bg-white shadow rounded-lg p-4 overflow-x-auto">
+                        <table id="orderHistoryTable" class="w-full table-auto">
+                            <thead>
+                                <tr class="text-left">
+                                    <th class="px-4 py-2">Order ID</th>
+                                    <th class="px-4 py-2">Products</th>
+                                    <th class="px-4 py-2">Quantity</th>
+                                    <th class="px-4 py-2">Total Amount</th>
+                                    <th class="px-4 py-2">Status</th>
+                                    <th class="px-4 py-2">Order Date</th>
+                                    <th class="px-4 py-2">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="7" class="text-center py-8">
+                                        <div class="text-gray-400 text-4xl mb-4">📦</div>
+                                        <p class="text-gray-600">No orders placed yet.</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+    
+    <!-- Scripts - Load modules first, then main dashboard -->
     <script src="scripts/auth.js"></script>
+    <script src="scripts/api-client.js"></script>
+    
+    <!-- Retailer modules -->
+    <script src="scripts/retailer/product-management.js"></script>
+    <script src="scripts/retailer/order-management.js"></script>
+    <script src="scripts/retailer/stats-management.js"></script>
+    
+    <!-- Main retailer dashboard -->
     <script src="scripts/retailer-dashboard.js"></script>
 </body>
 </html>
