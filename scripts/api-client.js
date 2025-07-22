@@ -11,7 +11,7 @@ class ApiClient {
             // Products
             PRODUCTS: '/products',
             PRODUCT: (id) => `/products/${id}`,
-            PRODUCT_INVENTORY: (id) => `/products/${id}/inventory`,
+            PRODUCT_INVENTORY: (id) => `/products/${id}/inventory',
             
             // Orders
             ORDERS: '/orders',
@@ -252,6 +252,13 @@ class ApiClient {
             console.error('Error creating order:', error);
             throw error;
         }
+    }
+
+    async updateOrder(orderId, orderData) {
+        return this.request(this.endpoints.ORDER(orderId), {
+            method: 'PUT',
+            body: JSON.stringify(orderData)
+        });
     }
 
     async updateOrderStatus(id, status) {

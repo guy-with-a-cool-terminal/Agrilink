@@ -268,31 +268,52 @@ function displayOrderHistory(orders) {
         return;
     }
     
-    orderHistoryTable.innerHTML = orders.map(order => `
-        <tr>
-            <td class="font-mono">#${order.id}</td>
-            <td>
-                ${order.items ? order.items.map(item => `
+    orderHistoryTable.innerHTML = orders.map(order => {
+        // Get product names from order items
+        let productDisplay = 'No products';
+        let totalQuantity = 0;
+        
+        if (order.items && Array.isArray(order.items) && order.items.length > 0) {
+            productDisplay = order.items.map(item => {
+                const quantity = parseInt(item.quantity || 0);
+                totalQuantity += quantity;
+                return `
                     <div class="text-sm mb-1">
-                        <div class="font-medium">${item.name}</div>
-                        <div class="text-gray-600">Qty: ${item.quantity}</div>
+                        <div class="font-medium">${item.name || item.product_name || 'Product'}</div>
+                        <div class="text-gray-600">Qty: ${quantity}</div>
                     </div>
-                `).join('') : '<span class="text-gray-500">No items</span>'}
-            </td>
-            <td>${order.items ? order.items.reduce((sum, item) => sum + parseInt(item.quantity || 0), 0) : 0}</td>
-            <td class="font-medium">Ksh${parseFloat(order.total_amount || 0).toFixed(2)}</td>
-            <td>
-                <span class="status-${order.status || 'pending'}">${(order.status || 'pending').replace('_', ' ')}</span>
-            </td>
-            <td class="text-sm text-gray-600">${new Date(order.created_at).toLocaleDateString()}</td>
-            <td>
-                ${['pending', 'confirmed'].includes(order.status) ? 
-                    `<button class="btn-danger text-sm" onclick="cancelOrder(${order.id})">Cancel</button>` :
-                    '<span class="text-gray-400 text-sm">Completed</span>'
-                }
-            </td>
-        </tr>
-    `).join('');
+                `;
+            }).join('');
+        } else if (order.product_name) {
+            const quantity = parseInt(order.quantity || 0);
+            totalQuantity = quantity;
+            productDisplay = `
+                <div class="text-sm mb-1">
+                    <div class="font-medium">${order.product_name}</div>
+                    <div class="text-gray-600">Qty: ${quantity}</div>
+                </div>
+            `;
+        }
+
+        return `
+            <tr>
+                <td class="font-mono">#${order.id}</td>
+                <td>${productDisplay}</td>
+                <td>${totalQuantity}</td>
+                <td class="font-medium">Ksh${parseFloat(order.total_amount || 0).toFixed(2)}</td>
+                <td>
+                    <span class="status-${order.status || 'pending'}">${(order.status || 'pending').replace('_', ' ')}</span>
+                </td>
+                <td class="text-sm text-gray-600">${new Date(order.created_at).toLocaleDateString()}</td>
+                <td>
+                    ${['pending', 'confirmed'].includes(order.status) ? 
+                        `<button class="btn-danger text-sm" onclick="cancelOrder(${order.id})">Cancel</button>` :
+                        '<span class="text-gray-400 text-sm">Completed</span>'
+                    }
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
 // Add order cancellation function

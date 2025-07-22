@@ -66,19 +66,39 @@ async function loadDashboardData() {
     }
 }
 
-// Load analytics data
+// Load analytics data with proper error handling
 async function loadAnalytics() {
     try {
         const analytics = await apiClient.getAnalytics();
         console.log('Analytics data loaded:', analytics);
 
-        document.getElementById('totalUsers').textContent = analytics.total_users || 0;
-        document.getElementById('totalProducts').textContent = analytics.total_products || 0;
-        document.getElementById('totalOrders').textContent = analytics.total_orders || 0;
-        document.getElementById('totalRevenue').textContent = `Ksh${analytics.total_revenue?.toLocaleString() || 0}`;
+        // Update stats with fallback values
+        document.getElementById('totalSales').textContent = analytics.total_sales?.toLocaleString() || '0';
+        document.getElementById('totalOrders').textContent = analytics.total_orders || '0';
+        document.getElementById('totalUsers').textContent = analytics.total_users || '0';
+        document.getElementById('monthlyRevenue').textContent = `Ksh${analytics.monthly_revenue?.toLocaleString() || '0'}`;
+        document.getElementById('pendingOrders').textContent = analytics.pending_orders || '0';
+        document.getElementById('totalProducts').textContent = analytics.total_products || '0';
+
+        // Update growth indicators
+        document.getElementById('salesGrowth').textContent = analytics.sales_growth || '+0%';
+        document.getElementById('orderGrowth').textContent = analytics.order_growth || '+0%';
+        document.getElementById('userGrowth').textContent = analytics.user_growth || '+0%';
+        document.getElementById('revenueGrowth').textContent = analytics.revenue_growth || '+0%';
+
     } catch (error) {
         console.error('Error loading analytics:', error);
-        showNotification('Failed to load analytics', 'error');
+        // Set fallback values when analytics fail
+        document.getElementById('totalSales').textContent = '0';
+        document.getElementById('totalOrders').textContent = '0';
+        document.getElementById('totalUsers').textContent = '0';
+        document.getElementById('monthlyRevenue').textContent = 'Ksh0';
+        document.getElementById('pendingOrders').textContent = '0';
+        document.getElementById('totalProducts').textContent = '0';
+        document.getElementById('salesGrowth').textContent = '+0%';
+        document.getElementById('orderGrowth').textContent = '+0%';
+        document.getElementById('userGrowth').textContent = '+0%';
+        document.getElementById('revenueGrowth').textContent = '+0%';
     }
 }
 
@@ -196,7 +216,7 @@ async function loadOrders() {
     }
 }
 
-// Display orders in table
+// Display orders in table with proper data mapping
 function displayOrders(ordersToShow) {
     const ordersTableBody = document.querySelector('#ordersTable tbody');
     if (!ordersTableBody) return;
@@ -206,7 +226,7 @@ function displayOrders(ordersToShow) {
     if (!Array.isArray(ordersToShow) || ordersToShow.length === 0) {
         ordersTableBody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center py-8">
+                <td colspan="6" class="text-center py-8">
                     <p class="text-gray-500">No orders found</p>
                 </td>
             </tr>
@@ -216,17 +236,22 @@ function displayOrders(ordersToShow) {
 
     ordersToShow.forEach(order => {
         const row = document.createElement('tr');
+        
+        // Get product names from order items
+        let productNames = 'No products';
+        if (order.items && Array.isArray(order.items) && order.items.length > 0) {
+            productNames = order.items.map(item => `${item.name || item.product_name || 'Product'} (x${item.quantity || 1})`).join(', ');
+        } else if (order.product_name) {
+            productNames = `${order.product_name} (x${order.quantity || 1})`;
+        }
+
+        // Get customer name
+        const customerName = order.customer_name || order.user?.name || order.customer_email || 'Unknown Customer';
+        
         row.innerHTML = `
             <td class="font-mono">#${order.id}</td>
-            <td>
-                ${order.items ? order.items.map(item => `
-                    <div class="text-sm">
-                        <div class="font-medium">${item.name}</div>
-                        <div class="text-gray-600">Qty: ${item.quantity}</div>
-                    </div>
-                `).join('') : 'No items'}
-            </td>
-            <td>${order.customer_name || order.user?.name || 'Unknown'}</td>
+            <td class="max-w-xs truncate" title="${productNames}">${productNames}</td>
+            <td>${customerName}</td>
             <td class="font-medium">Ksh${parseFloat(order.total_amount || 0).toFixed(2)}</td>
             <td>
                 <span class="status-${order.status || 'pending'}">${(order.status || 'pending').replace('_', ' ')}</span>
@@ -235,7 +260,14 @@ function displayOrders(ordersToShow) {
             <td>
                 <div class="flex gap-2">
                     <button class="btn-secondary text-sm" onclick="viewOrderDetails(${order.id})">View</button>
-                    <button class="btn-primary text-sm" onclick="updateOrderStatus(${order.id}, 'processing')">Process</button>
+                    ${['pending', 'confirmed'].includes(order.status) ? 
+                        `<button class="btn-primary text-sm" onclick="updateOrderStatus(${order.id}, 'processing')">Process</button>` :
+                        '<span class="text-gray-400 text-sm">Processed</span>'
+                    }
+                    ${order.status === 'processing' ? 
+                        `<button class="btn-success text-sm" onclick="assignToLogistics(${order.id})">Assign</button>` :
+                        ''
+                    }
                 </div>
             </td>
         `;
@@ -480,19 +512,7 @@ async function assignDelivery(event) {
     }
 }
 
-// Make functions globally available
-window.showAddUserModal = showAddUserModal;
-window.closeModal = closeModal;
-window.editUser = editUser;
-window.deleteUser = deleteUser;
-window.editProduct = editProduct;
-window.deleteProduct = deleteProduct;
-window.showAssignDeliveryModal = showAssignDeliveryModal;
-
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', initializeAdminDashboard);
-
-// Add missing functions for order management
+// View order details with proper modal styling
 function viewOrderDetails(orderId) {
     const order = orders.find(o => o.id === orderId);
     if (!order) {
@@ -500,32 +520,51 @@ function viewOrderDetails(orderId) {
         return;
     }
     
-    const orderDetails = `
-        <div class="space-y-4">
-            <div><strong>Order ID:</strong> ${order.id}</div>
-            <div><strong>Customer:</strong> ${order.customer_name || order.user?.name || 'Unknown'}</div>
-            <div><strong>Total:</strong> Ksh${parseFloat(order.total_amount || 0).toFixed(2)}</div>
-            <div><strong>Status:</strong> ${order.status}</div>
-            <div><strong>Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</div>
-            ${order.items ? `
-                <div><strong>Items:</strong>
-                    <ul class="mt-2 space-y-1">
-                        ${order.items.map(item => `
-                            <li>• ${item.name || 'Product'} x${item.quantity} @ Ksh${parseFloat(item.unit_price || 0).toFixed(2)}</li>
-                        `).join('')}
-                    </ul>
-                </div>
-            ` : ''}
+    // Create modal content with proper HTML structure
+    const modalContent = document.createElement('div');
+    modalContent.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modalContent.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Order Details #${order.id}</h3>
+                <button onclick="closeOrderModal()" class="text-gray-500 hover:text-gray-700">×</button>
+            </div>
+            <div class="space-y-4">
+                <div><strong>Order ID:</strong> #${order.id}</div>
+                <div><strong>Customer:</strong> ${order.customer_name || order.user?.name || order.customer_email || 'Unknown'}</div>
+                <div><strong>Total:</strong> Ksh${parseFloat(order.total_amount || 0).toFixed(2)}</div>
+                <div><strong>Status:</strong> <span class="status-${order.status}">${order.status}</span></div>
+                <div><strong>Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</div>
+                ${order.items && order.items.length > 0 ? `
+                    <div><strong>Items:</strong>
+                        <div class="mt-2 space-y-2 bg-gray-50 p-3 rounded">
+                            ${order.items.map(item => `
+                                <div class="flex justify-between">
+                                    <span>${item.name || item.product_name || 'Product'}</span>
+                                    <span>x${item.quantity} @ Ksh${parseFloat(item.unit_price || item.price || 0).toFixed(2)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                ${order.delivery_address ? `<div><strong>Delivery Address:</strong> ${order.delivery_address}</div>` : ''}
+            </div>
         </div>
     `;
     
-    alert(orderDetails);
+    document.body.appendChild(modalContent);
+    
+    // Add global function to close modal
+    window.closeOrderModal = function() {
+        modalContent.remove();
+        delete window.closeOrderModal;
+    };
 }
 
 function updateOrderStatus(orderId, newStatus) {
     if (!confirm(`Update order status to ${newStatus}?`)) return;
     
-    apiClient.updateOrder(orderId, { status: newStatus })
+    apiClient.updateOrderStatus(orderId, newStatus)
         .then(() => {
             showNotification('Order status updated successfully', 'success');
             loadOrders();
@@ -537,6 +576,45 @@ function updateOrderStatus(orderId, newStatus) {
         });
 }
 
+// Assign order to logistics
+function assignToLogistics(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) {
+        showNotification('Order not found', 'error');
+        return;
+    }
+
+    // Create delivery assignment
+    const deliveryData = {
+        order_id: orderId,
+        delivery_address: order.delivery_address || 'Address not provided',
+        status: 'assigned',
+        priority: 'normal'
+    };
+
+    apiClient.assignDelivery(orderId, deliveryData)
+        .then(() => {
+            showNotification('Order assigned to logistics successfully', 'success');
+            updateOrderStatus(orderId, 'shipped');
+            loadDeliveries();
+        })
+        .catch(error => {
+            console.error('Error assigning order to logistics:', error);
+            showNotification('Failed to assign order to logistics', 'error');
+        });
+}
+
 // Make functions globally available
 window.viewOrderDetails = viewOrderDetails;
 window.updateOrderStatus = updateOrderStatus;
+window.assignToLogistics = assignToLogistics;
+window.showAddUserModal = showAddUserModal;
+window.closeModal = closeModal;
+window.editUser = editUser;
+window.deleteUser = deleteUser;
+window.editProduct = editProduct;
+window.deleteProduct = deleteProduct;
+window.showAssignDeliveryModal = showAssignDeliveryModal;
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', initializeAdminDashboard);
