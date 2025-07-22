@@ -1,368 +1,644 @@
-class ApiClient {
-    constructor() {
-        this.baseURL = 'http://127.0.0.1:8000/api';
-        this.endpoints = {
-            // Authentication
-            LOGIN: '/login',
-            REGISTER: '/register',
-            LOGOUT: '/logout',
-            USER: '/user',
-            
-            // Products
-            PRODUCTS: '/products',
-            PRODUCT: (id) => `/products/${id}`,
-            PRODUCT_INVENTORY: (id) => `/products/${id}/inventory`,
-            
-            // Orders
-            ORDERS: '/orders',
-            ORDER: (id) => `/orders/${id}`,
-            ORDER_STATUS: (id) => `/orders/${id}/status`,
-            ORDER_CANCEL: (id) => `/orders/${id}/cancel`,
-            
-            // Deliveries
-            DELIVERIES: '/deliveries',
-            DELIVERY: (id) => `/deliveries/${id}`,
-            DELIVERY_STATUS: (id) => `/deliveries/${id}/status`,
-            DELIVERY_ASSIGN: (id) => `/deliveries/${id}/assign`,
-            DELIVERY_TRACK: '/deliveries/track',
-            
-            // Admin
-            ADMIN_USERS: '/admin/users',
-            ADMIN_USER: (id) => `/admin/users/${id}`,
-            ADMIN_USER_STATUS: (id) => `/admin/users/${id}/status`,
-            ADMIN_ANALYTICS: '/admin/analytics',
-            
-            // Maintenance
-            MAINTENANCE_STATUS: '/admin/maintenance/status',
-            MAINTENANCE_ENABLE: '/admin/maintenance/enable',
-            MAINTENANCE_DISABLE: '/admin/maintenance/disable',
-            
-            // Payments
-            PAYMENTS_PROCESS: '/payments/process',
-            
-            // Promotions
-            PROMOTIONS: '/promotions',
-            PROMOTION: (id) => `/promotions/${id}`,
-            PROMOTIONS_CALCULATE_DISCOUNT: '/promotions/calculate-discount'
-        };
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Admin Dashboard initializing...');
+    initDashboard();
+    loadUserData();
+    loadRealTimeAnalytics();
+    loadUsers();
+    loadOrders();
+    loadProducts();
+});
+
+// Data storage
+let users = [];
+let orders = [];
+let products = [];
+let currentUser = null;
+let maintenanceMode = false;
+
+async function initDashboard() {
+    const user = localStorage.getItem('currentUser');
+    if (!user) {
+        window.location.href = 'index.html';
+        return;
     }
 
-    getAuthToken() {
-        const user = localStorage.getItem('currentUser');
-        return user ? JSON.parse(user).token : null;
-    }
-
-    getHeaders(includeAuth = true) {
-        const headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        };
-
-        if (includeAuth) {
-            const token = this.getAuthToken();
-            if (token) {
-                headers.Authorization = `Bearer ${token}`;
-            }
+    try {
+        currentUser = JSON.parse(user);
+        if (currentUser.role !== 'admin') {
+            alert('Access denied. Admin privileges required.');
+            window.location.href = 'index.html';
+            return;
         }
-
-        return headers;
+        await checkMaintenanceStatus();
+    } catch (error) {
+        console.error('Error parsing user data:', error);
+        window.location.href = 'index.html';
     }
-
-    async request(endpoint, options = {}) {
-        const url = `${this.baseURL}${endpoint}`;
-        const config = {
-            ...options,
-            headers: this.getHeaders(options.auth !== false)
-        };
-
-        try {
-            console.log(`API Request: ${config.method || 'GET'} ${url}`);
-            const response = await fetch(url, config);
-            
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log(`API Response:`, data);
-            return data;
-        } catch (error) {
-            console.error('API Request Error:', error);
-            throw error;
-        }
+}
+// Load user data and update UI
+async function loadUserData() {
+    try {
+        const userData = await apiClient.getUser();
+        console.log('User data loaded:', userData);
+        
+        document.getElementById('userName').textContent = userData.name || currentUser.name || 'Admin';
+        document.getElementById('userRole').textContent = userData.role || 'Admin';
+    } catch (error) {
+        console.error('Error loading user data:', error);
+        document.getElementById('userName').textContent = currentUser.name || 'Admin';
     }
-
-   // Helper method to extract array data from nested responses, including pagination
-    extractArrayData(response, key = 'data') {
-    // 1. Direct array response
-    if (Array.isArray(response)) {
-        return response;
-    }
-
-    // 2. Laravel pagination: { data: [...] }
-    if (response?.data && Array.isArray(response.data)) {
-        return response.data;
-    }
-
-    // 3. Nested Laravel-style: { data: { items: [...] } }
-    if (response?.data?.items && Array.isArray(response.data.items)) {
-        return response.data.items;
-    }
-
-    // 4. Products: { products: { data: [...] } }
-    if (response?.products?.data && Array.isArray(response.products.data)) {
-        return response.products.data;
-    }
-
-    // 5. Users: { users: { data: [...] } }
-    if (response?.users?.data && Array.isArray(response.users.data)) {
-        return response.users.data;
-    }
-
-    // 6. Direct key-based array
-    if (response && Array.isArray(response[key])) {
-        return response[key];
-    }
-
-    // 7. Fallback: top-level key holding paginated data
-    if (response?.[key]?.data && Array.isArray(response[key].data)) {
-        return response[key].data;
-    }
-
-    console.warn('Expected array data but received:', response);
-    return [];
 }
 
- // Authentication
-    async login(credentials) {
-        return this.request(this.endpoints.LOGIN, {
-            method: 'POST',
-            body: JSON.stringify(credentials),
-            auth: false
+// Setup event listeners
+function setupEventListeners() {
+    // User Management
+    document.getElementById('addUserBtn')?.addEventListener('click', showAddUserModal);
+    document.getElementById('closeModal')?.addEventListener('click', () => closeModal('addUserModal'));
+    document.getElementById('addUserForm')?.addEventListener('submit', handleAddUser);
+
+    // Product Management
+    document.getElementById('addProductBtn')?.addEventListener('click', showAddProductModal);
+    document.getElementById('closeProductModal')?.addEventListener('click', () => closeModal('addProductModal'));
+    document.getElementById('addProductForm')?.addEventListener('submit', handleAddProduct);
+
+    // Delivery Management
+    document.getElementById('assignDeliveryForm')?.addEventListener('submit', assignDelivery);
+    document.getElementById('closeAssignDeliveryModal')?.addEventListener('click', () => closeModal('assignDeliveryModal'));
+
+    // Close modal when clicking outside
+    const addUserModal = document.getElementById('addUserModal');
+    if (addUserModal) {
+        addUserModal.addEventListener('click', (e) => {
+            if (e.target === addUserModal) {
+                addUserModal.classList.remove('active');
+            }
         });
     }
+}
 
-    async register(userData) {
-        return this.request(this.endpoints.REGISTER, {
-            method: 'POST',
-            body: JSON.stringify(userData),
-            auth: false
-        });
+// Load dashboard data
+async function loadDashboardData() {
+    try {
+        await Promise.all([
+            loadAnalytics(),
+            loadUsers(),
+            loadProducts(),
+            loadOrders(),
+            loadDeliveries()
+        ]);
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        showNotification('Failed to load dashboard data', 'error');
+    }
+}
+
+// Load analytics data with proper error handling
+async function loadAnalytics() {
+    try {
+        const analytics = await apiClient.getAnalytics();
+        console.log('Analytics data loaded:', analytics);
+
+        // Update stats with fallback values
+        document.getElementById('totalSales').textContent = analytics.total_sales?.toLocaleString() || '0';
+        document.getElementById('totalOrders').textContent = analytics.total_orders || '0';
+        document.getElementById('totalUsers').textContent = analytics.total_users || '0';
+        document.getElementById('monthlyRevenue').textContent = `Ksh${analytics.monthly_revenue?.toLocaleString() || '0'}`;
+        document.getElementById('pendingOrders').textContent = analytics.pending_orders || '0';
+        document.getElementById('totalProducts').textContent = analytics.total_products || '0';
+
+        // Update growth indicators
+        document.getElementById('salesGrowth').textContent = analytics.sales_growth || '+0%';
+        document.getElementById('orderGrowth').textContent = analytics.order_growth || '+0%';
+        document.getElementById('userGrowth').textContent = analytics.user_growth || '+0%';
+        document.getElementById('revenueGrowth').textContent = analytics.revenue_growth || '+0%';
+
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+        // Set fallback values when analytics fail
+        document.getElementById('totalSales').textContent = '0';
+        document.getElementById('totalOrders').textContent = '0';
+        document.getElementById('totalUsers').textContent = '0';
+        document.getElementById('monthlyRevenue').textContent = 'Ksh0';
+        document.getElementById('pendingOrders').textContent = '0';
+        document.getElementById('totalProducts').textContent = '0';
+        document.getElementById('salesGrowth').textContent = '+0%';
+        document.getElementById('orderGrowth').textContent = '+0%';
+        document.getElementById('userGrowth').textContent = '+0%';
+        document.getElementById('revenueGrowth').textContent = '+0%';
+    }
+}
+
+// Load users
+async function loadUsers() {
+    try {
+        const response = await apiClient.getUsers();
+        users = apiClient.extractArrayData(response) || [];
+        console.log('Users loaded:', users);
+        displayUsers(users);
+    } catch (error) {
+        console.error('Error loading users:', error);
+        showNotification('Failed to load users', 'error');
+    }
+}
+
+// Display users in table
+function displayUsers(usersToShow) {
+    const usersTableBody = document.querySelector('#usersTable tbody');
+    if (!usersTableBody) return;
+
+    usersTableBody.innerHTML = '';
+
+    if (!Array.isArray(usersToShow) || usersToShow.length === 0) {
+        usersTableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-8">
+                    <p class="text-gray-500">No users found</p>
+                </td>
+            </tr>
+        `;
+        return;
     }
 
-    async logout() {
-        const result = await this.request(this.endpoints.LOGOUT, { method: 'POST' });
-        this.removeToken();
-        return result;
+    usersToShow.forEach(user => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="font-mono">#${user.id}</td>
+            <td>${user.name || 'Unnamed'}</td>
+            <td>${user.email}</td>
+            <td>${user.role}</td>
+            <td><span class="status-${user.status || 'active'}">${user.status || 'active'}</span></td>
+            <td>
+                <div class="flex gap-2">
+                    <button class="btn-secondary text-sm" onclick="editUser(${user.id})">Edit</button>
+                    <button class="btn-danger text-sm" onclick="deleteUser(${user.id})">Delete</button>
+                </div>
+            </td>
+        `;
+        usersTableBody.appendChild(row);
+    });
+}
+
+// Load products
+async function loadProducts() {
+    try {
+        const response = await apiClient.getProducts();
+        products = apiClient.extractArrayData(response) || [];
+        console.log('Products loaded:', products);
+        displayProducts(products);
+    } catch (error) {
+        console.error('Error loading products:', error);
+        showNotification('Failed to load products', 'error');
+    }
+}
+
+// Display products in table
+function displayProducts(productsToShow) {
+    const productsTableBody = document.querySelector('#productsTable tbody');
+    if (!productsTableBody) return;
+
+    productsTableBody.innerHTML = '';
+
+    if (!Array.isArray(productsToShow) || productsToShow.length === 0) {
+        productsTableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-8">
+                    <p class="text-gray-500">No products found</p>
+                </td>
+            </tr>
+        `;
+        return;
     }
 
-    async getUser() {
-        return this.request(this.endpoints.USER);
+    productsToShow.forEach(product => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="text-center">📦</td>
+            <td class="font-medium">${product.name || 'Unnamed Product'}</td>
+            <td class="capitalize">${product.category || 'N/A'}</td>
+            <td>${product.quantity || product.stock || 0}</td>
+            <td class="font-medium">Ksh${parseFloat(product.price || 0).toFixed(2)}</td>
+            <td><span class="status-${product.status || 'active'}">${(product.status || 'active').replace('_', ' ')}</span></td>
+            <td>
+                <div class="flex gap-2">
+                    <button class="btn-secondary text-sm" onclick="editProduct(${product.id})">Edit</button>
+                    <button class="btn-danger text-sm" onclick="deleteProduct(${product.id})">Delete</button>
+                </div>
+            </td>
+        `;
+        productsTableBody.appendChild(row);
+    });
+}
+
+// Load orders
+async function loadOrders() {
+    try {
+        const response = await apiClient.getOrders();
+        orders = apiClient.extractArrayData(response) || [];
+        console.log('Orders loaded:', orders);
+        displayOrders(orders);
+    } catch (error) {
+        console.error('Error loading orders:', error);
+        showNotification('Failed to load orders', 'error');
+    }
+}
+
+// Display orders in table with proper data mapping
+function displayOrders(ordersToShow) {
+    const ordersTableBody = document.querySelector('#ordersTable tbody');
+    if (!ordersTableBody) return;
+
+    ordersTableBody.innerHTML = '';
+
+    if (!Array.isArray(ordersToShow) || ordersToShow.length === 0) {
+        ordersTableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-8">
+                    <p class="text-gray-500">No orders found</p>
+                </td>
+            </tr>
+        `;
+        return;
     }
 
-    async updateUser(userId, userData) {
-        return this.request(this.endpoints.ADMIN_USER(userId), {
-            method: 'PUT',
-            body: JSON.stringify(userData)
-        });
+    ordersToShow.forEach(order => {
+        const row = document.createElement('tr');
+        
+        // Get product names from order items
+        let productNames = 'No products';
+        if (order.items && Array.isArray(order.items) && order.items.length > 0) {
+            productNames = order.items.map(item => `${item.name || item.product_name || 'Product'} (x${item.quantity || 1})`).join(', ');
+        } else if (order.product_name) {
+            productNames = `${order.product_name} (x${order.quantity || 1})`;
+        }
+
+        // Get customer name
+        const customerName = order.customer_name || order.user?.name || order.customer_email || 'Unknown Customer';
+        
+        row.innerHTML = `
+            <td class="font-mono">#${order.id}</td>
+            <td class="max-w-xs truncate" title="${productNames}">${productNames}</td>
+            <td>${customerName}</td>
+            <td class="font-medium">Ksh${parseFloat(order.total_amount || 0).toFixed(2)}</td>
+            <td>
+                <span class="status-${order.status || 'pending'}">${(order.status || 'pending').replace('_', ' ')}</span>
+            </td>
+            <td class="text-sm text-gray-600">${new Date(order.created_at).toLocaleDateString()}</td>
+            <td>
+                <div class="flex gap-2">
+                    <button class="btn-secondary text-sm" onclick="viewOrderDetails(${order.id})">View</button>
+                    ${['pending', 'confirmed'].includes(order.status) ? 
+                        `<button class="btn-primary text-sm" onclick="updateOrderStatus(${order.id}, 'processing')">Process</button>` :
+                        '<span class="text-gray-400 text-sm">Processed</span>'
+                    }
+                    ${order.status === 'processing' ? 
+                        `<button class="btn-success text-sm" onclick="assignToLogistics(${order.id})">Assign</button>` :
+                        ''
+                    }
+                </div>
+            </td>
+        `;
+        ordersTableBody.appendChild(row);
+    });
+}
+
+// Load deliveries
+async function loadDeliveries() {
+    try {
+        const response = await apiClient.getDeliveries();
+        deliveries = apiClient.extractArrayData(response) || [];
+        console.log('Deliveries loaded:', deliveries);
+        displayDeliveries(deliveries);
+        populateDeliverySelect(deliveries);
+    } catch (error) {
+        console.error('Error loading deliveries:', error);
+        showNotification('Failed to load deliveries', 'error');
+    }
+}
+
+// Display deliveries in table
+function displayDeliveries(deliveriesToShow) {
+    const deliveriesTableBody = document.querySelector('#deliveriesTable tbody');
+    if (!deliveriesTableBody) return;
+
+    deliveriesTableBody.innerHTML = '';
+
+    if (!Array.isArray(deliveriesToShow) || deliveriesToShow.length === 0) {
+        deliveriesTableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-8">
+                    <p class="text-gray-500">No deliveries found</p>
+                </td>
+            </tr>
+        `;
+        return;
     }
 
-    async updateUserStatus(userId, status) {
-        return this.request(this.endpoints.ADMIN_USER_STATUS(userId), {
-            method: 'PUT',
-            body: JSON.stringify({ status })
-        });
-    }
+    deliveriesToShow.forEach(delivery => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="font-mono">#${delivery.id}</td>
+            <td>${delivery.order_id || 'N/A'}</td>
+            <td>${delivery.delivery_address || 'N/A'}</td>
+            <td>${delivery.assigned_to || 'Unassigned'}</td>
+            <td><span class="status-${delivery.status || 'pending'}">${delivery.status || 'pending'}</span></td>
+            <td>${delivery.priority || 'Normal'}</td>
+            <td>
+                <button class="btn-secondary text-sm" onclick="showAssignDeliveryModal(${delivery.id})">Assign</button>
+            </td>
+        `;
+        deliveriesTableBody.appendChild(row);
+    });
+}
 
-    async deleteUser(userId) {
-        return this.request(this.endpoints.ADMIN_USER(userId), {
-            method: 'DELETE'
-        });
-    }
+// Populate delivery select options
+function populateDeliverySelect(deliveriesList) {
+    const deliverySelect = document.getElementById('deliverySelect');
+    if (!deliverySelect) return;
 
-    // Products
-    async getProducts() {
-        return this.request(this.endpoints.PRODUCTS);
-    }
+    deliverySelect.innerHTML = '<option value="">Select Delivery</option>';
 
-    async getProduct(productId) {
-        return this.request(this.endpoints.PRODUCT(productId));
-    }
+    deliveriesList.forEach(delivery => {
+        const option = document.createElement('option');
+        option.value = delivery.id;
+        option.textContent = `#${delivery.id} - ${delivery.delivery_address}`;
+        deliverySelect.appendChild(option);
+    });
+}
 
-    async createProduct(productData) {
-        return this.request(this.endpoints.PRODUCTS, {
-            method: 'POST',
-            body: JSON.stringify(productData)
-        });
+// Show add user modal
+function showAddUserModal() {
+    const modal = document.getElementById('addUserModal');
+    if (modal) {
+        modal.classList.add('active');
     }
+}
 
-    async updateProduct(id, productData) {
-        return this.request(this.endpoints.PRODUCT(id), {
-            method: 'PUT',
-            body: JSON.stringify(productData)
-        });
+// Show add product modal
+function showAddProductModal() {
+    const modal = document.getElementById('addProductModal');
+    if (modal) {
+        modal.classList.add('active');
     }
+}
 
-    async deleteProduct(id) {
-        return this.request(this.endpoints.PRODUCT(id), {
-            method: 'DELETE'
-        });
+// Show assign delivery modal
+function showAssignDeliveryModal(deliveryId) {
+    const modal = document.getElementById('assignDeliveryModal');
+    if (modal) {
+        modal.classList.add('active');
+        document.getElementById('deliveryId').value = deliveryId;
     }
+}
 
-    // Orders
-    async getOrders() {
-        return this.request(this.endpoints.ORDERS);
+// Close modal
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
     }
+}
 
-    async getOrder(orderId) {
-        return this.request(this.endpoints.ORDER(orderId));
+// Handle add user
+async function handleAddUser(event) {
+    event.preventDefault();
+
+    const formData = new FormData(event.target);
+    const userData = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        password: formData.get('password'),
+        role: formData.get('role'),
+        status: 'active'
+    };
+
+    try {
+        const response = await apiClient.createUser(userData);
+        console.log('User created successfully:', response);
+        showNotification('User added successfully!', 'success');
+        closeModal('addUserModal');
+        event.target.reset();
+        await loadUsers();
+        await loadAnalytics();
+    } catch (error) {
+        console.error('Error creating user:', error);
+        showNotification('Failed to add user', 'error');
     }
+}
 
-    async createOrder(orderData) {
+// Handle add product
+async function handleAddProduct(event) {
+    event.preventDefault();
+
+    const formData = new FormData(event.target);
+    const productData = {
+        name: formData.get('name'),
+        description: formData.get('description'),
+        price: parseFloat(formData.get('price')),
+        quantity: parseInt(formData.get('quantity')),
+        category: formData.get('category'),
+        status: 'active'
+    };
+
+    try {
+        const response = await apiClient.createProduct(productData);
+        console.log('Product created successfully:', response);
+        showNotification('Product added successfully!', 'success');
+        closeModal('addProductModal');
+        event.target.reset();
+        await loadProducts();
+        await loadAnalytics();
+    } catch (error) {
+        console.error('Error creating product:', error);
+        showNotification('Failed to add product', 'error');
+    }
+}
+
+// Edit user
+async function editUser(userId) {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+
+    const newStatus = prompt('Enter new status (active, inactive, suspended):', user.status);
+    if (newStatus && ['active', 'inactive', 'suspended'].includes(newStatus.toLowerCase())) {
         try {
-            console.log('Creating order with data:', orderData);
-            const response = await this.request(this.endpoints.ORDERS, {
-                method: 'POST',
-                body: JSON.stringify(orderData)
-            });
-            console.log('Order created successfully:', response);
-            return response;
+            await apiClient.updateUser(userId, { status: newStatus.toLowerCase() });
+            showNotification('User updated successfully!', 'success');
+            await loadUsers();
         } catch (error) {
-            console.error('Error creating order:', error);
-            throw error;
+            console.error('Error updating user:', error);
+            showNotification('Failed to update user', 'error');
         }
     }
+}
 
-    async updateOrderStatus(id, status) {
-        return this.request(this.endpoints.ORDER_STATUS(id), {
-            method: 'PUT',
-            body: JSON.stringify({ status })
-        });
+// Delete user
+async function deleteUser(userId) {
+    if (confirm('Are you sure you want to delete this user?')) {
+        try {
+            await apiClient.deleteUser(userId);
+            showNotification('User deleted successfully!', 'success');
+            await loadUsers();
+            await loadAnalytics();
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            showNotification('Failed to delete user', 'error');
+        }
     }
+}
 
-    async cancelOrder(orderId) {
-        return this.request(this.endpoints.ORDER_CANCEL(orderId), {
-            method: 'POST'
-        });
+// Edit product
+async function editProduct(productId) {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    const newPrice = prompt('Enter new price:', product.price);
+    if (newPrice && !isNaN(newPrice)) {
+        try {
+            await apiClient.updateProduct(productId, { price: parseFloat(newPrice) });
+            showNotification('Product updated successfully!', 'success');
+            await loadProducts();
+        } catch (error) {
+            console.error('Error updating product:', error);
+            showNotification('Failed to update product', 'error');
+        }
     }
+}
 
-    // Deliveries
-    async getDeliveries() {
-        return this.request(this.endpoints.DELIVERIES);
+// Delete product
+async function deleteProduct(productId) {
+    if (confirm('Are you sure you want to delete this product?')) {
+        try {
+            await apiClient.deleteProduct(productId);
+            showNotification('Product deleted successfully!', 'success');
+            await loadProducts();
+            await loadAnalytics();
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            showNotification('Failed to delete product', 'error');
+        }
     }
+}
 
-    async updateDeliveryStatus(id, statusData) {
-        return this.request(this.endpoints.DELIVERY_STATUS(id), {
-            method: 'PUT',
-            body: JSON.stringify(statusData)
-        });
+// Assign delivery
+async function assignDelivery(event) {
+    event.preventDefault();
+
+    const deliveryId = document.getElementById('deliveryId').value;
+    const logisticsId = document.getElementById('logisticsSelect').value;
+
+    try {
+        await apiClient.assignDelivery(deliveryId, { assigned_to: logisticsId });
+        showNotification('Delivery assigned successfully!', 'success');
+        closeModal('assignDeliveryModal');
+        event.target.reset();
+        await loadDeliveries();
+    } catch (error) {
+        console.error('Error assigning delivery:', error);
+        showNotification('Failed to assign delivery', 'error');
     }
+}
 
-    async trackDelivery(trackingNumber) {
-        return this.request(this.endpoints.DELIVERY_TRACK);
-    }
-
-    async assignDelivery(deliveryId, assignmentData) {
-        return this.request(this.endpoints.DELIVERY_ASSIGN(deliveryId), {
-            method: 'POST',
-            body: JSON.stringify(assignmentData)
-        });
-    }
-
-    // Promotions
-    async getPromotions() {
-        return this.request(this.endpoints.PROMOTIONS);
-    }
-
-    async getPromotion(promotionId) {
-        return this.request(this.endpoints.PROMOTION(promotionId));
-    }
-
-    async createPromotion(promotionData) {
-        return this.request(this.endpoints.PROMOTIONS, {
-            method: 'POST',
-            body: JSON.stringify(promotionData)
-        });
-    }
-
-    async updatePromotion(promotionId, promotionData) {
-        return this.request(this.endpoints.PROMOTION(promotionId), {
-            method: 'PUT',
-            body: JSON.stringify(promotionData)
-        });
-    }
-
-    async deletePromotion(promotionId) {
-        return this.request(this.endpoints.PROMOTION(promotionId), {
-            method: 'DELETE'
-        });
-    }
-
-    async calculateDiscount(discountData) {
-        return this.request(this.endpoints.PROMOTIONS_CALCULATE_DISCOUNT, {
-            method: 'POST',
-            body: JSON.stringify(discountData)
-        });
-    }
-
-    // Analytics methods
-    async getAnalytics() {
-        return this.request(this.endpoints.ADMIN_ANALYTICS);
+// View order details with proper modal styling
+function viewOrderDetails(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) {
+        showNotification('Order not found', 'error');
+        return;
     }
     
-    // Admin methods - Fixed to use correct endpoint
-    async getUsers() {
-        return this.request(this.endpoints.ADMIN_USERS);
-    }
-
-    async toggleUserStatus(userId) {
-        return this.request(this.endpoints.ADMIN_USER_STATUS(userId), {
-            method: 'PUT'
-        });
-    }
-
-    async createUser(userData) {
-        return this.request(this.endpoints.ADMIN_USERS, {
-            method: 'POST',
-            body: JSON.stringify(userData)
-        });
-    }
-
-    // Maintenance Mode
-    async getMaintenanceStatus() {
-        return this.request(this.endpoints.MAINTENANCE_STATUS);
-    }
-
-    async enableMaintenanceMode() {
-        return this.request(this.endpoints.MAINTENANCE_ENABLE, {
-            method: 'POST'
-        });
-    }
-
-    async disableMaintenanceMode() {
-        return this.request(this.endpoints.MAINTENANCE_DISABLE, {
-            method: 'POST'
-        });
-    }
-
-    // Payment processing
-    async processPayment(paymentData) {
-        return this.request(this.endpoints.PAYMENTS_PROCESS, {
-            method: 'POST',
-            body: JSON.stringify(paymentData)
-        });
-    }
-
-    // Inventory management
-    async updateInventory(productId, inventoryData) {
-        return this.request(this.endpoints.PRODUCT_INVENTORY(productId), {
-            method: 'PUT',
-            body: JSON.stringify(inventoryData)
-        });
-    }
+    // Create modal content with proper HTML structure
+    const modalContent = document.createElement('div');
+    modalContent.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modalContent.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Order Details #${order.id}</h3>
+                <button onclick="closeOrderModal()" class="text-gray-500 hover:text-gray-700">×</button>
+            </div>
+            <div class="space-y-4">
+                <div><strong>Order ID:</strong> #${order.id}</div>
+                <div><strong>Customer:</strong> ${order.customer_name || order.user?.name || order.customer_email || 'Unknown'}</div>
+                <div><strong>Total:</strong> Ksh${parseFloat(order.total_amount || 0).toFixed(2)}</div>
+                <div><strong>Status:</strong> <span class="status-${order.status}">${order.status}</span></div>
+                <div><strong>Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</div>
+                ${order.items && order.items.length > 0 ? `
+                    <div><strong>Items:</strong>
+                        <div class="mt-2 space-y-2 bg-gray-50 p-3 rounded">
+                            ${order.items.map(item => `
+                                <div class="flex justify-between">
+                                    <span>${item.name || item.product_name || 'Product'}</span>
+                                    <span>x${item.quantity} @ Ksh${parseFloat(item.unit_price || item.price || 0).toFixed(2)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                ${order.delivery_address ? `<div><strong>Delivery Address:</strong> ${order.delivery_address}</div>` : ''}
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modalContent);
+    
+    // Add global function to close modal
+    window.closeOrderModal = function() {
+        modalContent.remove();
+        delete window.closeOrderModal;
+    };
 }
 
-if (typeof window.apiClient === 'undefined') {
-    window.apiClient = new ApiClient();
+function updateOrderStatus(orderId, newStatus) {
+    if (!confirm(`Update order status to ${newStatus}?`)) return;
+    
+    apiClient.updateOrderStatus(orderId, newStatus)
+        .then(() => {
+            showNotification('Order status updated successfully', 'success');
+            loadOrders();
+            loadAnalytics();
+        })
+        .catch(error => {
+            console.error('Error updating order status:', error);
+            showNotification('Failed to update order status', 'error');
+        });
 }
+
+// Assign order to logistics
+function assignToLogistics(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) {
+        showNotification('Order not found', 'error');
+        return;
+    }
+
+    // Create delivery assignment
+    const deliveryData = {
+        order_id: orderId,
+        delivery_address: order.delivery_address || 'Address not provided',
+        status: 'assigned',
+        priority: 'normal'
+    };
+
+    apiClient.assignDelivery(orderId, deliveryData)
+        .then(() => {
+            showNotification('Order assigned to logistics successfully', 'success');
+            updateOrderStatus(orderId, 'shipped');
+            loadDeliveries();
+        })
+        .catch(error => {
+            console.error('Error assigning order to logistics:', error);
+            showNotification('Failed to assign order to logistics', 'error');
+        });
+}
+
+// Make functions globally available
+window.viewOrderDetails = viewOrderDetails;
+window.updateOrderStatus = updateOrderStatus;
+window.assignToLogistics = assignToLogistics;
+window.showAddUserModal = showAddUserModal;
+window.closeModal = closeModal;
+window.editUser = editUser;
+window.deleteUser = deleteUser;
+window.editProduct = editProduct;
+window.deleteProduct = deleteProduct;
+window.showAssignDeliveryModal = showAssignDeliveryModal;
+
