@@ -297,9 +297,14 @@ async function loadOrders() {
                         <button class="btn-secondary text-sm" onclick="viewOrderDetails('${order.id}')">
                             View
                         </button>
-                        <button class="btn-primary text-sm" onclick="updateOrderStatus('${order.id}')">
-                            Update
-                        </button>
+                        ${order.status === 'confirmed' ?
+                            `<button class="btn-primary text-sm" onclick="showAssignOrderModal(${order.id})">
+                                Assign
+                            </button>` :
+                            `<button class="btn-primary text-sm" onclick="updateOrderStatus('${order.id}')">
+                                Update
+                            </button>`
+                        }
                         ${['pending', 'confirmed'].includes(order.status) ?
                             `<button class="btn-danger text-sm" onclick="cancelOrder(${order.id})">Cancel</button>` :
                             ''
@@ -1101,6 +1106,112 @@ function viewDeliveryDetails(deliveryId) {
     showNotification(`Viewing delivery #${deliveryId} details...`, 'info');
 }
 
+// Show assign order modal
+async function showAssignOrderModal(orderId) {
+    const order = orders.find(o => o.id == orderId);
+    if (!order) {
+        showNotification('Order not found', 'error');
+        return;
+    }
+    
+    try {
+        const usersResponse = await apiClient.getUsers();
+        const usersList = apiClient.extractArrayData(usersResponse) || [];
+        const logisticsUsers = usersList.filter(user => user.role === 'logistics');
+        
+        if (logisticsUsers.length === 0) {
+            showNotification('No logistics users available', 'error');
+            return;
+        }
+        
+        const logisticsOptions = logisticsUsers.map(user => 
+            `<option value="${user.id}">${user.name} (${user.email})</option>`
+        ).join('');
+        
+        const modalHtml = `
+            <div id="assignOrderModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                    <h3 class="text-lg font-semibold mb-4">Assign Order to Logistics User</h3>
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-600 mb-2">Order #${order.id}</p>
+                        <p class="text-sm text-gray-600 mb-2">Customer: ${order.user?.name || order.customer_name || 'N/A'}</p>
+                        <p class="text-sm text-gray-600 mb-4">Amount: Ksh${parseFloat(order.total_amount || 0).toLocaleString()}</p>
+                    </div>
+                    <form id="assignOrderForm">
+                        <div class="form-group mb-4">
+                            <label for="assignLogisticsUser">Assign to Logistics User</label>
+                            <select id="assignLogisticsUser" required class="w-full p-2 border rounded">
+                                <option value="">Choose Logistics User</option>
+                                ${logisticsOptions}
+                            </select>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label for="deliveryAddress">Delivery Address</label>
+                            <textarea id="deliveryAddress" class="w-full p-2 border rounded" rows="3" required placeholder="Enter delivery address...">${order.delivery_address || ''}</textarea>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label for="assignmentNotes">Notes (optional)</label>
+                            <textarea id="assignmentNotes" class="w-full p-2 border rounded" rows="3" placeholder="Add any special instructions..."></textarea>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button type="submit" class="btn-primary flex-1">Assign Order</button>
+                            <button type="button" onclick="closeAssignOrderModal()" class="btn-secondary flex-1">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        document.getElementById('assignOrderForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const logisticsUserId = document.getElementById('assignLogisticsUser').value;
+            const deliveryAddress = document.getElementById('deliveryAddress').value;
+            const notes = document.getElementById('assignmentNotes').value;
+            
+            if (!logisticsUserId || !deliveryAddress) {
+                showNotification('Please select logistics user and provide delivery address', 'warning');
+                return;
+            }
+            
+            try {
+                // Create a delivery record for this order assignment
+                const deliveryData = {
+                    order_id: orderId,
+                    assigned_to: logisticsUserId,
+                    delivery_address: deliveryAddress,
+                    status: 'assigned',
+                    priority: 'medium',
+                    notes: notes
+                };
+                
+                await apiClient.assignDelivery(orderId, deliveryData);
+                showNotification('Order assigned to logistics user successfully!', 'success');
+                closeAssignOrderModal();
+                await loadOrders(); // Refresh orders list
+                
+            } catch (error) {
+                console.error('Error assigning order:', error);
+                showNotification('Failed to assign order: ' + error.message, 'error');
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading logistics users:', error);
+        showNotification('Failed to load logistics users', 'error');
+    }
+}
+
+// Close assign order modal
+function closeAssignOrderModal() {
+    const modal = document.getElementById('assignOrderModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
 // Cancel order function
 async function cancelOrder(orderId) {
     if (!confirm('Are you sure you want to cancel this order?')) return;
@@ -1127,6 +1238,8 @@ window.viewOrderDetails = viewOrderDetails;
 window.updateOrderStatus = updateOrderStatus;
 window.closeOrderStatusModal = closeOrderStatusModal;
 window.cancelOrder = cancelOrder;
+window.showAssignOrderModal = showAssignOrderModal;
+window.closeAssignOrderModal = closeAssignOrderModal;
 window.showDeliveryAssignmentModal = showDeliveryAssignmentModal;
 window.closeDeliveryAssignmentModal = closeDeliveryAssignmentModal;
 window.loadDeliveries = loadDeliveries;
