@@ -60,9 +60,9 @@ async function loadDeliveries() {
         const response = await apiClient.getDeliveries();
         const deliveriesList = apiClient.extractArrayData(response) || [];
         
-        // Filter deliveries assigned to current user or unassigned ones
+        // Filter deliveries assigned to current user only
         const relevantDeliveries = deliveriesList.filter(delivery => 
-            !delivery.assigned_to || delivery.assigned_to == currentUser.id
+            delivery.assigned_to && delivery.assigned_to == currentUser.id
         );
         
         displayDeliveries(relevantDeliveries);
@@ -129,16 +129,21 @@ async function loadLogisticsStats() {
         // Fetch deliveries data
         const response = await apiClient.getDeliveries();
         const deliveriesList = apiClient.extractArrayData(response) || [];
+        
+        // Filter to only deliveries assigned to current user
+        const userDeliveries = deliveriesList.filter(delivery => 
+            delivery.assigned_to && delivery.assigned_to == currentUser.id
+        );
 
-        // Calculate statistics
-        const activeDeliveries = deliveriesList.filter(delivery => delivery.status !== 'delivered').length;
-        const completedToday = deliveriesList.filter(delivery => {
+        // Calculate statistics based on user's assigned deliveries
+        const activeDeliveries = userDeliveries.filter(delivery => delivery.status !== 'delivered').length;
+        const completedToday = userDeliveries.filter(delivery => {
             const deliveredDate = new Date(delivery.updated_at).toLocaleDateString();
             const todayDate = new Date().toLocaleDateString();
             return delivery.status === 'delivered' && deliveredDate === todayDate;
         }).length;
-        const totalDistance = deliveriesList.reduce((sum, delivery) => sum + (delivery.distance || 0), 0);
-        const efficiency = deliveriesList.length > 0 ? ((deliveriesList.filter(delivery => delivery.status === 'delivered').length / deliveriesList.length) * 100).toFixed(2) + '%' : '0%';
+        const totalDistance = userDeliveries.reduce((sum, delivery) => sum + (delivery.distance || 0), 0);
+        const efficiency = userDeliveries.length > 0 ? ((userDeliveries.filter(delivery => delivery.status === 'delivered').length / userDeliveries.length) * 100).toFixed(2) + '%' : '0%';
 
         // Update stat cards
         updateStatCard('activeDeliveries', activeDeliveries);
