@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retailer Dashboard - AgriLink</title>
+    <link rel="stylesheet" href="styles/tailwind-output.css">
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body class="bg-gray-50">
+    <div class="dashboard active">
+        <header class="dashboard-header">
+            <nav class="dashboard-nav">
+                <h1 class="dashboard-title">🏪 Retailer Dashboard</h1>
+                <div class="user-info">
+                    <span id="userName" class="text-gray-700 font-medium">Loading...</span>
+                    <span class="role-badge bg-blue-100 text-blue-800" id="userRole">Retailer</span>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </nav>
+        </header>
+
+        <div class="dashboard-content">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 id="totalOrders">0</h3>
+                    <p>Bulk Orders</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalSpent">Ksh0</h3>
+                    <p>Total Spent</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="activeSuppliers">0</h3>
+                    <p>Active Suppliers</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="pendingDeliveries">0</h3>
+                    <p>Pending Deliveries</p>
+                </div>
+            </div>
+
+            <!-- Bulk Order Form -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">Place Bulk Order</h3>
+                <form onsubmit="placeBulkOrder(event)">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="form-group">
+                            <label for="productSelect">Product</label>
+                            <select id="productSelect" required>
+                                <option value="">Select Product</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="bulkQuantity">Quantity</label>
+                            <input type="number" id="bulkQuantity" min="10" required placeholder="Minimum 10 units">
+                        </div>
+                        <div class="form-group">
+                            <label for="deliveryDate">Preferred Delivery Date</label>
+                            <input type="date" id="deliveryDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="budgetRange">Budget Range</label>
+                            <select id="budgetRange" required>
+                                <option value="">Select Budget</option>
+                                <option value="5000-10000">Ksh5,000 - Ksh10,000</option>
+                                <option value="10000-25000">Ksh10,000 - Ksh25,000</option>
+                                <option value="25000-50000">Ksh25,000 - Ksh50,000</option>
+                                <option value="50000+">Ksh50,000+</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div class="form-group">
+                            <label for="bulkPaymentMethod">Payment Method</label>
+                            <select id="bulkPaymentMethod" required>
+                                <option value="">Select Payment Method</option>
+                                <option value="cod">Cash on Delivery</option>
+                                <option value="mpesa">M-Pesa</option>
+                                <option value="card">Credit/Debit Card</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="specialRequirements">Special Requirements</label>
+                            <textarea id="specialRequirements" rows="2" placeholder="Any specific requirements or notes"></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <h4 class="font-semibold mb-2">Order Summary</h4>
+                        <div id="orderSummary" class="text-sm text-gray-600">
+                            Select a product and quantity to see the total cost.
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary mt-4">Place Bulk Order</button>
+                </form>
+            </div>
+
+            <!-- Delivery Schedule -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">Schedule Delivery</h3>
+                <form onsubmit="scheduleDelivery(event)">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="form-group">
+                            <label for="orderSelect">Select Order</label>
+                            <select id="orderSelect" required>
+                                <option value="">Select Order</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="deliveryTime">Delivery Time</label>
+                            <select id="deliveryTime" required>
+                                <option value="">Select Time</option>
+                                <option value="morning">Morning (8AM - 12PM)</option>
+                                <option value="afternoon">Afternoon (12PM - 4PM)</option>
+                                <option value="evening">Evening (4PM - 8PM)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="deliveryAddress">Delivery Address</label>
+                            <textarea id="deliveryAddress" rows="2" required placeholder="Enter delivery address"></textarea>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary">Schedule Delivery</button>
+                </form>
+            </div>
+
+            <!-- Order History -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>Bulk Order History</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Product</th>
+                                <th>Quantity</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderHistoryTable">
+                            <!-- Orders will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="scripts/api-client.js"></script>
+    <script src="scripts/auth.js"></script>
+    <script src="scripts/retailer-dashboard.js"></script>
+</body>
+</html>

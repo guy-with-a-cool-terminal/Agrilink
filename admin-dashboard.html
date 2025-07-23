@@ -1,0 +1,148 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - AgriLink</title>
+    <link rel="stylesheet" href="styles/tailwind-output.css">
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body class="bg-gray-50">
+    <div class="dashboard active">
+        <header class="dashboard-header">
+            <nav class="dashboard-nav">
+                <h1 class="dashboard-title">⚙️ Admin Dashboard</h1>
+                <div class="user-info">
+                    <button class="btn-secondary" onclick="window.open('analytics.html', '_blank')" style="margin-right: 10px;">
+                        📊 Analytics
+                    </button>
+                    <button id="maintenanceToggle" class="btn-secondary" onclick="toggleMaintenanceMode()" style="margin-right: 10px;">
+                        🔧 Enable Maintenance
+                    </button>
+                    <button class="btn-secondary" onclick="refreshData()" style="margin-right: 10px;">
+                        🔄 Refresh
+                    </button>
+                    <span id="userName" class="text-gray-700 font-medium">Loading...</span>
+                    <span class="role-badge bg-purple-100 text-purple-800" id="userRole">Admin</span>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </nav>
+        </header>
+
+        <div class="dashboard-content">
+            <!-- Real-time Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 id="totalSales" class="text-3xl font-bold text-gray-900">Loading...</h3>
+                    <p class="text-gray-600">Total Sales</p>
+                    <small id="salesGrowth" class="text-green-600 font-medium">Loading...</small>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalOrders" class="text-3xl font-bold text-gray-900">Loading...</h3>
+                    <p class="text-gray-600">Total Orders</p>
+                    <small id="orderGrowth" class="text-green-600 font-medium">Loading...</small>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalUsers" class="text-3xl font-bold text-gray-900">Loading...</h3>
+                    <p class="text-gray-600">Total Users</p>
+                    <small id="userGrowth" class="text-green-600 font-medium">Loading...</small>
+                </div>
+                <div class="stat-card">
+                    <h3 id="monthlyRevenue" class="text-3xl font-bold text-gray-900">Loading...</h3>
+                    <p class="text-gray-600">Monthly Revenue</p>
+                    <small id="revenueGrowth" class="text-green-600 font-medium">Loading...</small>
+                </div>
+                <div class="stat-card">
+                    <h3 id="pendingOrders" class="text-3xl font-bold text-gray-900">Loading...</h3>
+                    <p class="text-gray-600">Pending Orders</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalProducts" class="text-3xl font-bold text-gray-900">Loading...</h3>
+                    <p class="text-gray-600">Total Products</p>
+                </div>
+            </div>
+
+            <!-- Product Analytics -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">Product Analytics</h3>
+                <div id="productMetrics">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-blue-800">Total Products</h4>
+                            <p class="text-2xl font-bold text-blue-600">Loading...</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-green-800">Active Products</h4>
+                            <p class="text-2xl font-bold text-green-600">Loading...</p>
+                        </div>
+                        <div class="bg-yellow-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-yellow-800">Low Stock</h4>
+                            <p class="text-2xl font-bold text-yellow-600">Loading...</p>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-red-800">Out of Stock</h4>
+                            <p class="text-2xl font-bold text-red-600">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Management -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>Users Management</h3>
+                    <button class="btn-primary" onclick="showCreateUserModal()">
+                        + Create User
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Join Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recent Orders -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>Recent Orders</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="ordersTable">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Customer</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Orders will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="scripts/api-client.js"></script>
+    <script src="scripts/auth.js"></script>
+    <script src="scripts/admin-dashboard.js"></script>
+</body>
+</html>

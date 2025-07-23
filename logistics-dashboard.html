@@ -1,0 +1,137 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistics Dashboard - AgriLink</title>
+    <link rel="stylesheet" href="styles/tailwind-output.css">
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body class="bg-gray-50">
+    <div class="dashboard active">
+        <header class="dashboard-header">
+            <nav class="dashboard-nav">
+                <h1 class="dashboard-title">🚚 Logistics Dashboard</h1>
+                <div class="user-info">
+                    <span id="userName" class="text-gray-700 font-medium">Loading...</span>
+                    <span class="role-badge bg-orange-100 text-orange-800" id="userRole">Logistics</span>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </nav>
+        </header>
+
+        <div class="dashboard-content">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 id="activeDeliveries">0</h3>
+                    <p>Active Deliveries</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="completedToday">0</h3>
+                    <p>Completed Today</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalDistance">0</h3>
+                    <p>KM Traveled</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="efficiency">0%</h3>
+                    <p>Delivery Efficiency</p>
+                </div>
+            </div>
+
+            <!-- Delivery Route Map -->
+            <div class="chart-container">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900">Delivery Route Map</h3>
+                    <button onclick="refreshDeliveryMap()" class="btn-secondary text-sm">
+                        🔄 Refresh Map
+                    </button>
+                </div>
+                <div id="deliveryMap" class="w-full h-96 rounded-lg border border-gray-200 bg-gray-100">
+                    <div class="flex items-center justify-center h-full">
+                        <div class="text-center">
+                            <div class="text-gray-400 text-2xl mb-2">🗺️</div>
+                            <p class="text-gray-600">Loading delivery map...</p>
+                            <p class="text-gray-500 text-sm mt-1">Google Maps integration</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assigned Deliveries -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>Assigned Deliveries</h3>
+                    <button class="btn-primary" onclick="refreshDeliveries()">
+                        🔄 Refresh
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Delivery ID</th>
+                                <th>Order Details</th>
+                                <th>Customer</th>
+                                <th>Address</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deliveriesTable">
+                            <!-- Deliveries will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Delivery Status Update -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">Update Delivery Status</h3>
+                <form onsubmit="updateDeliveryStatus(event)">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="form-group">
+                            <label for="deliverySelect">Select Delivery</label>
+                            <select id="deliverySelect" required>
+                                <option value="">Select Delivery</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="newStatus">New Status</label>
+                            <select id="newStatus" required>
+                                <option value="">Select Status</option>
+                                <option value="picked_up">Picked Up</option>
+                                <option value="in_transit">In Transit</option>
+                                <option value="out_for_delivery">Out for Delivery</option>
+                                <option value="delivered">Delivered</option>
+                                <option value="failed">Delivery Failed</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="location">Current Location</label>
+                            <input type="text" id="location" placeholder="Enter current location">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="statusNotes">Notes/Comments</label>
+                        <textarea id="statusNotes" rows="3" placeholder="Any additional notes about the delivery"></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary">Update Status</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google Maps API - Replace YOUR_API_KEY with your actual Google Maps API key -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap&libraries=geometry"></script>
+    
+    <script src="scripts/api-client.js"></script>
+    <script src="scripts/auth.js"></script>
+    <script src="scripts/logistics-dashboard.js"></script>
+    <script src="scripts/maps.js"></script>
+</body>
+</html>

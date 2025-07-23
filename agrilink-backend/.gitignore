@@ -1,0 +1,43 @@
+# Logs
+*.log
+
+# macOS
+.DS_Store
+
+# Environment files (do NOT commit secrets)
+.env
+.env.backup
+.env.production
+
+# IDE/editor configs
+.phpactor.json
+.phpunit.result.cache
+/.fleet
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+
+# Composer auth
+/auth.json
+
+# Node modules & build artifacts
+/node_modules
+/public/build
+/public/hot
+/public/storage
+
+# Storage keys and caches
+/storage/*.key
+/storage/pail
+
+# Vendor (PHP dependencies)
+ /vendor
+
+# Vagrant Homestead
+Homestead.json
+Homestead.yaml
+
+# Windows system files
+Thumbs.db
