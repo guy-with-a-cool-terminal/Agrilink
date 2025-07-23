@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadUsers();
     loadOrders();
     loadProducts();
+    loadDeliveries();
 });
 
 // Data storage
@@ -677,6 +678,425 @@ function logout() {
     window.location.href = 'index.html';
 }
 
+// ============ MISSING FUNCTIONS - Order Management ============
+
+// View order details function
+function viewOrderDetails(orderId) {
+    const order = orders.find(o => o.id == orderId);
+    if (!order) {
+        showNotification('Order not found', 'error');
+        return;
+    }
+    
+    // Calculate total items
+    let totalItems = 0;
+    let itemsDisplay = 'No items';
+    
+    if (order.items && Array.isArray(order.items)) {
+        totalItems = order.items.length;
+        itemsDisplay = order.items.map(item => 
+            `${item.product?.name || item.name || 'Product'} (Qty: ${item.quantity || 0})`
+        ).join('\n');
+    }
+    
+    const orderDate = new Date(order.created_at).toLocaleDateString();
+    const deliveryDate = order.delivery_date ? new Date(order.delivery_date).toLocaleDateString() : 'Not set';
+    
+    alert(`Order Details:
+
+Order ID: #${order.id}
+Order Number: ${order.order_number || 'N/A'}
+Customer: ${order.user?.name || order.customer_name || 'N/A'}
+Status: ${order.status}
+Total Amount: Ksh${parseFloat(order.total_amount || 0).toLocaleString()}
+Order Date: ${orderDate}
+Delivery Date: ${deliveryDate}
+Delivery Address: ${order.delivery_address || 'Not provided'}
+Total Items: ${totalItems}
+
+Items:
+${itemsDisplay}
+
+Notes: ${order.notes || 'No notes'}`);
+}
+
+// Update order status function
+async function updateOrderStatus(orderId) {
+    const order = orders.find(o => o.id == orderId);
+    if (!order) {
+        showNotification('Order not found', 'error');
+        return;
+    }
+    
+    const currentStatus = order.status;
+    const statusOptions = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+    
+    let optionsHtml = statusOptions.map(status => 
+        `<option value="${status}" ${status === currentStatus ? 'selected' : ''}>${status.charAt(0).toUpperCase() + status.slice(1)}</option>`
+    ).join('');
+    
+    const modalHtml = `
+        <div id="orderStatusModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold mb-4">Update Order Status</h3>
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 mb-2">Order #${order.id} - ${order.user?.name || order.customer_name || 'Customer'}</p>
+                    <p class="text-sm text-gray-600 mb-4">Current Status: <span class="font-medium">${currentStatus}</span></p>
+                </div>
+                <form id="updateOrderStatusForm">
+                    <div class="form-group mb-4">
+                        <label for="newOrderStatus">New Status</label>
+                        <select id="newOrderStatus" required class="w-full p-2 border rounded">
+                            ${optionsHtml}
+                        </select>
+                    </div>
+                    <div class="form-group mb-4">
+                        <label for="statusNotes">Notes (optional)</label>
+                        <textarea id="statusNotes" class="w-full p-2 border rounded" rows="3" placeholder="Add any notes about this status update..."></textarea>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button type="submit" class="btn-primary flex-1">Update Status</button>
+                        <button type="button" onclick="closeOrderStatusModal()" class="btn-secondary flex-1">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    document.getElementById('updateOrderStatusForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const newStatus = document.getElementById('newOrderStatus').value;
+        const notes = document.getElementById('statusNotes').value;
+        
+        try {
+            await apiClient.updateOrderStatus(orderId, newStatus);
+            showNotification(`Order status updated to ${newStatus}`, 'success');
+            closeOrderStatusModal();
+            await loadOrders(); // Refresh orders list
+        } catch (error) {
+            console.error('Error updating order status:', error);
+            showNotification('Failed to update order status: ' + error.message, 'error');
+        }
+    });
+}
+
+// Close order status modal
+function closeOrderStatusModal() {
+    const modal = document.getElementById('orderStatusModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// ============ DELIVERY ASSIGNMENT FEATURE ============
+
+// Show delivery assignment modal
+async function showDeliveryAssignmentModal() {
+    try {
+        // Load deliveries and logistics users
+        const [deliveriesResponse, usersResponse] = await Promise.all([
+            apiClient.getDeliveries(),
+            apiClient.getUsers()
+        ]);
+        
+        const deliveriesList = apiClient.extractArrayData(deliveriesResponse) || [];
+        const usersList = apiClient.extractArrayData(usersResponse) || [];
+        
+        // Filter unassigned deliveries and logistics users
+        const unassignedDeliveries = deliveriesList.filter(delivery => 
+            !delivery.assigned_to || delivery.assigned_to === null
+        );
+        const logisticsUsers = usersList.filter(user => user.role === 'logistics');
+        
+        if (unassignedDeliveries.length === 0) {
+            showNotification('No unassigned deliveries found', 'info');
+            return;
+        }
+        
+        if (logisticsUsers.length === 0) {
+            showNotification('No logistics users available', 'error');
+            return;
+        }
+        
+        const deliveryOptions = unassignedDeliveries.map(delivery => 
+            `<option value="${delivery.id}">
+                Delivery #${delivery.id} - ${delivery.customer_name || delivery.order?.customer_name || 'Customer'} 
+                (${delivery.delivery_address ? delivery.delivery_address.substring(0, 50) + '...' : 'No address'})
+            </option>`
+        ).join('');
+        
+        const logisticsOptions = logisticsUsers.map(user => 
+            `<option value="${user.id}">${user.name} (${user.email})</option>`
+        ).join('');
+        
+        const modalHtml = `
+            <div id="deliveryAssignmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                    <h3 class="text-lg font-semibold mb-4">Assign Delivery to Logistics User</h3>
+                    <form id="deliveryAssignmentForm">
+                        <div class="form-group mb-4">
+                            <label for="deliverySelect">Select Delivery</label>
+                            <select id="deliverySelect" required class="w-full p-2 border rounded">
+                                <option value="">Choose Delivery</option>
+                                ${deliveryOptions}
+                            </select>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label for="logisticsUserSelect">Assign to Logistics User</label>
+                            <select id="logisticsUserSelect" required class="w-full p-2 border rounded">
+                                <option value="">Choose Logistics User</option>
+                                ${logisticsOptions}
+                            </select>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label for="assignmentNotes">Assignment Notes (optional)</label>
+                            <textarea id="assignmentNotes" class="w-full p-2 border rounded" rows="3" placeholder="Add any special instructions..."></textarea>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button type="submit" class="btn-primary flex-1">Assign Delivery</button>
+                            <button type="button" onclick="closeDeliveryAssignmentModal()" class="btn-secondary flex-1">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        document.getElementById('deliveryAssignmentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await handleDeliveryAssignment();
+        });
+        
+    } catch (error) {
+        console.error('Error loading delivery assignment data:', error);
+        showNotification('Failed to load assignment data', 'error');
+    }
+}
+
+// Handle delivery assignment
+async function handleDeliveryAssignment() {
+    const deliveryId = document.getElementById('deliverySelect').value;
+    const logisticsUserId = document.getElementById('logisticsUserSelect').value;
+    const notes = document.getElementById('assignmentNotes').value;
+    
+    if (!deliveryId || !logisticsUserId) {
+        showNotification('Please select both delivery and logistics user', 'warning');
+        return;
+    }
+    
+    try {
+        const assignmentData = {
+            assigned_to: logisticsUserId,
+            status: 'assigned',
+            notes: notes
+        };
+        
+        await apiClient.assignDelivery(deliveryId, assignmentData);
+        showNotification('Delivery assigned successfully!', 'success');
+        closeDeliveryAssignmentModal();
+        
+        // Refresh relevant data
+        await loadOrders();
+        
+    } catch (error) {
+        console.error('Error assigning delivery:', error);
+        showNotification('Failed to assign delivery: ' + error.message, 'error');
+    }
+}
+
+// Close delivery assignment modal
+function closeDeliveryAssignmentModal() {
+    const modal = document.getElementById('deliveryAssignmentModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Load deliveries for admin view
+async function loadDeliveries() {
+    try {
+        const response = await apiClient.getDeliveries();
+        const deliveriesList = apiClient.extractArrayData(response) || [];
+        
+        console.log('Deliveries loaded for admin:', deliveriesList);
+        displayDeliveriesTable(deliveriesList);
+        
+    } catch (error) {
+        console.error('Error loading deliveries:', error);
+        showNotification('Failed to load deliveries', 'error');
+    }
+}
+
+// Display deliveries in admin table
+function displayDeliveriesTable(deliveriesList) {
+    const tableBody = document.querySelector('#deliveriesTable tbody');
+    if (!tableBody) return;
+    
+    if (deliveriesList.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center py-8">
+                    <div class="text-gray-400 text-4xl mb-4">📦</div>
+                    <p class="text-gray-600 mb-4">No deliveries found.</p>
+                    <button class="btn-primary" onclick="showDeliveryAssignmentModal()">Assign Deliveries</button>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tableBody.innerHTML = deliveriesList.map(delivery => {
+        const assignedUser = delivery.assigned_to ? 
+            users.find(u => u.id == delivery.assigned_to) : null;
+        const assignedName = assignedUser ? assignedUser.name : 'Unassigned';
+        
+        return `
+            <tr>
+                <td class="font-mono">#${delivery.id}</td>
+                <td>
+                    ${delivery.order ? `
+                        <div class="text-sm">
+                            <div class="font-medium">Order #${delivery.order.id}</div>
+                            <div class="text-gray-600">${delivery.order.order_number || ''}</div>
+                        </div>
+                    ` : 'No order'}
+                </td>
+                <td>${delivery.customer_name || delivery.order?.customer_name || 'Unknown'}</td>
+                <td class="text-sm max-w-xs truncate">${delivery.delivery_address || 'Not specified'}</td>
+                <td>
+                    <span class="status-${delivery.status || 'pending'}">${(delivery.status || 'pending').replace('_', ' ')}</span>
+                </td>
+                <td>
+                    <span class="priority-${delivery.priority || 'medium'}">${delivery.priority || 'medium'}</span>
+                </td>
+                <td>
+                    <span class="${delivery.assigned_to ? 'text-green-600 font-medium' : 'text-red-600'}">
+                        ${assignedName}
+                    </span>
+                </td>
+                <td>
+                    <div class="flex gap-2">
+                        ${!delivery.assigned_to ? `
+                            <button class="btn-primary text-sm" onclick="assignSingleDelivery('${delivery.id}')">
+                                Assign
+                            </button>
+                        ` : `
+                            <button class="btn-secondary text-sm" onclick="reassignDelivery('${delivery.id}')">
+                                Reassign
+                            </button>
+                        `}
+                        <button class="btn-secondary text-sm" onclick="viewDeliveryDetails('${delivery.id}')">
+                            View
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Assign single delivery
+async function assignSingleDelivery(deliveryId) {
+    try {
+        const usersResponse = await apiClient.getUsers();
+        const usersList = apiClient.extractArrayData(usersResponse) || [];
+        const logisticsUsers = usersList.filter(user => user.role === 'logistics');
+        
+        if (logisticsUsers.length === 0) {
+            showNotification('No logistics users available', 'error');
+            return;
+        }
+        
+        const logisticsOptions = logisticsUsers.map(user => 
+            `<option value="${user.id}">${user.name} (${user.email})</option>`
+        ).join('');
+        
+        const modalHtml = `
+            <div id="singleDeliveryAssignmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                    <h3 class="text-lg font-semibold mb-4">Assign Delivery #${deliveryId}</h3>
+                    <form id="singleDeliveryAssignmentForm">
+                        <div class="form-group mb-4">
+                            <label for="singleLogisticsUserSelect">Assign to Logistics User</label>
+                            <select id="singleLogisticsUserSelect" required class="w-full p-2 border rounded">
+                                <option value="">Choose Logistics User</option>
+                                ${logisticsOptions}
+                            </select>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label for="singleAssignmentNotes">Assignment Notes (optional)</label>
+                            <textarea id="singleAssignmentNotes" class="w-full p-2 border rounded" rows="3" placeholder="Add any special instructions..."></textarea>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button type="submit" class="btn-primary flex-1">Assign</button>
+                            <button type="button" onclick="closeSingleDeliveryAssignmentModal()" class="btn-secondary flex-1">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        document.getElementById('singleDeliveryAssignmentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const logisticsUserId = document.getElementById('singleLogisticsUserSelect').value;
+            const notes = document.getElementById('singleAssignmentNotes').value;
+            
+            if (!logisticsUserId) {
+                showNotification('Please select a logistics user', 'warning');
+                return;
+            }
+            
+            try {
+                const assignmentData = {
+                    assigned_to: logisticsUserId,
+                    status: 'assigned',
+                    notes: notes
+                };
+                
+                await apiClient.assignDelivery(deliveryId, assignmentData);
+                showNotification('Delivery assigned successfully!', 'success');
+                closeSingleDeliveryAssignmentModal();
+                await loadDeliveries();
+                
+            } catch (error) {
+                console.error('Error assigning delivery:', error);
+                showNotification('Failed to assign delivery: ' + error.message, 'error');
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading logistics users:', error);
+        showNotification('Failed to load logistics users', 'error');
+    }
+}
+
+// Close single delivery assignment modal
+function closeSingleDeliveryAssignmentModal() {
+    const modal = document.getElementById('singleDeliveryAssignmentModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Reassign delivery (alias for assign single delivery)
+function reassignDelivery(deliveryId) {
+    assignSingleDelivery(deliveryId);
+}
+
+// View delivery details
+function viewDeliveryDetails(deliveryId) {
+    // This would typically show detailed delivery information
+    // For now, show a basic alert (can be enhanced with a proper modal)
+    showNotification(`Viewing delivery #${deliveryId} details...`, 'info');
+}
+
 // Make functions globally available
 window.showCreateUserModal = showCreateUserModal;
 window.editUser = editUser;
@@ -687,6 +1107,14 @@ window.deleteUser = deleteUser;
 window.toggleMaintenanceMode = toggleMaintenanceMode;
 window.viewOrderDetails = viewOrderDetails;
 window.updateOrderStatus = updateOrderStatus;
+window.closeOrderStatusModal = closeOrderStatusModal;
+window.showDeliveryAssignmentModal = showDeliveryAssignmentModal;
+window.closeDeliveryAssignmentModal = closeDeliveryAssignmentModal;
+window.loadDeliveries = loadDeliveries;
+window.assignSingleDelivery = assignSingleDelivery;
+window.closeSingleDeliveryAssignmentModal = closeSingleDeliveryAssignmentModal;
+window.reassignDelivery = reassignDelivery;
+window.viewDeliveryDetails = viewDeliveryDetails;
 window.refreshData = refreshData;
 window.loadUsers = loadUsers;
 window.logout = logout;
