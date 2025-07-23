@@ -283,6 +283,13 @@ class ApiClient {
         });
     }
 
+    async createDelivery(deliveryData) {
+        return this.request(this.endpoints.DELIVERIES, {
+            method: 'POST',
+            body: JSON.stringify(deliveryData)
+        });
+    }
+
     async trackDelivery(trackingNumber) {
         return this.request(this.endpoints.DELIVERY_TRACK);
     }

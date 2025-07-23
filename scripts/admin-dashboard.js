@@ -1177,7 +1177,7 @@ async function showAssignOrderModal(orderId) {
             }
             
             try {
-                // Create a delivery record for this order assignment
+                // First create a delivery record, then assign it
                 const deliveryData = {
                     order_id: orderId,
                     assigned_to: logisticsUserId,
@@ -1187,7 +1187,9 @@ async function showAssignOrderModal(orderId) {
                     notes: notes
                 };
                 
-                await apiClient.assignDelivery(orderId, deliveryData);
+                // Create delivery first
+                const deliveryResponse = await apiClient.createDelivery(deliveryData);
+                
                 showNotification('Order assigned to logistics user successfully!', 'success');
                 closeAssignOrderModal();
                 await loadOrders(); // Refresh orders list
@@ -1212,12 +1214,13 @@ function closeAssignOrderModal() {
     }
 }
 
-// Cancel order function
+// Cancel order function - for admin use updateOrderStatus instead
 async function cancelOrder(orderId) {
     if (!confirm('Are you sure you want to cancel this order?')) return;
     
     try {
-        await apiClient.cancelOrder(orderId);
+        // Since admin can't use cancel endpoint, update status to cancelled
+        await apiClient.updateOrderStatus(orderId, 'cancelled');
         showNotification('Order cancelled successfully', 'success');
         await loadOrders(); // Refresh orders list
     } catch (error) {
