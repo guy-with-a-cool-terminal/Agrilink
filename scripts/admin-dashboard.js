@@ -300,6 +300,10 @@ async function loadOrders() {
                         <button class="btn-primary text-sm" onclick="updateOrderStatus('${order.id}')">
                             Update
                         </button>
+                        ${['pending', 'confirmed'].includes(order.status) ?
+                            `<button class="btn-danger text-sm" onclick="cancelOrder(${order.id})">Cancel</button>` :
+                            ''
+                        }
                     </div>
                 </td>
             `;
@@ -1097,6 +1101,20 @@ function viewDeliveryDetails(deliveryId) {
     showNotification(`Viewing delivery #${deliveryId} details...`, 'info');
 }
 
+// Cancel order function
+async function cancelOrder(orderId) {
+    if (!confirm('Are you sure you want to cancel this order?')) return;
+    
+    try {
+        await apiClient.cancelOrder(orderId);
+        showNotification('Order cancelled successfully', 'success');
+        await loadOrders(); // Refresh orders list
+    } catch (error) {
+        console.error('Error cancelling order:', error);
+        showNotification('Failed to cancel order: ' + error.message, 'error');
+    }
+}
+
 // Make functions globally available
 window.showCreateUserModal = showCreateUserModal;
 window.editUser = editUser;
@@ -1108,6 +1126,7 @@ window.toggleMaintenanceMode = toggleMaintenanceMode;
 window.viewOrderDetails = viewOrderDetails;
 window.updateOrderStatus = updateOrderStatus;
 window.closeOrderStatusModal = closeOrderStatusModal;
+window.cancelOrder = cancelOrder;
 window.showDeliveryAssignmentModal = showDeliveryAssignmentModal;
 window.closeDeliveryAssignmentModal = closeDeliveryAssignmentModal;
 window.loadDeliveries = loadDeliveries;

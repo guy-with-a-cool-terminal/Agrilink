@@ -16,15 +16,14 @@ class ApiClient {
             // Orders
             ORDERS: '/orders',
             ORDER: (id) => `/orders/${id}`,
-            ORDER_STATUS: (id) => `/orders/${id}/status`,
             ORDER_CANCEL: (id) => `/orders/${id}/cancel`,
             
             // Deliveries
             DELIVERIES: '/deliveries',
             DELIVERY: (id) => `/deliveries/${id}`,
-            DELIVERY_STATUS: (id) => `/deliveries/${id}/status`,
             DELIVERY_ASSIGN: (id) => `/deliveries/${id}/assign`,
-            DELIVERY_TRACK: '/deliveries/track',
+            DELIVERY_STATUS: (id) => `/deliveries/${id}/status`,
+            DELIVERY_TRACK: (tracking) => `/deliveries/track/${tracking}`,
             
             // Admin
             ADMIN_USERS: '/admin/users',
@@ -32,18 +31,9 @@ class ApiClient {
             ADMIN_USER_STATUS: (id) => `/admin/users/${id}/status`,
             ADMIN_ANALYTICS: '/admin/analytics',
             
-            // Maintenance
-            MAINTENANCE_STATUS: '/admin/maintenance/status',
-            MAINTENANCE_ENABLE: '/admin/maintenance/enable',
-            MAINTENANCE_DISABLE: '/admin/maintenance/disable',
-            
-            // Payments
-            PAYMENTS_PROCESS: '/payments/process',
-            
             // Promotions
             PROMOTIONS: '/promotions',
-            PROMOTION: (id) => `/promotions/${id}`,
-            PROMOTIONS_CALCULATE_DISCOUNT: '/promotions/calculate-discount'
+            PROMOTION: (id) => `/promotions/${id}`
         };
     }
 
@@ -262,7 +252,7 @@ class ApiClient {
     }
 
     async updateOrderStatus(id, status) {
-        return this.request(this.endpoints.ORDER_STATUS(id), {
+        return this.request(this.endpoints.ORDER(id), {
             method: 'PUT',
             body: JSON.stringify({ status })
         });
@@ -281,7 +271,7 @@ class ApiClient {
 
     async updateDeliveryStatus(id, statusData) {
         return this.request(this.endpoints.DELIVERY_STATUS(id), {
-            method: 'PUT',
+            method: 'POST',
             body: JSON.stringify(statusData)
         });
     }
