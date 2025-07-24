@@ -69,42 +69,67 @@ class ApiClient {
         return headers;
     }
 
-    async request(endpoint, options = {}) {
-        const url = `${this.baseURL}${endpoint}`;
-        const config = {
-            ...options,
-            headers: this.getHeaders(options.auth !== false)
-        };
+async request(endpoint, options = {}) {
+    const url = `${this.baseURL}${endpoint}`;
+    const config = {
+        ...options,
+        headers: this.getHeaders(options.auth !== false),
+    };
 
-        try {
-            console.log(`API Request: ${config.method || 'GET'} ${url}`);
-            if (config.body) {
-                console.log('Request Body:', config.body);
-            }
-            
-            const response = await fetch(url, config);
-            
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                
-                // Enhanced error handling for validation errors
-                if (response.status === 422 && errorData.errors) {
-                    console.error('Validation Errors:', errorData.errors);
-                    const errorMessages = Object.values(errorData.errors).flat();
-                    throw new Error(`Validation failed: ${errorMessages.join(', ')}`);
-                }
-                
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log(`API Response:`, data);
-            return data;
-        } catch (error) {
-            console.error('API Request Error:', error);
-            throw error;
+    try {
+        console.log(`\n--- API REQUEST START ---`);
+        console.log(`Method: ${config.method || 'GET'}`);
+        console.log(`URL: ${url}`);
+        console.log(`Headers:`, config.headers);
+        if (config.body) {
+            console.log('Request Body:', config.body);
         }
+
+        const response = await fetch(url, config);
+        console.log(`Response Status: ${response.status}`);
+        console.log(`Response Headers:`, [...response.headers.entries()]);
+
+        // Try to parse response as JSON if possible
+        let data = null;
+        const contentType = response.headers.get("content-type");
+        const isJson = contentType && contentType.includes("application/json");
+
+        if (isJson) {
+            try {
+                data = await response.json();
+                console.log("Parsed JSON Response:", data);
+            } catch (parseErr) {
+                console.warn("Failed to parse JSON:", parseErr);
+            }
+        } else {
+            console.warn("Response is not JSON. Content-Type:", contentType);
+        }
+
+        // Handle non-OK responses
+        if (!response.ok) {
+            const errorMessage =
+                (data && data.message) ||
+                response.statusText ||
+                `HTTP error! status: ${response.status}`;
+
+            if (response.status === 422 && data?.errors) {
+                console.error("Validation Errors:", data.errors);
+                const errorMessages = Object.values(data.errors).flat();
+                throw new Error(`Validation failed: ${errorMessages.join(', ')}`);
+            }
+
+            throw new Error(errorMessage);
+        }
+
+        console.log(`--- API REQUEST SUCCESS ---\n`);
+        return data;
+    } catch (error) {
+        console.error("API Request Error:", error);
+        console.error("--- API REQUEST FAILED ---\n");
+        throw error;
     }
+}
+
 
    // Helper method to extract array data from nested responses, including pagination
     extractArrayData(response, key = 'data') {

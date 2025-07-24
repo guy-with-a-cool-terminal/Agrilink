@@ -112,12 +112,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Order status updates (admin, logistics)
     Route::middleware('role:admin,logistics')->group(function () {
         Route::put('/orders/{order}', [OrderController::class, 'update']);
-        Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus']); // Added specific status update route
+        Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus']);
     });
 
-    // Delivery routes - ENHANCED SECTION
+    // FIXED: Delivery routes - Moved POST route outside restrictive middleware
     Route::get('/deliveries', [DeliveryController::class, 'index']);
-    Route::get('/deliveries/{delivery}', [DeliveryController::class, 'show']); // ADDED: Individual delivery view
+    Route::get('/deliveries/{delivery}', [DeliveryController::class, 'show']);
     Route::get('/deliveries/statuses', [DeliveryController::class, 'statuses']);
     Route::get('/deliveries/priorities', [DeliveryController::class, 'priorities']);
 
@@ -148,12 +148,15 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
     });
 
-    // Delivery management (admin, logistics) - FIXED: Moved POST route outside middleware groups
+    // This allows both admin and logistics users to create deliveries
+    Route::post('/deliveries', [DeliveryController::class, 'store'])
+        ->middleware('role:admin,logistics');
+
+    // Delivery management (admin, logistics)
     Route::middleware('role:admin,logistics')->group(function () {
-        Route::post('/deliveries', [DeliveryController::class, 'store']); // Create delivery - THIS IS THE KEY ROUTE
-        Route::put('/deliveries/{delivery}', [DeliveryController::class, 'update']); // ADDED: Update delivery
+        Route::put('/deliveries/{delivery}', [DeliveryController::class, 'update']);
         Route::post('/deliveries/{delivery}/assign', [DeliveryController::class, 'assign']);
-        Route::put('/deliveries/{delivery}/status', [DeliveryController::class, 'updateStatus']); // Changed from POST to PUT for consistency
+        Route::put('/deliveries/{delivery}/status', [DeliveryController::class, 'updateStatus']);
     });
 
     // Promotion routes (public viewing)
@@ -174,7 +177,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/analytics', [AdminController::class, 'analytics']);
         Route::post('/users', [AdminController::class, 'createUser']);
         Route::get('/users', [AdminController::class, 'users']);
-        Route::put('/users/{user}', [AdminController::class, 'updateUser']); // General user update route for CRUD functionality
+        Route::put('/users/{user}', [AdminController::class, 'updateUser']);
         Route::put('/users/{user}/status', [AdminController::class, 'updateUserStatus']);
         Route::delete('/users/{user}', [AdminController::class, 'deleteUser']);
         Route::get('/orders', [AdminController::class, 'orders']);

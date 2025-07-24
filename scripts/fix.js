@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadUsers();
     loadOrders();
     loadProducts();
-    loadDeliveries();
 });
 
 // Data storage
@@ -298,16 +297,12 @@ async function loadOrders() {
                             View
                         </button>
                         ${order.status === 'confirmed' ?
-                            `<button class="btn-primary text-sm" onclick="showAssignOrderModal(${order.id})">
+                            `<button class="btn-primary text-sm" onclick="showAssignOrderModal('${order.id}')">
                                 Assign
                             </button>` :
                             `<button class="btn-primary text-sm" onclick="updateOrderStatus('${order.id}')">
                                 Update
                             </button>`
-                        }
-                        ${['pending', 'confirmed'].includes(order.status) ?
-                            `<button class="btn-danger text-sm" onclick="cancelOrder(${order.id})">Cancel</button>` :
-                            ''
                         }
                     </div>
                 </td>
@@ -639,56 +634,6 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-// Display fallback stats in case of error
-function showFallbackStats() {
-    document.getElementById('totalSales').textContent = 'Ksh0';
-    document.getElementById('totalOrders').textContent = '0';
-    document.getElementById('totalUsers').textContent = '0';
-    document.getElementById('monthlyRevenue').textContent = 'Ksh0';
-    document.getElementById('pendingOrders').textContent = '0';
-    document.getElementById('totalProducts').textContent = '0';
-}
-
-// Display error message when loading users fails
-function showUsersError() {
-    const tableBody = document.querySelector('#usersTable tbody');
-    if (tableBody) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center py-8">
-                    <div class="text-red-400 text-4xl mb-4">⚠️</div>
-                    <p class="text-gray-600 mb-4">Failed to load users. Please try again.</p>
-                    <button class="btn-primary" onclick="loadUsers()">Retry</button>
-                </td>
-            </tr>
-        `;
-    }
-}
-
-// Refresh all data
-async function refreshData() {
-    try {
-        await Promise.all([
-            loadRealTimeAnalytics(),
-            loadUsers(),
-            loadOrders(),
-            loadProducts()
-        ]);
-        showNotification('System Data refreshed with latest information!', 'success');
-    } catch (error) {
-        console.error('Error refreshing data:', error);
-        showNotification('Failed to refresh System Data!', 'error');
-    }
-}
-
-// Logout function
-function logout() {
-    localStorage.removeItem('currentUser');
-    window.location.href = 'index.html';
-}
-
-// ============ MISSING FUNCTIONS - Order Management ============
-
 // View order details function
 function viewOrderDetails(orderId) {
     const order = orders.find(o => o.id == orderId);
@@ -799,314 +744,9 @@ function closeOrderStatusModal() {
         modal.remove();
     }
 }
-
-// ============ DELIVERY ASSIGNMENT FEATURE ============
-
-// Show delivery assignment modal
-async function showDeliveryAssignmentModal() {
-    try {
-        // Load deliveries and logistics users
-        const [deliveriesResponse, usersResponse] = await Promise.all([
-            apiClient.getDeliveries(),
-            apiClient.getUsers()
-        ]);
-        
-        const deliveriesList = apiClient.extractArrayData(deliveriesResponse) || [];
-        const usersList = apiClient.extractArrayData(usersResponse) || [];
-        
-        // Filter unassigned deliveries and logistics users
-        const unassignedDeliveries = deliveriesList.filter(delivery => 
-            !delivery.assigned_to || delivery.assigned_to === null
-        );
-        const logisticsUsers = usersList.filter(user => user.role === 'logistics');
-        
-        if (unassignedDeliveries.length === 0) {
-            showNotification('No unassigned deliveries found', 'info');
-            return;
-        }
-        
-        if (logisticsUsers.length === 0) {
-            showNotification('No logistics users available', 'error');
-            return;
-        }
-        
-        const deliveryOptions = unassignedDeliveries.map(delivery => 
-            `<option value="${delivery.id}">
-                Delivery #${delivery.id} - ${delivery.customer_name || delivery.order?.customer_name || 'Customer'} 
-                (${delivery.delivery_address ? delivery.delivery_address.substring(0, 50) + '...' : 'No address'})
-            </option>`
-        ).join('');
-        
-        const logisticsOptions = logisticsUsers.map(user => 
-            `<option value="${user.id}">${user.name} (${user.email})</option>`
-        ).join('');
-        
-        const modalHtml = `
-            <div id="deliveryAssignmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div class="bg-white rounded-lg p-6 w-full max-w-md">
-                    <h3 class="text-lg font-semibold mb-4">Assign Delivery to Logistics User</h3>
-                    <form id="deliveryAssignmentForm">
-                        <div class="form-group mb-4">
-                            <label for="deliverySelect">Select Delivery</label>
-                            <select id="deliverySelect" required class="w-full p-2 border rounded">
-                                <option value="">Choose Delivery</option>
-                                ${deliveryOptions}
-                            </select>
-                        </div>
-                        <div class="form-group mb-4">
-                            <label for="logisticsUserSelect">Assign to Logistics User</label>
-                            <select id="logisticsUserSelect" required class="w-full p-2 border rounded">
-                                <option value="">Choose Logistics User</option>
-                                ${logisticsOptions}
-                            </select>
-                        </div>
-                        <div class="form-group mb-4">
-                            <label for="assignmentNotes">Assignment Notes (optional)</label>
-                            <textarea id="assignmentNotes" class="w-full p-2 border rounded" rows="3" placeholder="Add any special instructions..."></textarea>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button type="submit" class="btn-primary flex-1">Assign Delivery</button>
-                            <button type="button" onclick="closeDeliveryAssignmentModal()" class="btn-secondary flex-1">Cancel</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        `;
-        
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
-        document.getElementById('deliveryAssignmentForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            await handleDeliveryAssignment();
-        });
-        
-    } catch (error) {
-        console.error('Error loading delivery assignment data:', error);
-        showNotification('Failed to load assignment data', 'error');
-    }
-}
-
-// Handle delivery assignment
-async function handleDeliveryAssignment() {
-    const deliveryId = document.getElementById('deliverySelect').value;
-    const logisticsUserId = document.getElementById('logisticsUserSelect').value;
-    const notes = document.getElementById('assignmentNotes').value;
-    
-    if (!deliveryId || !logisticsUserId) {
-        showNotification('Please select both delivery and logistics user', 'warning');
-        return;
-    }
-    
-    try {
-        const assignmentData = {
-            assigned_to: logisticsUserId,
-            status: 'assigned',
-            notes: notes
-        };
-        
-        await apiClient.assignDelivery(deliveryId, assignmentData);
-        showNotification('Delivery assigned successfully!', 'success');
-        closeDeliveryAssignmentModal();
-        
-        // Refresh relevant data
-        await loadOrders();
-        
-    } catch (error) {
-        console.error('Error assigning delivery:', error);
-        showNotification('Failed to assign delivery: ' + error.message, 'error');
-    }
-}
-
-// Close delivery assignment modal
-function closeDeliveryAssignmentModal() {
-    const modal = document.getElementById('deliveryAssignmentModal');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-// Load deliveries for admin view
-async function loadDeliveries() {
-    try {
-        const response = await apiClient.getDeliveries();
-        const deliveriesList = apiClient.extractArrayData(response) || [];
-        
-        console.log('Deliveries loaded for admin:', deliveriesList);
-        displayDeliveriesTable(deliveriesList);
-        
-    } catch (error) {
-        console.error('Error loading deliveries:', error);
-        showNotification('Failed to load deliveries', 'error');
-    }
-}
-
-// Display deliveries in admin table
-function displayDeliveriesTable(deliveriesList) {
-    const tableBody = document.querySelector('#deliveriesTable tbody');
-    if (!tableBody) return;
-    
-    if (deliveriesList.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="8" class="text-center py-8">
-                    <div class="text-gray-400 text-4xl mb-4">📦</div>
-                    <p class="text-gray-600 mb-4">No deliveries found.</p>
-                    <button class="btn-primary" onclick="showDeliveryAssignmentModal()">Assign Deliveries</button>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    tableBody.innerHTML = deliveriesList.map(delivery => {
-        const assignedUser = delivery.assigned_to ? 
-            users.find(u => u.id == delivery.assigned_to) : null;
-        const assignedName = assignedUser ? assignedUser.name : 'Unassigned';
-        
-        return `
-            <tr>
-                <td class="font-mono">#${delivery.id}</td>
-                <td>
-                    ${delivery.order ? `
-                        <div class="text-sm">
-                            <div class="font-medium">Order #${delivery.order.id}</div>
-                            <div class="text-gray-600">${delivery.order.order_number || ''}</div>
-                        </div>
-                    ` : 'No order'}
-                </td>
-                <td>${delivery.customer_name || delivery.order?.customer_name || 'Unknown'}</td>
-                <td class="text-sm max-w-xs truncate">${delivery.delivery_address || 'Not specified'}</td>
-                <td>
-                    <span class="status-${delivery.status || 'pending'}">${(delivery.status || 'pending').replace('_', ' ')}</span>
-                </td>
-                <td>
-                    <span class="priority-${delivery.priority || 'medium'}">${delivery.priority || 'medium'}</span>
-                </td>
-                <td>
-                    <span class="${delivery.assigned_to ? 'text-green-600 font-medium' : 'text-red-600'}">
-                        ${assignedName}
-                    </span>
-                </td>
-                <td>
-                    <div class="flex gap-2">
-                        ${!delivery.assigned_to ? `
-                            <button class="btn-primary text-sm" onclick="assignSingleDelivery('${delivery.id}')">
-                                Assign
-                            </button>
-                        ` : `
-                            <button class="btn-secondary text-sm" onclick="reassignDelivery('${delivery.id}')">
-                                Reassign
-                            </button>
-                        `}
-                        <button class="btn-secondary text-sm" onclick="viewDeliveryDetails('${delivery.id}')">
-                            View
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    }).join('');
-}
-
-// Assign single delivery
-async function assignSingleDelivery(deliveryId) {
-    try {
-        const usersResponse = await apiClient.getUsers();
-        const usersList = apiClient.extractArrayData(usersResponse) || [];
-        const logisticsUsers = usersList.filter(user => user.role === 'logistics');
-        
-        if (logisticsUsers.length === 0) {
-            showNotification('No logistics users available', 'error');
-            return;
-        }
-        
-        const logisticsOptions = logisticsUsers.map(user => 
-            `<option value="${user.id}">${user.name} (${user.email})</option>`
-        ).join('');
-        
-        const modalHtml = `
-            <div id="singleDeliveryAssignmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div class="bg-white rounded-lg p-6 w-full max-w-md">
-                    <h3 class="text-lg font-semibold mb-4">Assign Delivery #${deliveryId}</h3>
-                    <form id="singleDeliveryAssignmentForm">
-                        <div class="form-group mb-4">
-                            <label for="singleLogisticsUserSelect">Assign to Logistics User</label>
-                            <select id="singleLogisticsUserSelect" required class="w-full p-2 border rounded">
-                                <option value="">Choose Logistics User</option>
-                                ${logisticsOptions}
-                            </select>
-                        </div>
-                        <div class="form-group mb-4">
-                            <label for="singleAssignmentNotes">Assignment Notes (optional)</label>
-                            <textarea id="singleAssignmentNotes" class="w-full p-2 border rounded" rows="3" placeholder="Add any special instructions..."></textarea>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button type="submit" class="btn-primary flex-1">Assign</button>
-                            <button type="button" onclick="closeSingleDeliveryAssignmentModal()" class="btn-secondary flex-1">Cancel</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        `;
-        
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
-        document.getElementById('singleDeliveryAssignmentForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const logisticsUserId = document.getElementById('singleLogisticsUserSelect').value;
-            const notes = document.getElementById('singleAssignmentNotes').value;
-            
-            if (!logisticsUserId) {
-                showNotification('Please select a logistics user', 'warning');
-                return;
-            }
-            
-            try {
-                const assignmentData = {
-                    assigned_to: logisticsUserId,
-                    status: 'assigned',
-                    notes: notes
-                };
-                
-                await apiClient.assignDelivery(deliveryId, assignmentData);
-                showNotification('Delivery assigned successfully!', 'success');
-                closeSingleDeliveryAssignmentModal();
-                await loadDeliveries();
-                
-            } catch (error) {
-                console.error('Error assigning delivery:', error);
-                showNotification('Failed to assign delivery: ' + error.message, 'error');
-            }
-        });
-        
-    } catch (error) {
-        console.error('Error loading logistics users:', error);
-        showNotification('Failed to load logistics users', 'error');
-    }
-}
-
-// Close single delivery assignment modal
-function closeSingleDeliveryAssignmentModal() {
-    const modal = document.getElementById('singleDeliveryAssignmentModal');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-// Reassign delivery (alias for assign single delivery)
-function reassignDelivery(deliveryId) {
-    assignSingleDelivery(deliveryId);
-}
-
-// View delivery details
-function viewDeliveryDetails(deliveryId) {
-    // This would typically show detailed delivery information
-    // For now, show a basic alert (can be enhanced with a proper modal)
-    showNotification(`Viewing delivery #${deliveryId} details...`, 'info');
-}
-
 // Show assign order modal
+// Show assign order modal - ENHANCED with delivery check
+// Show assign order modal - ENHANCED with delivery check
 async function showAssignOrderModal(orderId) {
     const order = orders.find(o => o.id == orderId);
     if (!order) {
@@ -1115,8 +755,61 @@ async function showAssignOrderModal(orderId) {
     }
     
     try {
-        const usersResponse = await apiClient.getUsers();
-        const usersList = apiClient.extractArrayData(usersResponse) || [];
+        // First, check if a delivery already exists for this order
+        console.log('Checking for existing delivery for order:', orderId);
+        
+        let deliveriesList = [];
+        try {
+            const deliveriesResponse = await apiClient.getDeliveries();
+            deliveriesList = apiClient.extractArrayData(deliveriesResponse) || [];
+            console.log('Deliveries fetched:', deliveriesList);
+        } catch (deliveryError) {
+            console.warn('Could not fetch deliveries, proceeding with assignment:', deliveryError);
+            // Continue with assignment even if we can't check for existing deliveries
+        }
+        
+        const existingDelivery = deliveriesList.find(delivery => 
+            delivery.order_id == orderId || delivery.order?.id == orderId
+        );
+        
+        if (existingDelivery) {
+            // Show existing delivery info instead of creating new one
+            const assignedToName = existingDelivery.logistics_manager?.name || 
+                                 existingDelivery.logisticsManager?.name || 
+                                 'Unassigned';
+            
+            const scheduledDate = existingDelivery.scheduled_date ? 
+                new Date(existingDelivery.scheduled_date).toLocaleString() : 'Not scheduled';
+            
+            const deliveryInfo = `Order #${order.id} already has a delivery assigned:
+
+• Delivery ID: #${existingDelivery.id}
+• Tracking Number: ${existingDelivery.tracking_number || 'N/A'}
+• Status: ${existingDelivery.status || 'Unknown'}
+• Assigned To: ${assignedToName}
+• Scheduled Date: ${scheduledDate}
+• Priority: ${existingDelivery.priority || 'Medium'}
+
+Would you like to view or manage this existing delivery instead?`;
+            
+            const result = confirm(deliveryInfo);
+            if (result) {
+                // For now, just show a notification. You can implement actual delivery management later
+                showNotification(`Existing delivery #${existingDelivery.id} found. Delivery management interface can be implemented here.`, 'info');
+            }
+            return;
+        }
+        
+        // Continue with normal assign flow if no existing delivery
+        let usersList = [];
+        try {
+            const usersResponse = await apiClient.getUsers();
+            usersList = apiClient.extractArrayData(usersResponse) || [];
+        } catch (userError) {
+            console.error('Error fetching users:', userError);
+            showNotification('Failed to load users for assignment', 'error');
+            return;
+        }
         const logisticsUsers = usersList.filter(user => user.role === 'logistics');
         
         if (logisticsUsers.length === 0) {
@@ -1127,6 +820,11 @@ async function showAssignOrderModal(orderId) {
         const logisticsOptions = logisticsUsers.map(user => 
             `<option value="${user.id}">${user.name} (${user.email})</option>`
         ).join('');
+        
+        // Get tomorrow's date as default scheduled date
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const defaultScheduledDate = tomorrow.toISOString().slice(0, 16); // Format for datetime-local input
         
         const modalHtml = `
             <div id="assignOrderModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1146,12 +844,27 @@ async function showAssignOrderModal(orderId) {
                             </select>
                         </div>
                         <div class="form-group mb-4">
-                            <label for="deliveryAddress">Delivery Address</label>
-                            <textarea id="deliveryAddress" class="w-full p-2 border rounded" rows="3" required placeholder="Enter delivery address...">${order.delivery_address || ''}</textarea>
+                            <label for="scheduledDate">Scheduled Delivery Date & Time</label>
+                            <input type="datetime-local" id="scheduledDate" required class="w-full p-2 border rounded" 
+                                   value="${defaultScheduledDate}" min="${new Date().toISOString().slice(0, 16)}">
                         </div>
                         <div class="form-group mb-4">
-                            <label for="assignmentNotes">Notes (optional)</label>
-                            <textarea id="assignmentNotes" class="w-full p-2 border rounded" rows="3" placeholder="Add any special instructions..."></textarea>
+                            <label for="deliveryPriority">Priority</label>
+                            <select id="deliveryPriority" class="w-full p-2 border rounded">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label for="deliveryAddress">Delivery Address</label>
+                            <textarea id="deliveryAddress" class="w-full p-2 border rounded" rows="3" required 
+                                      placeholder="Enter delivery address...">${order.delivery_address || ''}</textarea>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label for="deliveryNotes">Delivery Notes (optional)</label>
+                            <textarea id="deliveryNotes" class="w-full p-2 border rounded" rows="3" 
+                                      placeholder="Add any special delivery instructions..."></textarea>
                         </div>
                         <div class="flex space-x-2">
                             <button type="submit" class="btn-primary flex-1">Assign Order</button>
@@ -1168,41 +881,80 @@ async function showAssignOrderModal(orderId) {
             e.preventDefault();
             
             const logisticsUserId = document.getElementById('assignLogisticsUser').value;
+            const scheduledDate = document.getElementById('scheduledDate').value;
             const deliveryAddress = document.getElementById('deliveryAddress').value;
-            const notes = document.getElementById('assignmentNotes').value;
+            const deliveryPriority = document.getElementById('deliveryPriority').value;
+            const deliveryNotes = document.getElementById('deliveryNotes').value;
             
-            if (!logisticsUserId || !deliveryAddress) {
-                showNotification('Please select logistics user and provide delivery address', 'warning');
+            if (!logisticsUserId || !scheduledDate || !deliveryAddress) {
+                showNotification('Please fill in all required fields (logistics user, scheduled date, and delivery address)', 'warning');
+                return;
+            }
+            
+            // Validate that scheduled date is in the future
+            const selectedDate = new Date(scheduledDate);
+            const now = new Date();
+            
+            if (selectedDate <= now) {
+                showNotification('Scheduled date must be in the future', 'warning');
                 return;
             }
             
             try {
-                // First create a delivery record, then assign it
+                // Create delivery data with correct field names matching Laravel validation
                 const deliveryData = {
-                    order_id: orderId,
-                    assigned_to: logisticsUserId,
-                    delivery_address: deliveryAddress,
-                    status: 'assigned',
-                    priority: 'medium',
-                    notes: notes
+                    order_id: parseInt(orderId),           // Required: order ID as integer
+                    assigned_to: parseInt(logisticsUserId), // Optional: logistics user ID as integer
+                    scheduled_date: selectedDate.toISOString(), // Required: future date in ISO format
+                    delivery_address: deliveryAddress.trim(),    // Required: delivery address string
+                    priority: deliveryPriority,            // Optional: priority level
+                    delivery_notes: deliveryNotes.trim() || null // Optional: delivery notes
                 };
                 
-                // Create delivery first
-                const deliveryResponse = await apiClient.createDelivery(deliveryData);
+                console.log('Creating delivery with data:', deliveryData);
                 
+                // Create delivery assignment
+                const result = await apiClient.createDelivery(deliveryData);
+                
+                console.log('Delivery created successfully:', result);
                 showNotification('Order assigned to logistics user successfully!', 'success');
                 closeAssignOrderModal();
                 await loadOrders(); // Refresh orders list
                 
             } catch (error) {
                 console.error('Error assigning order:', error);
-                showNotification('Failed to assign order: ' + error.message, 'error');
+                if (error.message.includes('Delivery already exists')) {
+                    showNotification('This order already has a delivery assigned. Please refresh the page.', 'warning');
+                    await loadOrders(); // Refresh to show current state
+                } else {
+                    showNotification('Failed to assign order: ' + error.message, 'error');
+                }
             }
         });
         
     } catch (error) {
-        console.error('Error loading logistics users:', error);
-        showNotification('Failed to load logistics users', 'error');
+        console.error('Error in showAssignOrderModal:', error);
+        showNotification('Failed to load assignment data. Please try again.', 'error');
+    }
+}
+
+// Fallback function for delivery management (to be expanded later)
+function showUpdateDeliveryModal(deliveryId) {
+    showNotification(`Delivery management for delivery #${deliveryId} will be implemented in the next phase.`, 'info');
+    
+    // For now, you could redirect to a delivery management page or show delivery details
+    // Example: window.location.href = `delivery-details.html?id=${deliveryId}`;
+}
+
+// Helper function to refresh orders and handle loading states
+async function refreshOrdersWithLoading() {
+    try {
+        showNotification('🔄 Refreshing orders...', 'info');
+        await loadOrders();
+        showNotification('✅ Orders refreshed successfully!', 'success');
+    } catch (error) {
+        console.error('Error refreshing orders:', error);
+        showNotification('❌ Failed to refresh orders. Please reload the page.', 'error');
     }
 }
 
@@ -1214,19 +966,52 @@ function closeAssignOrderModal() {
     }
 }
 
-// Cancel order function - for admin use updateOrderStatus instead
-async function cancelOrder(orderId) {
-    if (!confirm('Are you sure you want to cancel this order?')) return;
-    
-    try {
-        // Since admin can't use cancel endpoint, update status to cancelled
-        await apiClient.updateOrderStatus(orderId, 'cancelled');
-        showNotification('Order cancelled successfully', 'success');
-        await loadOrders(); // Refresh orders list
-    } catch (error) {
-        console.error('Error cancelling order:', error);
-        showNotification('Failed to cancel order: ' + error.message, 'error');
+// Display fallback stats in case of error
+function showFallbackStats() {
+    document.getElementById('totalSales').textContent = 'Ksh0';
+    document.getElementById('totalOrders').textContent = '0';
+    document.getElementById('totalUsers').textContent = '0';
+    document.getElementById('monthlyRevenue').textContent = 'Ksh0';
+    document.getElementById('pendingOrders').textContent = '0';
+    document.getElementById('totalProducts').textContent = '0';
+}
+
+// Display error message when loading users fails
+function showUsersError() {
+    const tableBody = document.querySelector('#usersTable tbody');
+    if (tableBody) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-8">
+                    <div class="text-red-400 text-4xl mb-4">⚠️</div>
+                    <p class="text-gray-600 mb-4">Failed to load users. Please try again.</p>
+                    <button class="btn-primary" onclick="loadUsers()">Retry</button>
+                </td>
+            </tr>
+        `;
     }
+}
+
+// Refresh all data
+async function refreshData() {
+    try {
+        await Promise.all([
+            loadRealTimeAnalytics(),
+            loadUsers(),
+            loadOrders(),
+            loadProducts()
+        ]);
+        showNotification('System Data refreshed with latest information!', 'success');
+    } catch (error) {
+        console.error('Error refreshing data:', error);
+        showNotification('Failed to refresh System Data!', 'error');
+    }
+}
+
+// Logout function
+function logout() {
+    localStorage.removeItem('currentUser');
+    window.location.href = 'index.html';
 }
 
 // Make functions globally available
@@ -1240,16 +1025,11 @@ window.toggleMaintenanceMode = toggleMaintenanceMode;
 window.viewOrderDetails = viewOrderDetails;
 window.updateOrderStatus = updateOrderStatus;
 window.closeOrderStatusModal = closeOrderStatusModal;
-window.cancelOrder = cancelOrder;
 window.showAssignOrderModal = showAssignOrderModal;
 window.closeAssignOrderModal = closeAssignOrderModal;
-window.showDeliveryAssignmentModal = showDeliveryAssignmentModal;
-window.closeDeliveryAssignmentModal = closeDeliveryAssignmentModal;
-window.loadDeliveries = loadDeliveries;
-window.assignSingleDelivery = assignSingleDelivery;
-window.closeSingleDeliveryAssignmentModal = closeSingleDeliveryAssignmentModal;
-window.reassignDelivery = reassignDelivery;
-window.viewDeliveryDetails = viewDeliveryDetails;
+window.showUpdateDeliveryModal = showUpdateDeliveryModal;
+window.refreshOrdersWithLoading = refreshOrdersWithLoading;
 window.refreshData = refreshData;
 window.loadUsers = loadUsers;
+window.loadOrders = loadOrders;
 window.logout = logout;
