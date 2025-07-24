@@ -744,7 +744,6 @@ function closeOrderStatusModal() {
         modal.remove();
     }
 }
-
 // Show assign order modal
 async function showAssignOrderModal(orderId) {
     const order = orders.find(o => o.id == orderId);
@@ -767,6 +766,11 @@ async function showAssignOrderModal(orderId) {
             `<option value="${user.id}">${user.name} (${user.email})</option>`
         ).join('');
         
+        // Get tomorrow's date as default scheduled date
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const defaultScheduledDate = tomorrow.toISOString().slice(0, 16); // Format for datetime-local input
+        
         const modalHtml = `
             <div id="assignOrderModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <div class="bg-white rounded-lg p-6 w-full max-w-md">
@@ -785,12 +789,27 @@ async function showAssignOrderModal(orderId) {
                             </select>
                         </div>
                         <div class="form-group mb-4">
-                            <label for="deliveryAddress">Delivery Address</label>
-                            <textarea id="deliveryAddress" class="w-full p-2 border rounded" rows="3" required placeholder="Enter delivery address...">${order.delivery_address || ''}</textarea>
+                            <label for="scheduledDate">Scheduled Delivery Date & Time</label>
+                            <input type="datetime-local" id="scheduledDate" required class="w-full p-2 border rounded" 
+                                   value="${defaultScheduledDate}" min="${new Date().toISOString().slice(0, 16)}">
                         </div>
                         <div class="form-group mb-4">
-                            <label for="assignmentNotes">Notes (optional)</label>
-                            <textarea id="assignmentNotes" class="w-full p-2 border rounded" rows="3" placeholder="Add any special instructions..."></textarea>
+                            <label for="deliveryPriority">Priority</label>
+                            <select id="deliveryPriority" class="w-full p-2 border rounded">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label for="deliveryAddress">Delivery Address</label>
+                            <textarea id="deliveryAddress" class="w-full p-2 border rounded" rows="3" required 
+                                      placeholder="Enter delivery address...">${order.delivery_address || ''}</textarea>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label for="deliveryNotes">Delivery Notes (optional)</label>
+                            <textarea id="deliveryNotes" class="w-full p-2 border rounded" rows="3" 
+                                      placeholder="Add any special delivery instructions..."></textarea>
                         </div>
                         <div class="flex space-x-2">
                             <button type="submit" class="btn-primary flex-1">Assign Order</button>
@@ -807,28 +826,42 @@ async function showAssignOrderModal(orderId) {
             e.preventDefault();
             
             const logisticsUserId = document.getElementById('assignLogisticsUser').value;
+            const scheduledDate = document.getElementById('scheduledDate').value;
             const deliveryAddress = document.getElementById('deliveryAddress').value;
-            const notes = document.getElementById('assignmentNotes').value;
+            const deliveryPriority = document.getElementById('deliveryPriority').value;
+            const deliveryNotes = document.getElementById('deliveryNotes').value;
             
-            if (!logisticsUserId || !deliveryAddress) {
-                showNotification('Please select logistics user and provide delivery address', 'warning');
+            if (!logisticsUserId || !scheduledDate || !deliveryAddress) {
+                showNotification('Please fill in all required fields (logistics user, scheduled date, and delivery address)', 'warning');
+                return;
+            }
+            
+            // Validate that scheduled date is in the future
+            const selectedDate = new Date(scheduledDate);
+            const now = new Date();
+            
+            if (selectedDate <= now) {
+                showNotification('Scheduled date must be in the future', 'warning');
                 return;
             }
             
             try {
-                // Create delivery record and assign it
+                // Create delivery data with correct field names matching Laravel validation
                 const deliveryData = {
-                    order_id: orderId,
-                    assigned_to: logisticsUserId,
-                    delivery_address: deliveryAddress,
-                    status: 'assigned',
-                    priority: 'medium',
-                    notes: notes
+                    order_id: parseInt(orderId),           // Required: order ID as integer
+                    assigned_to: parseInt(logisticsUserId), // Optional: logistics user ID as integer
+                    scheduled_date: selectedDate.toISOString(), // Required: future date in ISO format
+                    delivery_address: deliveryAddress.trim(),    // Required: delivery address string
+                    priority: deliveryPriority,            // Optional: priority level
+                    delivery_notes: deliveryNotes.trim() || null // Optional: delivery notes
                 };
                 
-                // Create delivery assignment
-                await apiClient.createDelivery(deliveryData);
+                console.log('Creating delivery with data:', deliveryData);
                 
+                // Create delivery assignment
+                const result = await apiClient.createDelivery(deliveryData);
+                
+                console.log('Delivery created successfully:', result);
                 showNotification('Order assigned to logistics user successfully!', 'success');
                 closeAssignOrderModal();
                 await loadOrders(); // Refresh orders list

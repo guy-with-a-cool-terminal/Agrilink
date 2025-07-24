@@ -78,10 +78,22 @@ class ApiClient {
 
         try {
             console.log(`API Request: ${config.method || 'GET'} ${url}`);
+            if (config.body) {
+                console.log('Request Body:', config.body);
+            }
+            
             const response = await fetch(url, config);
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
+                
+                // Enhanced error handling for validation errors
+                if (response.status === 422 && errorData.errors) {
+                    console.error('Validation Errors:', errorData.errors);
+                    const errorMessages = Object.values(errorData.errors).flat();
+                    throw new Error(`Validation failed: ${errorMessages.join(', ')}`);
+                }
+                
                 throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
 
@@ -275,22 +287,61 @@ class ApiClient {
         });
     }
 
-    // Deliveries - ENHANCED SECTION
+    // Deliveries - FULLY IMPLEMENTED SECTION
     async getDeliveries() {
-        return this.request(this.endpoints.DELIVERIES);
+        try {
+            console.log('Fetching deliveries...');
+            const response = await this.request(this.endpoints.DELIVERIES);
+            console.log('Deliveries fetched successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching deliveries:', error);
+            throw error;
+        }
     }
 
     async getDelivery(deliveryId) {
-        return this.request(this.endpoints.DELIVERY(deliveryId));
+        try {
+            console.log('Fetching delivery:', deliveryId);
+            const response = await this.request(this.endpoints.DELIVERY(deliveryId));
+            console.log('Delivery fetched successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching delivery:', error);
+            throw error;
+        }
     }
 
-    // NEW: Create delivery method that was missing
+    // Create delivery method - Enhanced with better validation
     async createDelivery(deliveryData) {
         try {
             console.log('Creating delivery with data:', deliveryData);
+            
+            // Validate required fields on the frontend
+            const requiredFields = ['order_id', 'scheduled_date', 'delivery_address'];
+            const missingFields = requiredFields.filter(field => !deliveryData[field]);
+            
+            if (missingFields.length > 0) {
+                throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+            }
+
+            // Ensure scheduled_date is in the future and properly formatted
+            const scheduledDate = new Date(deliveryData.scheduled_date);
+            const now = new Date();
+            
+            if (scheduledDate <= now) {
+                throw new Error('Scheduled date must be in the future');
+            }
+
+            // Format the date properly for Laravel (ISO string)
+            const formattedData = {
+                ...deliveryData,
+                scheduled_date: scheduledDate.toISOString()
+            };
+
             const response = await this.request(this.endpoints.DELIVERIES, {
                 method: 'POST',
-                body: JSON.stringify(deliveryData)
+                body: JSON.stringify(formattedData)
             });
             console.log('Delivery created successfully:', response);
             return response;
@@ -301,38 +352,86 @@ class ApiClient {
     }
 
     async updateDelivery(deliveryId, deliveryData) {
-        return this.request(this.endpoints.DELIVERY(deliveryId), {
-            method: 'PUT',
-            body: JSON.stringify(deliveryData)
-        });
+        try {
+            console.log('Updating delivery:', deliveryId, 'with data:', deliveryData);
+            const response = await this.request(this.endpoints.DELIVERY(deliveryId), {
+                method: 'PUT',
+                body: JSON.stringify(deliveryData)
+            });
+            console.log('Delivery updated successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error updating delivery:', error);
+            throw error;
+        }
     }
 
     async updateDeliveryStatus(id, statusData) {
-        return this.request(this.endpoints.DELIVERY_STATUS(id), {
-            method: 'PUT',
-            body: JSON.stringify(statusData)
-        });
+        try {
+            console.log('Updating delivery status:', id, 'with data:', statusData);
+            const response = await this.request(this.endpoints.DELIVERY_STATUS(id), {
+                method: 'PUT',
+                body: JSON.stringify(statusData)
+            });
+            console.log('Delivery status updated successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error updating delivery status:', error);
+            throw error;
+        }
     }
 
     async trackDelivery(trackingNumber) {
-        return this.request(this.endpoints.DELIVERY_TRACK);
+        try {
+            console.log('Tracking delivery:', trackingNumber);
+            const response = await this.request(`${this.endpoints.DELIVERY_TRACK}/${trackingNumber}`);
+            console.log('Delivery tracking info:', response);
+            return response;
+        } catch (error) {
+            console.error('Error tracking delivery:', error);
+            throw error;
+        }
     }
 
     async assignDelivery(deliveryId, assignmentData) {
-        return this.request(this.endpoints.DELIVERY_ASSIGN(deliveryId), {
-            method: 'POST',
-            body: JSON.stringify(assignmentData)
-        });
+        try {
+            console.log('Assigning delivery:', deliveryId, 'with data:', assignmentData);
+            const response = await this.request(this.endpoints.DELIVERY_ASSIGN(deliveryId), {
+                method: 'POST',
+                body: JSON.stringify(assignmentData)
+            });
+            console.log('Delivery assigned successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error assigning delivery:', error);
+            throw error;
+        }
     }
 
-    // NEW: Get deliveries assigned to current user (for logistics dashboard)
+    // Get deliveries assigned to current user (for logistics dashboard)
     async getUserDeliveries() {
-        return this.request(this.endpoints.USER_DELIVERIES);
+        try {
+            console.log('Fetching user deliveries...');
+            const response = await this.request(this.endpoints.USER_DELIVERIES);
+            console.log('User deliveries fetched successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching user deliveries:', error);
+            throw error;
+        }
     }
 
-    // NEW: Get deliveries assigned to specific user
+    // Get deliveries assigned to specific user
     async getUserDeliveriesByUserId(userId) {
-        return this.request(`${this.endpoints.DELIVERIES}?assigned_to=${userId}`);
+        try {
+            console.log('Fetching deliveries for user:', userId);
+            const response = await this.request(`${this.endpoints.DELIVERIES}?assigned_to=${userId}`);
+            console.log('User deliveries fetched successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching user deliveries:', error);
+            throw error;
+        }
     }
 
     // Promotions
@@ -427,7 +526,7 @@ class ApiClient {
         });
     }
 
-    // NEW: Remove token helper method (was referenced but missing)
+    // Remove token helper method
     removeToken() {
         localStorage.removeItem('currentUser');
     }

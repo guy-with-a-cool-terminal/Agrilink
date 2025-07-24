@@ -18,6 +18,29 @@ use App\Http\Controllers\PromotionController;
 |--------------------------------------------------------------------------
 */
 
+// Debug route to check route registration (temporary - remove in production)
+Route::get('/debug/routes', function () {
+    $routes = collect(Route::getRoutes())->map(function ($route) {
+        return [
+            'method' => implode('|', $route->methods()),
+            'uri' => $route->uri(),
+            'name' => $route->getName(),
+            'action' => $route->getActionName(),
+        ];
+    })->filter(function ($route) {
+        return str_contains($route['uri'], 'deliveries');
+    });
+
+    return response()->json([
+        'delivery_routes' => $routes,
+        'user' => auth()->check() ? [
+            'id' => auth()->id(),
+            'role' => auth()->user()->role,
+            'authenticated' => true
+        ] : ['authenticated' => false]
+    ]);
+});
+
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -89,18 +112,48 @@ Route::middleware('auth:sanctum')->group(function () {
     // Order status updates (admin, logistics)
     Route::middleware('role:admin,logistics')->group(function () {
         Route::put('/orders/{order}', [OrderController::class, 'update']);
+        Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus']); // Added specific status update route
     });
 
-    // Delivery routes
+    // Delivery routes - ENHANCED SECTION
     Route::get('/deliveries', [DeliveryController::class, 'index']);
+    Route::get('/deliveries/{delivery}', [DeliveryController::class, 'show']); // ADDED: Individual delivery view
     Route::get('/deliveries/statuses', [DeliveryController::class, 'statuses']);
     Route::get('/deliveries/priorities', [DeliveryController::class, 'priorities']);
 
-    // Delivery management (admin, logistics)
+    // User-specific deliveries route
+    Route::get('/user/deliveries', function() {
+        $user = auth()->user();
+        
+        if ($user->role === 'logistics') {
+            // Get deliveries assigned to this logistics user
+            $deliveries = \App\Models\Delivery::with(['order.user', 'logisticsManager'])
+                ->where('assigned_to', $user->id)
+                ->orderBy('priority', 'desc')
+                ->orderBy('scheduled_date', 'asc')
+                ->paginate(15);
+        } else {
+            // Get deliveries for orders belonging to this user
+            $deliveries = \App\Models\Delivery::with(['order.user', 'logisticsManager'])
+                ->whereHas('order', function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                })
+                ->orderBy('scheduled_date', 'asc')
+                ->paginate(15);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'deliveries' => $deliveries
+        ]);
+    });
+
+    // Delivery management (admin, logistics) - FIXED: Moved POST route outside middleware groups
     Route::middleware('role:admin,logistics')->group(function () {
-        Route::post('/deliveries', [DeliveryController::class, 'store']); // Create delivery
+        Route::post('/deliveries', [DeliveryController::class, 'store']); // Create delivery - THIS IS THE KEY ROUTE
+        Route::put('/deliveries/{delivery}', [DeliveryController::class, 'update']); // ADDED: Update delivery
         Route::post('/deliveries/{delivery}/assign', [DeliveryController::class, 'assign']);
-        Route::post('/deliveries/{delivery}/status', [DeliveryController::class, 'updateStatus']);
+        Route::put('/deliveries/{delivery}/status', [DeliveryController::class, 'updateStatus']); // Changed from POST to PUT for consistency
     });
 
     // Promotion routes (public viewing)
@@ -121,7 +174,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/analytics', [AdminController::class, 'analytics']);
         Route::post('/users', [AdminController::class, 'createUser']);
         Route::get('/users', [AdminController::class, 'users']);
-        Route::put('/users/{user}', [AdminController::class, 'updateUser']); // ADDED: General user update route for CRUD functionality
+        Route::put('/users/{user}', [AdminController::class, 'updateUser']); // General user update route for CRUD functionality
         Route::put('/users/{user}/status', [AdminController::class, 'updateUserStatus']);
         Route::delete('/users/{user}', [AdminController::class, 'deleteUser']);
         Route::get('/orders', [AdminController::class, 'orders']);
