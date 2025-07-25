@@ -57,7 +57,7 @@ async function loadDashboardData() {
 // Enhanced loadDeliveries function to show assigned deliveries
 async function loadDeliveries() {
     try {
-        const response = await apiClient.getDeliveries();
+        const response = await apiClient.getUserDeliveries();
         const deliveriesList = apiClient.extractArrayData(response) || [];
         
         // Filter deliveries assigned to current user or unassigned ones
@@ -127,7 +127,7 @@ function displayDeliveries(deliveriesList) {
 async function loadLogisticsStats() {
     try {
         // Fetch deliveries data
-        const response = await apiClient.getDeliveries();
+        const response = await apiClient.getUserDeliveries();
         const deliveriesList = apiClient.extractArrayData(response) || [];
 
         // Calculate statistics

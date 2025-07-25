@@ -94,7 +94,7 @@ class DeliveryController extends Controller
                 'assigned_to' => 'nullable|integer|exists:users,id',
                 'scheduled_date' => 'required|date|after:now',
                 'priority' => 'nullable|string|in:low,medium,high',
-                'delivery_address' => 'required|string|min:10|max:500',
+                'delivery_address' => 'required|string|min:5|max:500',
                 'delivery_notes' => 'nullable|string|max:1000'
             ], [
                 'order_id.required' => 'Order ID is required',
@@ -102,7 +102,7 @@ class DeliveryController extends Controller
                 'scheduled_date.required' => 'Scheduled date is required',
                 'scheduled_date.after' => 'Scheduled date must be in the future',
                 'delivery_address.required' => 'Delivery address is required',
-                'delivery_address.min' => 'Delivery address must be at least 10 characters',
+                'delivery_address.min' => 'Delivery address must be at least 5 characters',
                 'assigned_to.exists' => 'Assigned user does not exist'
             ]);
 
@@ -160,7 +160,7 @@ class DeliveryController extends Controller
             // Prepare delivery data
             $deliveryData = array_merge($validatedData, [
                 'tracking_number' => $trackingNumber,
-                'status' => 'pending',
+                'status' => Delivery::STATUS_ASSIGNED,
                 'priority' => $validatedData['priority'] ?? 'medium'
             ]);
 
@@ -184,7 +184,7 @@ class DeliveryController extends Controller
             try {
                 \App\Models\DeliveryStatusUpdate::create([
                     'delivery_id' => $delivery->id,
-                    'status' => 'pending',
+                    'status' => Delivery::STATUS_ASSIGNED,
                     'notes' => 'Delivery created',
                     'updated_by' => auth()->id(),
                 ]);

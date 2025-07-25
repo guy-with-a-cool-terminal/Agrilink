@@ -137,15 +137,8 @@ class OrderController extends Controller
                 ]);
             }
 
-            // Create delivery record - This is crucial for logistics dashboard
-            $delivery = Delivery::create([
-                'order_id' => $order->id,
-                'delivery_address' => $request->delivery_address,
-                'scheduled_date' => $request->delivery_date ?? now()->addDays(1),
-                'status' => Delivery::STATUS_ASSIGNED,
-                'priority' => $request->priority ?? Delivery::PRIORITY_MEDIUM,
-                'notes' => $request->notes,
-            ]);
+            // NOTE: Delivery record will be created by admin through DeliveryController when assigned
+            // This removes the automatic delivery creation conflict
 
             DB::commit();
 
@@ -153,15 +146,14 @@ class OrderController extends Controller
             $order->load([
                 'user',
                 'orderItems.product.farmer',
-                'payment',
-                'delivery'
+                'payment'
+                // Note: No delivery relation since it's not created yet
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Order placed successfully',
-                'order' => $order,
-                'delivery' => $delivery
+                'message' => 'Order placed successfully. Awaiting admin confirmation and delivery assignment.',
+                'order' => $order
             ], 201);
 
         } catch (\Exception $e) {
@@ -418,6 +410,11 @@ class OrderController extends Controller
             // Update payment status if exists
             if ($order->payment) {
                 $order->payment->update(['status' => 'refunded']);
+            }
+
+            // Cancel delivery if exists
+            if ($order->delivery) {
+                $order->delivery->update(['status' => 'cancelled']);
             }
 
             DB::commit();
