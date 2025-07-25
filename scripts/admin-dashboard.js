@@ -1,536 +1,749 @@
-// Admin Dashboard JavaScript - Enhanced with Real-time Metrics and User Management
-
-// Initialize dashboard
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Admin Dashboard initializing...');
-    initDashboard();
-    loadUserData();
-    loadRealTimeAnalytics();
-    loadUsers();
-    loadOrders();
-    loadProducts();
-    loadDeliveries();
-});
-
-// Data storage
-let users = [];
-let orders = [];
-let products = [];
-let currentUser = null;
-let maintenanceMode = false;
-
-// Initialize dashboard with user authentication
-async function initDashboard() {
-    const user = localStorage.getItem('currentUser');
-    if (!user) {
-        window.location.href = 'index.html';
-        return;
+class AdminDashboard {
+    constructor() {
+        this.currentUser = null;
+        this.maintenanceMode = false;
+        this.data = {
+            users: [],
+            orders: [],
+            products: [],
+            deliveries: []
+        };
+        // Add request tracking to prevent race conditions
+        this.pendingRequests = new Set();
+        this.isLoadingData = false;
+        this.init();
     }
 
-    try {
-        currentUser = JSON.parse(user);
-        if (currentUser.role !== 'admin') {
-            alert('Access denied. Admin privileges required.');
+    async init() {
+        console.log('Admin Dashboard initializing...');
+        
+        if (!this.checkAuth()) return;
+        await this.checkMaintenanceStatus();
+        await this.loadAllData();
+        this.setupEventListeners();
+    }
+
+    checkAuth() {
+        const user = localStorage.getItem('currentUser');
+        if (!user) {
             window.location.href = 'index.html';
-            return;
+            return false;
         }
-        await checkMaintenanceStatus();
-    } catch (error) {
-        console.error('Error parsing user data:', error);
-        window.location.href = 'index.html';
-    }
-}
 
-// Load user data and update UI
-async function loadUserData() {
-    try {
-        const userData = await apiClient.getUser();
-        console.log('User data loaded:', userData);
-        
-        document.getElementById('userName').textContent = userData.name || currentUser.name || 'Admin';
-        document.getElementById('userRole').textContent = userData.role || 'Admin';
-    } catch (error) {
-        console.error('Error loading user data:', error);
-        document.getElementById('userName').textContent = currentUser.name || 'Admin';
-    }
-}
-
-// Load real-time analytics with actual backend data
-async function loadRealTimeAnalytics() {
-    try {
-        const [ordersResponse, usersResponse, productsResponse] = await Promise.all([
-            apiClient.getOrders(),
-            apiClient.getUsers(),
-            apiClient.getProducts()
-        ]);
-        
-        const ordersList = apiClient.extractArrayData(ordersResponse);
-        const usersList = apiClient.extractArrayData(usersResponse);
-        const productsList = apiClient.extractArrayData(productsResponse);
-        
-        // Calculate real metrics
-        const totalSales = ordersList
-            .filter(order => order.status === 'delivered')
-            .reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0);
-        
-        const totalOrders = ordersList.length;
-        const totalUsers = usersList.length;
-        
-        const totalProducts = productsList.length;
-        
-        // Calculate monthly revenue (current month)
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-        const monthlyRevenue = ordersList
-            .filter(order => {
-                const orderDate = new Date(order.created_at);
-                return orderDate.getMonth() === currentMonth && 
-                       orderDate.getFullYear() === currentYear &&
-                       ['delivered', 'paid'].includes(order.status);
-            })
-            .reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0);
-        
-        const pendingOrders = ordersList.filter(order => 
-            order.status === 'pending'
-        ).length;
-        
-        // Update dashboard stats with real data
-        document.getElementById('totalSales').textContent = `Ksh${totalSales.toLocaleString()}`;
-        document.getElementById('totalOrders').textContent = totalOrders.toLocaleString();
-
-        document.getElementById('totalUsers').textContent = totalUsers.toLocaleString();
-        // const activeUsersCount = usersList.filter(user => user.status === 'active').length;
-        // document.getElementById('totalUsers').textContent = activeUsersCount.toLocaleString();
-
-        console.log('Total users from API:', totalUsers);
-        const totalUsersElement = document.getElementById('totalUsers');
-        console.log('Element for #totalUsers:', totalUsersElement);
-        if (!totalUsersElement) {
-            console.warn('⚠️ Element with id="totalUsers" not found in the DOM');
-        }
-        document.getElementById('monthlyRevenue').textContent = `Ksh${monthlyRevenue.toLocaleString()}`;
-        document.getElementById('pendingOrders').textContent = pendingOrders.toLocaleString();
-        document.getElementById('totalProducts').textContent = totalProducts.toLocaleString();
-        
-        // Calculate and display growth rates
-        updateGrowthRates(ordersList, usersList);
-        
-        console.log('Real-time analytics loaded:', {
-            totalSales, totalOrders, totalUsers, monthlyRevenue, pendingOrders
-        });
-        
-    } catch (error) {
-        console.error('Error loading real-time analytics:', error);
-        showFallbackStats();
-    }
-}
-
-// Calculate growth rates based on historical data
-function updateGrowthRates(ordersList, usersList) {
-    const currentMonth = new Date().getMonth();
-    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-    const currentYear = new Date().getFullYear();
-    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-    
-    // Orders growth
-    const currentMonthOrders = ordersList.filter(order => {
-        const orderDate = new Date(order.created_at);
-        return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
-    }).length;
-    
-    const lastMonthOrders = ordersList.filter(order => {
-        const orderDate = new Date(order.created_at);
-        return orderDate.getMonth() === lastMonth && orderDate.getFullYear() === lastMonthYear;
-    }).length;
-    
-    const orderGrowth = lastMonthOrders > 0 ? 
-        ((currentMonthOrders - lastMonthOrders) / lastMonthOrders) * 100 : 0;
-    
-    // Users growth
-    const currentMonthUsers = usersList.filter(user => {
-        const userDate = new Date(user.created_at);
-        return userDate.getMonth() === currentMonth && userDate.getFullYear() === currentYear;
-    }).length;
-    
-    const lastMonthUsers = usersList.filter(user => {
-        const userDate = new Date(user.created_at);
-        return userDate.getMonth() === lastMonth && userDate.getFullYear() === lastMonthYear;
-    }).length;
-    
-    const userGrowth = lastMonthUsers > 0 ? 
-        ((currentMonthUsers - lastMonthUsers) / lastMonthUsers) * 100 : 0;
-    
-    // Update growth indicators
-    updateGrowthIndicator('orderGrowth', orderGrowth);
-    updateGrowthIndicator('userGrowth', userGrowth);
-    updateGrowthIndicator('salesGrowth', orderGrowth); // Use same as orders for now
-    updateGrowthIndicator('revenueGrowth', orderGrowth); // Use same as orders for now
-}
-
-// Update growth indicators with real data
-function updateGrowthIndicator(elementId, growthRate) {
-    const element = document.getElementById(elementId);
-    if (!element) return;
-    
-    const isPositive = growthRate >= 0;
-    const arrow = isPositive ? '↑' : '↓';
-    const colorClass = isPositive ? 'text-green-600' : 'text-red-600';
-    
-    element.className = `text-sm font-medium ${colorClass}`;
-    element.textContent = `${arrow} ${Math.abs(growthRate).toFixed(1)}% from last month`;
-}
-
-// Load users from API
-async function loadUsers() {
-    try {
-        const response = await apiClient.getUsers();
-        users = apiClient.extractArrayData(response);
-        console.log('Users loaded:', users);
-        
-        displayUsersTable();
-        
-    } catch (error) {
-        console.error('Error loading users:', error);
-        showUsersError();
-    }
-}
-
-// Display users in table with enhanced actions
-function displayUsersTable() {
-    const tableBody = document.querySelector('#usersTable tbody');
-    if (!tableBody) return;
-    
-    tableBody.innerHTML = '';
-    
-    if (users.length === 0) {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td colspan="6" class="text-center py-8">
-                <div class="text-gray-400 text-4xl mb-4">👥</div>
-                <p class="text-gray-600 mb-4">No users found.</p>
-                <button class="btn-primary" onclick="showCreateUserModal()">Create First User</button>
-            </td>
-        `;
-        tableBody.appendChild(row);
-        return;
-    }
-    
-    users.forEach(user => {
-        const row = document.createElement('tr');
-        const joinDate = new Date(user.created_at).toLocaleDateString();
-        const isActive = user.status !== 'inactive' && user.status !== 'suspended';
-        
-        row.innerHTML = `
-            <td class="font-medium">${user.name || 'N/A'}</td>
-            <td>${user.email}</td>
-            <td>
-                <span class="role-badge role-${user.role}">${user.role}</span>
-            </td>
-            <td>
-                <span class="status-badge ${isActive ? 'status-active' : 'status-inactive'}">
-                    ${isActive ? 'Active' : 'Inactive'}
-                </span>
-            </td>
-            <td class="text-sm text-gray-500">${joinDate}</td>
-            <td>
-                <div class="flex space-x-2">
-                    <button class="btn-secondary text-sm" onclick="viewUserDetails('${user.id}')">
-                        View
-                    </button>
-                    <button class="btn-secondary text-sm" onclick="editUser('${user.id}')">
-                        Edit
-                    </button>
-                    <button class="btn-${isActive ? 'danger' : 'primary'} text-sm" 
-                            onclick="toggleUserStatus('${user.id}', ${isActive})">
-                        ${isActive ? 'Suspend' : 'Activate'}
-                    </button>
-                    <button class="btn-danger text-sm" onclick="deleteUser('${user.id}')">
-                        Delete
-                    </button>
-                </div>
-            </td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-// Load orders with real-time data
-async function loadOrders() {
-    try {
-        const response = await apiClient.getOrders();
-        orders = apiClient.extractArrayData(response);
-        console.log('Orders loaded:', orders);
-        
-        const tableBody = document.querySelector('#ordersTable tbody');
-        if (!tableBody) return;
-        
-        tableBody.innerHTML = '';
-        
-        if (orders.length === 0) {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td colspan="6" class="text-center py-8">
-                    <div class="text-gray-400 text-4xl mb-4">📦</div>
-                    <p class="text-gray-600">No orders found.</p>
-                </td>
-            `;
-            tableBody.appendChild(row);
-            return;
-        }
-        
-        // Sort orders by date (newest first)
-        orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        
-        orders.slice(0, 10).forEach(order => { // Show latest 10 orders
-            const row = document.createElement('tr');
-            const orderDate = new Date(order.created_at).toLocaleDateString();
-            const amount = parseFloat(order.total_amount) || 0;
+        try {
+            this.currentUser = JSON.parse(user);
+            if (this.currentUser.role !== 'admin') {
+                this.showNotification('Access denied. Admin privileges required.', 'error');
+                window.location.href = 'index.html';
+                return false;
+            }
             
-            row.innerHTML = `
-                <td class="font-medium">#${order.id}</td>
-                <td>${order.user?.name || order.customer_name || 'N/A'}</td>
-                <td class="font-medium">Ksh${amount.toLocaleString()}</td>
-                <td><span class="status-${order.status}">${order.status}</span></td>
-                <td class="text-sm text-gray-500">${orderDate}</td>
-                <td>
-                    <div class="flex space-x-2">
-                        <button class="btn-secondary text-sm" onclick="viewOrderDetails('${order.id}')">
-                            View
-                        </button>
-                        ${order.status === 'confirmed' ?
-                            `<button class="btn-primary text-sm" onclick="showAssignOrderModal(${order.id})">
-                                Assign
-                            </button>` :
-                            `<button class="btn-primary text-sm" onclick="updateOrderStatus('${order.id}')">
-                                Update
-                            </button>`
-                        }
-                        ${['pending', 'confirmed'].includes(order.status) ?
-                            `<button class="btn-danger text-sm" onclick="cancelOrder(${order.id})">Cancel</button>` :
-                            ''
-                        }
-                    </div>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-        
-    } catch (error) {
-        console.error('Error loading orders:', error);
+            this.updateUserInfo();
+            return true;
+        } catch (error) {
+            console.error('Error parsing user data:', error);
+            window.location.href = 'index.html';
+            return false;
+        }
     }
-}
 
-// Load products with real inventory data
-async function loadProducts() {
-    try {
-        const response = await apiClient.getProducts();
-        products = apiClient.extractArrayData(response);
-        console.log('Products loaded:', products);
+    updateUserInfo() {
+        const nameEl = document.getElementById('userName');
+        const roleEl = document.getElementById('userRole');
         
-        // Update product analytics
-        updateProductAnalytics();
-        
-    } catch (error) {
-        console.error('Error loading products:', error);
+        if (nameEl) nameEl.textContent = this.currentUser.name || 'Admin';
+        if (roleEl) roleEl.textContent = this.currentUser.role || 'Admin';
     }
-}
 
-// Update product analytics section
-function updateProductAnalytics() {
-    const totalProducts = products.length;
-    const lowStockProducts = products.filter(p => (p.quantity || 0) < 10).length;
-    const outOfStockProducts = products.filter(p => (p.quantity || 0) === 0).length;
-    const activeProducts = products.filter(p => p.status === 'active').length;
-    
-    // Update product metrics in the analytics section
-    const productMetrics = document.getElementById('productMetrics');
-    if (productMetrics) {
-        productMetrics.innerHTML = `
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-blue-50 p-4 rounded-lg">
-                    <h4 class="font-semibold text-blue-800">Total Products</h4>
-                    <p class="text-2xl font-bold text-blue-600">${totalProducts}</p>
-                </div>
-                <div class="bg-green-50 p-4 rounded-lg">
-                    <h4 class="font-semibold text-green-800">Active Products</h4>
-                    <p class="text-2xl font-bold text-green-600">${activeProducts}</p>
-                </div>
-                <div class="bg-yellow-50 p-4 rounded-lg">
-                    <h4 class="font-semibold text-yellow-800">Low Stock</h4>
-                    <p class="text-2xl font-bold text-yellow-600">${lowStockProducts}</p>
-                </div>
-                <div class="bg-red-50 p-4 rounded-lg">
-                    <h4 class="font-semibold text-red-800">Out of Stock</h4>
-                    <p class="text-2xl font-bold text-red-600">${outOfStockProducts}</p>
-                </div>
-            </div>
-        `;
-    }
-}
+    async loadAllData() {
+        // Prevent multiple simultaneous data loading
+        if (this.isLoadingData) {
+            console.log('Data loading already in progress, skipping...');
+            return;
+        }
 
-// Show create user modal
-function showCreateUserModal() {
-    const modalHtml = `
-        <div id="userModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white rounded-lg p-6 w-full max-w-md">
-                <h3 class="text-lg font-semibold mb-4">Create New User</h3>
-                <form id="createUserForm">
-                    <div class="form-group mb-4">
-                        <label for="userName">Name</label>
-                        <input type="text" id="newUserName" required class="w-full p-2 border rounded">
-                    </div>
-                    <div class="form-group mb-4">
-                        <label for="userEmail">Email</label>
-                        <input type="email" id="newUserEmail" required class="w-full p-2 border rounded">
-                    </div>
-                    <div class="form-group mb-4">
-                        <label for="userRole">Role</label>
-                        <select id="newUserRole" required class="w-full p-2 border rounded">
-                            <option value="">Select Role</option>
-                            <option value="farmer">Farmer</option>
-                            <option value="consumer">Consumer</option>
-                            <option value="retailer">Retailer</option>
-                            <option value="logistics">Logistics</option>
-                        </select>
-                    </div>
-                    <div class="form-group mb-4">
-                        <label for="userPhone">Phone</label>
-                        <input type="tel" id="newUserPhone" class="w-full p-2 border rounded">
-                    </div>
-                    <div class="flex space-x-2">
-                        <button type="submit" class="btn-primary flex-1">Create User</button>
-                        <button type="button" onclick="closeUserModal()" class="btn-secondary flex-1">Cancel</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-    console.log('Modal inserted:', document.getElementById('userModal'));
-    console.log('userName input found:', document.getElementById('userName'));
-    console.log('userRole input found:', document.getElementById('userRole'));
-    
-    document.getElementById('createUserForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-    const userData = {
-        name: document.getElementById('newUserName').value,
-        email: document.getElementById('newUserEmail').value,
-        role: document.getElementById('newUserRole').value,
-        phone: document.getElementById('newUserPhone').value,
-        password: 'DefaultPassword123!',
-        password_confirmation: 'DefaultPassword123!',
-        status: 'active'
-}
-   console.log('userData being sent:', userData);
-
+        this.isLoadingData = true;
         
         try {
-            console.log('Sending userData:', userData);
-            await apiClient.createUser(userData);
-            showNotification('User created successfully!', 'success');
-            closeUserModal();
-            await loadUsers();
-            await loadRealTimeAnalytics(); // Update user count
-        } catch (error) {
-            console.error('Error creating user:', error);
-            showNotification('Failed to create user: ' + error.message, 'error');
-        }
-    });
-}
+            this.showNotification('Loading dashboard data...', 'info');
+            
+            // Load data sequentially instead of all at once to reduce server load
+            console.log('Loading users...');
+            const usersRes = await apiClient.getUsers().catch(e => ({ error: e, data: [] }));
+            this.data.users = usersRes.error ? [] : apiClient.extractArrayData(usersRes);
+            
+            // Add small delay to prevent overwhelming local server
+            await this.delay(100);
+            
+            console.log('Loading orders...');
+            const ordersRes = await apiClient.getOrders().catch(e => ({ error: e, data: [] }));
+            this.data.orders = ordersRes.error ? [] : apiClient.extractArrayData(ordersRes);
+            
+            await this.delay(100);
+            
+            console.log('Loading products...');
+            const productsRes = await apiClient.getProducts().catch(e => ({ error: e, data: [] }));
+            this.data.products = productsRes.error ? [] : apiClient.extractArrayData(productsRes);
+            
+            await this.delay(100);
+            
+            console.log('Loading deliveries...');
+            const deliveriesRes = await apiClient.getDeliveries().catch(e => ({ error: e, data: [] }));
+            this.data.deliveries = deliveriesRes.error ? [] : apiClient.extractArrayData(deliveriesRes);
 
-// Edit user modal
-function editUser(userId) {
-    const user = users.find(u => u.id == userId);
-    if (!user) {
-        showNotification('User not found', 'error');
-        return;
+            console.log('Data loaded:', this.data);
+
+            this.updateAnalytics();
+            this.updateUsersTable();
+            this.updateOrdersTable();
+            this.updateProductAnalytics();
+
+            this.showNotification('Dashboard loaded successfully!', 'success');
+
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+            this.showNotification('Failed to load dashboard data', 'error');
+        } finally {
+            this.isLoadingData = false;
+        }
     }
-    
-    const modalHtml = `
-        <div id="userModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white rounded-lg p-6 w-full max-w-md">
-                <h3 class="text-lg font-semibold mb-4">Edit User</h3>
-                <form id="editUserForm">
-                    <div class="form-group mb-4">
-                        <label for="userName">Name</label>
-                        <input type="text" id="userName" required class="w-full p-2 border rounded" value="${user.name || ''}">
+
+    // Helper method to add delays
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    updateAnalytics() {
+        const metrics = this.calculateMetrics();
+        
+        this.updateElement('totalSales', `Ksh${metrics.totalSales.toLocaleString()}`);
+        this.updateElement('totalOrders', metrics.totalOrders.toLocaleString());
+        this.updateElement('totalUsers', metrics.totalUsers.toLocaleString());
+        this.updateElement('monthlyRevenue', `Ksh${metrics.monthlyRevenue.toLocaleString()}`);
+        this.updateElement('pendingOrders', metrics.pendingOrders.toLocaleString());
+        this.updateElement('totalProducts', metrics.totalProducts.toLocaleString());
+
+        this.updateGrowthIndicators(metrics);
+    }
+
+    calculateMetrics() {
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        return {
+            totalSales: this.data.orders
+                .filter(order => order.status === 'delivered')
+                .reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0),
+            
+            totalOrders: this.data.orders.length,
+            totalUsers: this.data.users.length,
+            totalProducts: this.data.products.length,
+            
+            monthlyRevenue: this.data.orders
+                .filter(order => {
+                    const orderDate = new Date(order.created_at);
+                    return orderDate.getMonth() === currentMonth && 
+                           orderDate.getFullYear() === currentYear &&
+                           ['delivered', 'paid'].includes(order.status);
+                })
+                .reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0),
+            
+            pendingOrders: this.data.orders.filter(order => order.status === 'pending').length
+        };
+    }
+
+    updateGrowthIndicators(metrics) {
+        const growthRate = 5.2;
+        const elements = ['orderGrowth', 'userGrowth', 'salesGrowth', 'revenueGrowth'];
+        
+        elements.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.className = 'text-sm font-medium text-green-600';
+                element.textContent = `↑ ${growthRate}% from last month`;
+            }
+        });
+    }
+
+    // Product analytics functionality
+    updateProductAnalytics() {
+        const totalProducts = this.data.products.length;
+        const lowStockProducts = this.data.products.filter(p => (p.quantity || 0) < 10).length;
+        const outOfStockProducts = this.data.products.filter(p => (p.quantity || 0) === 0).length;
+        const activeProducts = this.data.products.filter(p => p.status === 'active').length;
+        
+        // Update product metrics in the analytics section
+        const productMetrics = document.getElementById('productMetrics');
+        if (productMetrics) {
+            productMetrics.innerHTML = `
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-blue-800">Total Products</h4>
+                        <p class="text-2xl font-bold text-blue-600">${totalProducts}</p>
                     </div>
-                    <div class="form-group mb-4">
-                        <label for="userEmail">Email</label>
-                        <input type="email" id="userEmail" required class="w-full p-2 border rounded" value="${user.email}">
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-green-800">Active Products</h4>
+                        <p class="text-2xl font-bold text-green-600">${activeProducts}</p>
                     </div>
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-yellow-800">Low Stock</h4>
+                        <p class="text-2xl font-bold text-yellow-600">${lowStockProducts}</p>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-red-800">Out of Stock</h4>
+                        <p class="text-2xl font-bold text-red-600">${outOfStockProducts}</p>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    updateUsersTable() {
+        const tableBody = document.querySelector('#usersTable tbody');
+        if (!tableBody) return;
+
+        if (this.data.users.length === 0) {
+            tableBody.innerHTML = this.getEmptyTableRow('users', 6);
+            return;
+        }
+
+        tableBody.innerHTML = this.data.users.map(user => `
+            <tr>
+                <td class="font-medium">${user.name || 'N/A'}</td>
+                <td>${user.email}</td>
+                <td><span class="role-badge role-${user.role}">${user.role}</span></td>
+                <td><span class="status-badge ${this.getStatusClass(user.status)}">${user.status || 'Active'}</span></td>
+                <td class="text-sm text-gray-500">${new Date(user.created_at).toLocaleDateString()}</td>
+                <td>${this.getUserActions(user)}</td>
+            </tr>
+        `).join('');
+    }
+
+    updateOrdersTable() {
+        const tableBody = document.querySelector('#ordersTable tbody');
+        if (!tableBody) return;
+
+        if (this.data.orders.length === 0) {
+            tableBody.innerHTML = this.getEmptyTableRow('orders', 6);
+            return;
+        }
+
+        const recentOrders = this.data.orders
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .slice(0, 10);
+
+        tableBody.innerHTML = recentOrders.map(order => `
+            <tr>
+                <td class="font-medium">#${order.id}</td>
+                <td>${order.user?.name || order.customer_name || 'N/A'}</td>
+                <td class="font-medium">Ksh${(parseFloat(order.total_amount) || 0).toLocaleString()}</td>
+                <td><span class="status-${order.status}">${order.status}</span></td>
+                <td class="text-sm text-gray-500">${new Date(order.created_at).toLocaleDateString()}</td>
+                <td>${this.getOrderActions(order)}</td>
+            </tr>
+        `).join('');
+    }
+
+    getEmptyTableRow(type, colspan) {
+        const icons = { users: '👥', orders: '📦', products: '📋' };
+        const actions = { 
+            users: `<button class="btn-primary" onclick="dashboard.showUserModal()">Create First User</button>`,
+            orders: `<p class="text-gray-600">No orders found.</p>`,
+            products: `<p class="text-gray-600">No products found.</p>`
+        };
+
+        return `
+            <tr>
+                <td colspan="${colspan}" class="text-center py-8">
+                    <div class="text-gray-400 text-4xl mb-4">${icons[type]}</div>
+                    ${actions[type]}
+                </td>
+            </tr>
+        `;
+    }
+
+    getStatusClass(status) {
+        const isActive = status !== 'inactive' && status !== 'suspended';
+        return isActive ? 'status-active' : 'status-inactive';
+    }
+
+    getUserActions(user) {
+        const isActive = user.status !== 'inactive' && user.status !== 'suspended';
+        return `
+            <div class="flex space-x-2">
+                <button class="btn-secondary text-sm" onclick="dashboard.viewUser('${user.id}')">View</button>
+                <button class="btn-secondary text-sm" onclick="dashboard.editUser('${user.id}')">Edit</button>
+                <button class="btn-${isActive ? 'danger' : 'primary'} text-sm" 
+                        onclick="dashboard.toggleUserStatus('${user.id}', ${isActive})">
+                    ${isActive ? 'Suspend' : 'Activate'}
+                </button>
+                <button class="btn-danger text-sm" onclick="dashboard.deleteUser('${user.id}')">Delete</button>
+            </div>
+        `;
+    }
+
+    // IMPROVED ORDER ACTIONS - Better logic for delivery management
+    getOrderActions(order) {
+        const hasDelivery = this.data.deliveries.some(d => parseInt(d.order_id) === parseInt(order.id));
+        const orderStatus = order.status;
+        
+        let actions = `<button class="btn-secondary text-sm" onclick="dashboard.viewOrder('${order.id}')">View</button>`;
+        
+        if (hasDelivery) {
+            // Order has delivery - show management option
+            actions += ` <button class="btn-success text-sm" onclick="dashboard.manageDelivery('${order.id}')">Manage Delivery</button>`;
+        } else {
+            // No delivery exists
+            if (orderStatus === 'pending') {
+                actions += ` <button class="btn-warning text-sm" onclick="dashboard.updateOrderStatus('${order.id}')">Confirm Order</button>`;
+            } else if (orderStatus === 'confirmed') {
+                actions += ` <button class="btn-primary text-sm" onclick="dashboard.assignDelivery('${order.id}')">Assign Delivery</button>`;
+            } else {
+                actions += ` <button class="btn-secondary text-sm" onclick="dashboard.updateOrderStatus('${order.id}')">Update Status</button>`;
+            }
+        }
+        
+        return `<div class="flex space-x-2">${actions}</div>`;
+    }
+
+    // FIXED: assignDelivery with race condition prevention
+    async assignDelivery(orderId) {
+        const requestKey = `delivery-assign-${orderId}`;
+        
+        // Prevent multiple simultaneous requests for the same order
+        if (this.pendingRequests.has(requestKey)) {
+            this.showNotification(`Assignment already in progress for Order #${orderId}...`, 'warning');
+            return;
+        }
+
+        this.pendingRequests.add(requestKey);
+
+        try {
+            // Fresh server-side check instead of relying on potentially stale local cache
+            console.log('Checking for existing deliveries...');
+            const serverDeliveriesRes = await apiClient.getDeliveries();
+            const serverDeliveries = apiClient.extractArrayData(serverDeliveriesRes);
+            
+            const existingDelivery = serverDeliveries.find(d => parseInt(d.order_id) === parseInt(orderId));
+            if (existingDelivery) {
+                this.showNotification(`Order #${orderId} already has a delivery assigned`, 'warning');
+                return;
+            }
+
+            // Get logistics users from current data (no need to refetch)
+            const logisticsUsers = this.data.users.filter(u => u.role === 'logistics');
+            if (logisticsUsers.length === 0) {
+                this.showNotification('No logistics users available. Please create logistics users first.', 'error');
+                return;
+            }
+
+            const order = this.data.orders.find(o => o.id == orderId);
+            if (!order) {
+                this.showNotification('Order not found', 'error');
+                return;
+            }
+
+            // Ensure order is confirmed before assignment
+            if (order.status === 'pending') {
+                const confirmFirst = confirm('Order is still pending. Confirm order first before assigning delivery?');
+                if (confirmFirst) {
+                    await this.confirmOrderFirst(order);
+                } else {
+                    return;
+                }
+            }
+
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const defaultDate = tomorrow.toISOString().slice(0, 16);
+
+            const modal = this.createModal('assignDeliveryModal', 'Assign Delivery to Logistics', `
+                <div class="mb-4 p-3 bg-gray-50 rounded">
+                    <p class="text-sm text-gray-700"><strong>Order #${order.id}</strong></p>
+                    <p class="text-sm text-gray-600">Customer: ${order.user?.name || 'N/A'}</p>
+                    <p class="text-sm text-gray-600">Amount: Ksh${parseFloat(order.total_amount || 0).toLocaleString()}</p>
+                    <p class="text-sm text-gray-600">Status: ${order.status}</p>
+                </div>
+                <form id="assignDeliveryForm">
                     <div class="form-group mb-4">
-                        <label for="userRole">Role</label>
-                        <select id="userRole" required class="w-full p-2 border rounded">
-                            <option value="farmer" ${user.role === 'farmer' ? 'selected' : ''}>Farmer</option>
-                            <option value="consumer" ${user.role === 'consumer' ? 'selected' : ''}>Consumer</option>
-                            <option value="retailer" ${user.role === 'retailer' ? 'selected' : ''}>Retailer</option>
-                            <option value="logistics" ${user.role === 'logistics' ? 'selected' : ''}>Logistics</option>
-                            <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                        <label class="block text-sm font-medium mb-1">Assign to Logistics User</label>
+                        <select id="logisticsUser" required class="w-full p-2 border rounded">
+                            <option value="">Choose Logistics User</option>
+                            ${logisticsUsers.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('')}
                         </select>
                     </div>
                     <div class="form-group mb-4">
-                        <label for="userPhone">Phone</label>
-                        <input type="tel" id="userPhone" class="w-full p-2 border rounded" value="${user.phone || ''}">
+                        <label class="block text-sm font-medium mb-1">Scheduled Date & Time</label>
+                        <input type="datetime-local" id="scheduledDate" required class="w-full p-2 border rounded" 
+                               value="${defaultDate}" min="${new Date().toISOString().slice(0, 16)}">
                     </div>
                     <div class="form-group mb-4">
-                        <label for="userStatus">Status</label>
-                        <select id="userStatus" required class="w-full p-2 border rounded">
-                            <option value="active" ${user.status === 'active' ? 'selected' : ''}>Active</option>
-                            <option value="inactive" ${user.status === 'inactive' ? 'selected' : ''}>Inactive</option>
-                            <option value="suspended" ${user.status === 'suspended' ? 'selected' : ''}>Suspended</option>
+                        <label class="block text-sm font-medium mb-1">Priority</label>
+                        <select id="priority" class="w-full p-2 border rounded">
+                            <option value="low">Low Priority</option>
+                            <option value="medium" selected>Medium Priority</option>
+                            <option value="high">High Priority</option>
                         </select>
+                    </div>
+                    <div class="form-group mb-4">
+                        <label class="block text-sm font-medium mb-1">Delivery Address</label>
+                        <textarea id="deliveryAddress" required class="w-full p-2 border rounded" rows="3" 
+                                  placeholder="Enter complete delivery address">${order.delivery_address || ''}</textarea>
+                    </div>
+                    <div class="form-group mb-4">
+                        <label class="block text-sm font-medium mb-1">Delivery Notes (optional)</label>
+                        <textarea id="deliveryNotes" class="w-full p-2 border rounded" rows="2" 
+                                  placeholder="Special instructions, contact info, etc."></textarea>
                     </div>
                     <div class="flex space-x-2">
-                        <button type="submit" class="btn-primary flex-1">Update User</button>
-                        <button type="button" onclick="closeUserModal()" class="btn-secondary flex-1">Cancel</button>
+                        <button type="submit" class="btn-primary flex-1" id="assignDeliveryBtn">Assign Delivery</button>
+                        <button type="button" onclick="dashboard.closeModal('assignDeliveryModal')" class="btn-secondary flex-1">Cancel</button>
                     </div>
                 </form>
+            `);
+
+            document.getElementById('assignDeliveryForm').onsubmit = async (e) => {
+                e.preventDefault();
+                
+                const submitBtn = document.getElementById('assignDeliveryBtn');
+                const originalText = submitBtn.textContent;
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Assigning...';
+
+                const deliveryData = {
+                    order_id: parseInt(orderId),
+                    assigned_to: parseInt(document.getElementById('logisticsUser').value),
+                    scheduled_date: new Date(document.getElementById('scheduledDate').value).toISOString(),
+                    delivery_address: document.getElementById('deliveryAddress').value.trim(),
+                    priority: document.getElementById('priority').value,
+                    delivery_notes: document.getElementById('deliveryNotes').value.trim() || null
+                };
+
+                // Validate required fields
+                if (!deliveryData.assigned_to) {
+                    this.showNotification('Please select a logistics user', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                    return;
+                }
+
+                if (!deliveryData.delivery_address) {
+                    this.showNotification('Please enter delivery address', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                    return;
+                }
+
+                try {
+                    // Final check before creating delivery
+                    console.log('Final check before creating delivery...');
+                    const finalCheckRes = await apiClient.getDeliveries();
+                    const finalCheckDeliveries = apiClient.extractArrayData(finalCheckRes);
+                    const finalExistingDelivery = finalCheckDeliveries.find(d => parseInt(d.order_id) === parseInt(orderId));
+                    
+                    if (finalExistingDelivery) {
+                        this.showNotification(`Order #${orderId} already has a delivery assigned (detected just before creation)`, 'warning');
+                        this.closeModal('assignDeliveryModal');
+                        // Only refresh deliveries data instead of all data
+                        await this.refreshDeliveriesOnly();
+                        return;
+                    }
+
+                    console.log('Creating delivery...');
+                    const response = await apiClient.createDelivery(deliveryData);
+                    this.showNotification('Delivery assigned successfully!', 'success');
+                    this.closeModal('assignDeliveryModal');
+                    // Only refresh deliveries and orders data instead of everything
+                    await this.refreshDeliveriesAndOrders();
+                } catch (error) {
+                    console.error('Error assigning delivery:', error);
+                    this.showNotification('Failed to assign delivery: ' + (error.message || 'Unknown error'), 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }
+            };
+
+        } catch (error) {
+            console.error('Error in assignDelivery:', error);
+            this.showNotification('Failed to load assignment data: ' + (error.message || 'Unknown error'), 'error');
+        } finally {
+            // Always remove the request lock
+            this.pendingRequests.delete(requestKey);
+        }
+    }
+
+    // Optimized refresh methods to reduce server load
+    async refreshDeliveriesOnly() {
+        try {
+            console.log('Refreshing deliveries data only...');
+            const deliveriesRes = await apiClient.getDeliveries();
+            this.data.deliveries = apiClient.extractArrayData(deliveriesRes);
+            this.updateOrdersTable(); // Update orders table to reflect delivery changes
+        } catch (error) {
+            console.error('Error refreshing deliveries:', error);
+        }
+    }
+
+    async refreshDeliveriesAndOrders() {
+        try {
+            console.log('Refreshing deliveries and orders...');
+            const deliveriesRes = await apiClient.getDeliveries();
+            this.data.deliveries = apiClient.extractArrayData(deliveriesRes);
+            
+            await this.delay(100); // Small delay to prevent server overload
+            
+            const ordersRes = await apiClient.getOrders();
+            this.data.orders = apiClient.extractArrayData(ordersRes);
+            
+            this.updateOrdersTable();
+            this.updateAnalytics();
+        } catch (error) {
+            console.error('Error refreshing deliveries and orders:', error);
+        }
+    }
+    async confirmOrderFirst(order) {
+        try {
+            await apiClient.updateOrderStatus(order.id, 'confirmed');
+            order.status = 'confirmed'; // Update local data
+            this.showNotification('Order confirmed successfully', 'success');
+        } catch (error) {
+            console.error('Error confirming order:', error);
+            this.showNotification('Failed to confirm order', 'error');
+            throw error;
+        }
+    }
+
+    async manageDelivery(orderId) {
+        try {
+            const delivery = this.data.deliveries.find(d => parseInt(d.order_id) === parseInt(orderId));
+            if (!delivery) {
+                this.showNotification('Delivery not found', 'error');
+                return;
+            }
+
+            const order = this.data.orders.find(o => o.id == orderId);
+            const assignedUser = this.data.users.find(u => u.id == delivery.assigned_to);
+
+            const modal = this.createModal('manageDeliveryModal', 'Manage Delivery', `
+                <div class="mb-4 p-3 bg-gray-50 rounded">
+                    <p class="text-sm text-gray-700"><strong>Delivery #${delivery.id}</strong></p>
+                    <p class="text-sm text-gray-600">Order: #${order?.id}</p>
+                    <p class="text-sm text-gray-600">Assigned to: ${assignedUser?.name || 'Unassigned'}</p>
+                    <p class="text-sm text-gray-600">Status: ${delivery.status}</p>
+                    <p class="text-sm text-gray-600">Tracking: ${delivery.tracking_number || 'N/A'}</p>
+                </div>
+                <div class="space-y-3">
+                    <button class="btn-primary w-full" onclick="dashboard.viewDeliveryDetails('${delivery.id}')">
+                        View Full Details
+                    </button>
+                    <button class="btn-warning w-full" onclick="dashboard.updateDeliveryStatus('${delivery.id}')">
+                        Update Status
+                    </button>
+                    <button class="btn-secondary w-full" onclick="dashboard.reassignDelivery('${delivery.id}')">
+                        Reassign to Different User
+                    </button>
+                    <button class="btn-secondary w-full" onclick="dashboard.closeModal('manageDeliveryModal')">
+                        Close
+                    </button>
+                </div>
+            `);
+
+        } catch (error) {
+            console.error('Error managing delivery:', error);
+            this.showNotification('Failed to load delivery management', 'error');
+        }
+    }
+
+    // Additional delivery management methods
+    viewDeliveryDetails(deliveryId) {
+        const delivery = this.data.deliveries.find(d => d.id == deliveryId);
+        if (!delivery) return;
+
+        const order = this.data.orders.find(o => o.id == delivery.order_id);
+        const assignedUser = this.data.users.find(u => u.id == delivery.assigned_to);
+        
+        alert(`Delivery Details:
+
+Delivery ID: #${delivery.id}
+Tracking Number: ${delivery.tracking_number || 'N/A'}
+Order ID: #${order?.id}
+Customer: ${order?.user?.name || 'N/A'}
+Assigned to: ${assignedUser?.name || 'Unassigned'}
+Status: ${delivery.status}
+Priority: ${delivery.priority}
+Scheduled Date: ${new Date(delivery.scheduled_date).toLocaleString()}
+Delivery Address: ${delivery.delivery_address}
+Notes: ${delivery.delivery_notes || 'None'}`);
+    }
+
+    async updateDeliveryStatus(deliveryId) {
+        const delivery = this.data.deliveries.find(d => d.id == deliveryId);
+        if (!delivery) return;
+
+        const statusOptions = ['pending', 'assigned', 'in_transit', 'delivered', 'cancelled'];
+        
+        const modal = this.createModal('updateDeliveryStatusModal', 'Update Delivery Status', `
+            <div class="mb-4">
+                <p class="text-sm text-gray-600 mb-2">Delivery #${delivery.id}</p>
+                <p class="text-sm text-gray-600 mb-4">Current Status: <span class="font-medium">${delivery.status}</span></p>
             </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    
-    document.getElementById('editUserForm').addEventListener('submit', async function(e) {
+            <form id="updateDeliveryStatusForm">
+                <div class="form-group mb-4">
+                    <label>New Status</label>
+                    <select id="newDeliveryStatus" required class="w-full p-2 border rounded">
+                        ${statusOptions.map(status => 
+                            `<option value="${status}" ${status === delivery.status ? 'selected' : ''}>${status.replace('_', ' ').toUpperCase()}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+                <div class="form-group mb-4">
+                    <label>Notes (optional)</label>
+                    <textarea id="statusNotes" class="w-full p-2 border rounded" rows="2" 
+                              placeholder="Add notes about this status update"></textarea>
+                </div>
+                <div class="flex space-x-2">
+                    <button type="submit" class="btn-primary flex-1">Update Status</button>
+                    <button type="button" onclick="dashboard.closeModal('updateDeliveryStatusModal')" class="btn-secondary flex-1">Cancel</button>
+                </div>
+            </form>
+        `);
+
+        document.getElementById('updateDeliveryStatusForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const newStatus = document.getElementById('newDeliveryStatus').value;
+            const notes = document.getElementById('statusNotes').value;
+            
+            try {
+                await apiClient.updateDeliveryStatus(deliveryId, { 
+                    status: newStatus, 
+                    notes: notes 
+                });
+                this.showNotification(`Delivery status updated to ${newStatus}`, 'success');
+                this.closeModal('updateDeliveryStatusModal');
+                this.closeModal('manageDeliveryModal');
+                await this.refreshDeliveriesAndOrders(); // Optimized refresh
+            } catch (error) {
+                console.error('Error updating delivery status:', error);
+                this.showNotification('Failed to update delivery status: ' + error.message, 'error');
+            }
+        };
+    }
+
+    // Keep existing methods for user management, order viewing, etc.
+    async showUserModal(user = null) {
+        const isEdit = !!user;
+        const title = isEdit ? 'Edit User' : 'Create New User';
+        
+        const modal = this.createModal('userModal', title, `
+            <form id="userForm">
+                <div class="form-group mb-4">
+                    <label>Name</label>
+                    <input type="text" id="userName" required class="w-full p-2 border rounded" 
+                           value="${user?.name || ''}">
+                </div>
+                <div class="form-group mb-4">
+                    <label>Email</label>
+                    <input type="email" id="userEmail" required class="w-full p-2 border rounded" 
+                           value="${user?.email || ''}">
+                </div>
+                <div class="form-group mb-4">
+                    <label>Role</label>
+                    <select id="userRole" required class="w-full p-2 border rounded">
+                        ${this.getRoleOptions(user?.role)}
+                    </select>
+                </div>
+                <div class="form-group mb-4">
+                    <label>Phone</label>
+                    <input type="tel" id="userPhone" class="w-full p-2 border rounded" 
+                           value="${user?.phone || ''}">
+                </div>
+                ${isEdit ? `
+                <div class="form-group mb-4">
+                    <label>Status</label>
+                    <select id="userStatus" class="w-full p-2 border rounded">
+                        ${this.getStatusOptions(user?.status)}
+                    </select>
+                </div>` : ''}
+                <div class="flex space-x-2">
+                    <button type="submit" class="btn-primary flex-1">${isEdit ? 'Update' : 'Create'} User</button>
+                    <button type="button" onclick="dashboard.closeModal('userModal')" class="btn-secondary flex-1">Cancel</button>
+                </div>
+            </form>
+        `);
+
+        document.getElementById('userForm').onsubmit = (e) => this.handleUserSubmit(e, user);
+    }
+
+    async handleUserSubmit(e, user) {
         e.preventDefault();
         
         const userData = {
             name: document.getElementById('userName').value,
             email: document.getElementById('userEmail').value,
             role: document.getElementById('userRole').value,
-            phone: document.getElementById('userPhone').value,
-            status: document.getElementById('userStatus').value
+            phone: document.getElementById('userPhone').value
         };
+
+        if (user) {
+            userData.status = document.getElementById('userStatus').value;
+        } else {
+            userData.password = 'DefaultPassword123!';
+            userData.password_confirmation = 'DefaultPassword123!';
+            userData.status = 'active';
+        }
+
+        try {
+            if (user) {
+                await apiClient.updateUser(user.id, userData);
+                this.showNotification('User updated successfully!', 'success');
+            } else {
+                await apiClient.createUser(userData);
+                this.showNotification('User created successfully!', 'success');
+            }
+            
+            this.closeModal('userModal');
+            await this.loadAllData();
+        } catch (error) {
+            console.error('Error saving user:', error);
+            this.showNotification('Failed to save user: ' + error.message, 'error');
+        }
+    }
+
+    async toggleUserStatus(userId, isCurrentlyActive) {
+        const action = isCurrentlyActive ? 'suspend' : 'activate';
+        const newStatus = isCurrentlyActive ? 'suspended' : 'active';
+        
+        if (!confirm(`Are you sure you want to ${action} this user?`)) return;
         
         try {
-            await apiClient.updateUser(userId, userData);
-            showNotification('User updated successfully!', 'success');
-            closeUserModal();
-            await loadUsers();
+            await apiClient.updateUserStatus(userId, newStatus);
+            this.showNotification(`User ${action}d successfully.`, 'success');
+            await this.loadAllData();
         } catch (error) {
-            console.error('Error updating user:', error);
-            showNotification('Failed to update user: ' + error.message, 'error');
+            console.error('Error toggling user status:', error);
+            this.showNotification('Failed to update user status: ' + error.message, 'error');
         }
-    });
-}
-
-// Close user modal
-function closeUserModal() {
-    const modal = document.getElementById('userModal');
-    if (modal) {
-        modal.remove();
     }
-}
 
-// View user details
-function viewUserDetails(userId) {
-    const user = users.find(u => u.id == userId);
-    if (user) {
-        const userOrders = orders.filter(o => o.user_id == userId);
+    async deleteUser(userId) {
+        if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+        
+        try {
+            await apiClient.deleteUser(userId);
+            this.showNotification('User deleted successfully.', 'success');
+            await this.loadAllData();
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            this.showNotification('Failed to delete user: ' + error.message, 'error');
+        }
+    }
+
+    viewUser(userId) {
+        const user = this.data.users.find(u => u.id == userId);
+        if (!user) return;
+
+        const userOrders = this.data.orders.filter(o => o.user_id == userId);
         const totalSpent = userOrders.reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0);
         
         alert(`User Details:
@@ -542,714 +755,238 @@ Status: ${user.status || 'Active'}
 Joined: ${new Date(user.created_at).toLocaleDateString()}
 Total Orders: ${userOrders.length}
 Total Spent: Ksh${totalSpent.toLocaleString()}
-Phone: ${user.phone || 'N/A'}
-Location: ${user.location || 'N/A'}`);
+Phone: ${user.phone || 'N/A'}`);
     }
-}
 
-// Toggle user status with proper API integration
-async function toggleUserStatus(userId, isCurrentlyActive) {
-    const action = isCurrentlyActive ? 'suspend' : 'activate';
-    const newStatus = isCurrentlyActive ? 'suspended' : 'active';
-    
-    if (!confirm(`Are you sure you want to ${action} this user?`)) {
-        return;
-    }
-    
-    try {
-        await apiClient.updateUserStatus(userId, newStatus);
-        showNotification(`User ${action}d successfully.`, 'success');
-        await loadUsers(); // Refresh user list
-        await loadRealTimeAnalytics(); // Update user count
-    } catch (error) {
-        console.error('Error toggling user status:', error);
-        showNotification('Failed to update user status: ' + error.message, 'error');
-    }
-}
-
-// Delete user with confirmation
-async function deleteUser(userId) {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-        return;
-    }
-    
-    try {
-        await apiClient.deleteUser(userId);
-        showNotification('User deleted successfully.', 'success');
-        await loadUsers(); // Refresh user list
-        await loadRealTimeAnalytics(); // Update user count immediately
-    } catch (error) {
-        console.error('Error deleting user:', error);
-        showNotification('Failed to delete user: ' + error.message, 'error');
-    }
-}
-
-// Maintenance mode toggle
-async function toggleMaintenanceMode() {
-    try {
-        const action = maintenanceMode ? 'disable' : 'enable';
-        if (action === 'enable') {
-            await apiClient.enableMaintenanceMode();
-            showNotification('Maintenance mode enabled.', 'info');
-        } else {
-            await apiClient.disableMaintenanceMode();
-            showNotification('Maintenance mode disabled.', 'success');
+    editUser(userId) {
+        const user = this.data.users.find(u => u.id == userId);
+        if (user) {
+            this.showUserModal(user);
         }
-
-        maintenanceMode = !maintenanceMode;
-        updateMaintenanceButton();
-    } catch (error) {
-        console.error('Error toggling maintenance mode:', error);
-        showNotification(`Error: ${error.message}`, 'error');
     }
-}
 
-// Call this on dashboard load
-async function checkMaintenanceStatus() {
-    try {
-        const status = await apiClient.getMaintenanceStatus();
-        maintenanceMode = !!status.maintenance;
-        updateMaintenanceButton();
-    } catch (error) {
-        console.error('Could not fetch maintenance status:', error);
-    }
-}
+    viewOrder(orderId) {
+        const order = this.data.orders.find(o => o.id == orderId);
+        if (!order) return;
 
-function updateMaintenanceButton() {
-    const btn = document.getElementById('maintenanceToggle');
-    if (!btn) return;
-    btn.textContent = maintenanceMode ? '🔧 Disable Maintenance' : '🔧 Enable Maintenance';
-    btn.className = maintenanceMode ? 'btn-primary' : 'btn-secondary';
-}
-
-// Show notification system
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
-        type === 'success' ? 'bg-green-500 text-white' :
-        type === 'error' ? 'bg-red-500 text-white' :
-        type === 'info' ? 'bg-blue-500 text-white' :
-        'bg-gray-500 text-white'
-    }`;
-    notification.textContent = message;
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.remove();
-    }, 5000);
-}
-
-// Display fallback stats in case of error
-function showFallbackStats() {
-    document.getElementById('totalSales').textContent = 'Ksh0';
-    document.getElementById('totalOrders').textContent = '0';
-    document.getElementById('totalUsers').textContent = '0';
-    document.getElementById('monthlyRevenue').textContent = 'Ksh0';
-    document.getElementById('pendingOrders').textContent = '0';
-    document.getElementById('totalProducts').textContent = '0';
-}
-
-// Display error message when loading users fails
-function showUsersError() {
-    const tableBody = document.querySelector('#usersTable tbody');
-    if (tableBody) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center py-8">
-                    <div class="text-red-400 text-4xl mb-4">⚠️</div>
-                    <p class="text-gray-600 mb-4">Failed to load users. Please try again.</p>
-                    <button class="btn-primary" onclick="loadUsers()">Retry</button>
-                </td>
-            </tr>
-        `;
-    }
-}
-
-// Refresh all data
-async function refreshData() {
-    try {
-        await Promise.all([
-            loadRealTimeAnalytics(),
-            loadUsers(),
-            loadOrders(),
-            loadProducts()
-        ]);
-        showNotification('System Data refreshed with latest information!', 'success');
-    } catch (error) {
-        console.error('Error refreshing data:', error);
-        showNotification('Failed to refresh System Data!', 'error');
-    }
-}
-
-// Logout function
-function logout() {
-    localStorage.removeItem('currentUser');
-    window.location.href = 'index.html';
-}
-
-// ============ MISSING FUNCTIONS - Order Management ============
-
-// View order details function
-function viewOrderDetails(orderId) {
-    const order = orders.find(o => o.id == orderId);
-    if (!order) {
-        showNotification('Order not found', 'error');
-        return;
-    }
-    
-    // Calculate total items
-    let totalItems = 0;
-    let itemsDisplay = 'No items';
-    
-    if (order.items && Array.isArray(order.items)) {
-        totalItems = order.items.length;
-        itemsDisplay = order.items.map(item => 
-            `${item.product?.name || item.name || 'Product'} (Qty: ${item.quantity || 0})`
-        ).join('\n');
-    }
-    
-    const orderDate = new Date(order.created_at).toLocaleDateString();
-    const deliveryDate = order.delivery_date ? new Date(order.delivery_date).toLocaleDateString() : 'Not set';
-    
-    alert(`Order Details:
+        const orderDate = new Date(order.created_at).toLocaleDateString();
+        const itemsCount = order.items?.length || 0;
+        const hasDelivery = this.data.deliveries.some(d => d.order_id == orderId);
+        
+        alert(`Order Details:
 
 Order ID: #${order.id}
-Order Number: ${order.order_number || 'N/A'}
 Customer: ${order.user?.name || order.customer_name || 'N/A'}
 Status: ${order.status}
 Total Amount: Ksh${parseFloat(order.total_amount || 0).toLocaleString()}
 Order Date: ${orderDate}
-Delivery Date: ${deliveryDate}
+Items: ${itemsCount}
 Delivery Address: ${order.delivery_address || 'Not provided'}
-Total Items: ${totalItems}
-
-Items:
-${itemsDisplay}
-
-Notes: ${order.notes || 'No notes'}`);
-}
-
-// Update order status function
-async function updateOrderStatus(orderId) {
-    const order = orders.find(o => o.id == orderId);
-    if (!order) {
-        showNotification('Order not found', 'error');
-        return;
+Has Delivery: ${hasDelivery ? 'Yes' : 'No'}`);
     }
-    
-    const currentStatus = order.status;
-    const statusOptions = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
-    
-    let optionsHtml = statusOptions.map(status => 
-        `<option value="${status}" ${status === currentStatus ? 'selected' : ''}>${status.charAt(0).toUpperCase() + status.slice(1)}</option>`
-    ).join('');
-    
-    const modalHtml = `
-        <div id="orderStatusModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white rounded-lg p-6 w-full max-w-md">
-                <h3 class="text-lg font-semibold mb-4">Update Order Status</h3>
-                <div class="mb-4">
-                    <p class="text-sm text-gray-600 mb-2">Order #${order.id} - ${order.user?.name || order.customer_name || 'Customer'}</p>
-                    <p class="text-sm text-gray-600 mb-4">Current Status: <span class="font-medium">${currentStatus}</span></p>
-                </div>
-                <form id="updateOrderStatusForm">
-                    <div class="form-group mb-4">
-                        <label for="newOrderStatus">New Status</label>
-                        <select id="newOrderStatus" required class="w-full p-2 border rounded">
-                            ${optionsHtml}
-                        </select>
-                    </div>
-                    <div class="form-group mb-4">
-                        <label for="statusNotes">Notes (optional)</label>
-                        <textarea id="statusNotes" class="w-full p-2 border rounded" rows="3" placeholder="Add any notes about this status update..."></textarea>
-                    </div>
-                    <div class="flex space-x-2">
-                        <button type="submit" class="btn-primary flex-1">Update Status</button>
-                        <button type="button" onclick="closeOrderStatusModal()" class="btn-secondary flex-1">Cancel</button>
-                    </div>
-                </form>
+
+    async updateOrderStatus(orderId) {
+        const order = this.data.orders.find(o => o.id == orderId);
+        if (!order) return;
+
+        const statusOptions = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+        const currentStatus = order.status;
+        
+        const modal = this.createModal('orderStatusModal', 'Update Order Status', `
+            <div class="mb-4">
+                <p class="text-sm text-gray-600 mb-2">Order #${order.id} - ${order.user?.name || 'Customer'}</p>
+                <p class="text-sm text-gray-600 mb-4">Current Status: <span class="font-medium">${currentStatus}</span></p>
             </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    
-    document.getElementById('updateOrderStatusForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const newStatus = document.getElementById('newOrderStatus').value;
-        const notes = document.getElementById('statusNotes').value;
-        
-        try {
-            await apiClient.updateOrderStatus(orderId, newStatus);
-            showNotification(`Order status updated to ${newStatus}`, 'success');
-            closeOrderStatusModal();
-            await loadOrders(); // Refresh orders list
-        } catch (error) {
-            console.error('Error updating order status:', error);
-            showNotification('Failed to update order status: ' + error.message, 'error');
-        }
-    });
-}
-
-// Close order status modal
-function closeOrderStatusModal() {
-    const modal = document.getElementById('orderStatusModal');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-// ============ DELIVERY ASSIGNMENT FEATURE ============
-
-// Show delivery assignment modal
-async function showDeliveryAssignmentModal() {
-    try {
-        // Load deliveries and logistics users
-        const [deliveriesResponse, usersResponse] = await Promise.all([
-            apiClient.getDeliveries(),
-            apiClient.getUsers()
-        ]);
-        
-        const deliveriesList = apiClient.extractArrayData(deliveriesResponse) || [];
-        const usersList = apiClient.extractArrayData(usersResponse) || [];
-        
-        // Filter unassigned deliveries and logistics users
-        const unassignedDeliveries = deliveriesList.filter(delivery => 
-            !delivery.assigned_to || delivery.assigned_to === null
-        );
-        const logisticsUsers = usersList.filter(user => user.role === 'logistics');
-        
-        if (unassignedDeliveries.length === 0) {
-            showNotification('No unassigned deliveries found', 'info');
-            return;
-        }
-        
-        if (logisticsUsers.length === 0) {
-            showNotification('No logistics users available', 'error');
-            return;
-        }
-        
-        const deliveryOptions = unassignedDeliveries.map(delivery => 
-            `<option value="${delivery.id}">
-                Delivery #${delivery.id} - ${delivery.customer_name || delivery.order?.customer_name || 'Customer'} 
-                (${delivery.delivery_address ? delivery.delivery_address.substring(0, 50) + '...' : 'No address'})
-            </option>`
-        ).join('');
-        
-        const logisticsOptions = logisticsUsers.map(user => 
-            `<option value="${user.id}">${user.name} (${user.email})</option>`
-        ).join('');
-        
-        const modalHtml = `
-            <div id="deliveryAssignmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div class="bg-white rounded-lg p-6 w-full max-w-md">
-                    <h3 class="text-lg font-semibold mb-4">Assign Delivery to Logistics User</h3>
-                    <form id="deliveryAssignmentForm">
-                        <div class="form-group mb-4">
-                            <label for="deliverySelect">Select Delivery</label>
-                            <select id="deliverySelect" required class="w-full p-2 border rounded">
-                                <option value="">Choose Delivery</option>
-                                ${deliveryOptions}
-                            </select>
-                        </div>
-                        <div class="form-group mb-4">
-                            <label for="logisticsUserSelect">Assign to Logistics User</label>
-                            <select id="logisticsUserSelect" required class="w-full p-2 border rounded">
-                                <option value="">Choose Logistics User</option>
-                                ${logisticsOptions}
-                            </select>
-                        </div>
-                        <div class="form-group mb-4">
-                            <label for="assignmentNotes">Assignment Notes (optional)</label>
-                            <textarea id="assignmentNotes" class="w-full p-2 border rounded" rows="3" placeholder="Add any special instructions..."></textarea>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button type="submit" class="btn-primary flex-1">Assign Delivery</button>
-                            <button type="button" onclick="closeDeliveryAssignmentModal()" class="btn-secondary flex-1">Cancel</button>
-                        </div>
-                    </form>
+            <form id="orderStatusForm">
+                <div class="form-group mb-4">
+                    <label>New Status</label>
+                    <select id="newOrderStatus" required class="w-full p-2 border rounded">
+                        ${statusOptions.map(status => 
+                            `<option value="${status}" ${status === currentStatus ? 'selected' : ''}>${status.charAt(0).toUpperCase() + status.slice(1)}</option>`
+                        ).join('')}
+                    </select>
                 </div>
+                <div class="flex space-x-2">
+                    <button type="submit" class="btn-primary flex-1">Update Status</button>
+                    <button type="button" onclick="dashboard.closeModal('orderStatusModal')" class="btn-secondary flex-1">Cancel</button>
+                </div>
+            </form>
+        `);
+
+        document.getElementById('orderStatusForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const newStatus = document.getElementById('newOrderStatus').value;
+            
+            try {
+                await apiClient.updateOrderStatus(orderId, newStatus);
+                this.showNotification(`Order status updated to ${newStatus}`, 'success');
+                this.closeModal('orderStatusModal');
+                // Only refresh orders and deliveries instead of all data
+                await this.refreshDeliveriesAndOrders();
+            } catch (error) {
+                console.error('Error updating order status:', error);
+                this.showNotification('Failed to update order status: ' + error.message, 'error');
+            }
+        };
+    }
+
+    // Maintenance mode functionality
+    async checkMaintenanceStatus() {
+        try {
+            const status = await apiClient.getMaintenanceStatus();
+            this.maintenanceMode = !!status.maintenance;
+            this.updateMaintenanceButton();
+        } catch (error) {
+            console.error('Could not fetch maintenance status:', error);
+        }
+    }
+
+    async toggleMaintenanceMode() {
+        try {
+            const action = this.maintenanceMode ? 'disable' : 'enable';
+            if (action === 'enable') {
+                await apiClient.enableMaintenanceMode();
+                this.showNotification('Maintenance mode enabled.', 'info');
+            } else {
+                await apiClient.disableMaintenanceMode();
+                this.showNotification('Maintenance mode disabled.', 'success');
+            }
+
+            this.maintenanceMode = !this.maintenanceMode;
+            this.updateMaintenanceButton();
+        } catch (error) {
+            console.error('Error toggling maintenance mode:', error);
+            this.showNotification(`Error: ${error.message}`, 'error');
+        }
+    }
+
+    updateMaintenanceButton() {
+        const btn = document.getElementById('maintenanceToggle');
+        if (!btn) return;
+        btn.textContent = this.maintenanceMode ? '🔧 Disable Maintenance' : '🔧 Enable Maintenance';
+        btn.className = this.maintenanceMode ? 'btn-primary' : 'btn-secondary';
+    }
+
+    // Utility Methods
+    createModal(id, title, content) {
+        const modal = document.createElement('div');
+        modal.id = id;
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto">
+                <h3 class="text-lg font-semibold mb-4">${title}</h3>
+                ${content}
             </div>
         `;
-        
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
-        document.getElementById('deliveryAssignmentForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            await handleDeliveryAssignment();
-        });
-        
-    } catch (error) {
-        console.error('Error loading delivery assignment data:', error);
-        showNotification('Failed to load assignment data', 'error');
+        document.body.appendChild(modal);
+        return modal;
     }
-}
 
-// Handle delivery assignment
-async function handleDeliveryAssignment() {
-    const deliveryId = document.getElementById('deliverySelect').value;
-    const logisticsUserId = document.getElementById('logisticsUserSelect').value;
-    const notes = document.getElementById('assignmentNotes').value;
-    
-    if (!deliveryId || !logisticsUserId) {
-        showNotification('Please select both delivery and logistics user', 'warning');
-        return;
+    closeModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.remove();
     }
-    
-    try {
-        const assignmentData = {
-            assigned_to: logisticsUserId,
-            status: 'assigned',
-            notes: notes
+
+    updateElement(id, value) {
+        const element = document.getElementById(id);
+        if (element) element.textContent = value;
+    }
+
+    getRoleOptions(selectedRole = '') {
+        const roles = ['farmer', 'consumer', 'retailer', 'logistics', 'admin'];
+        return roles.map(role => 
+            `<option value="${role}" ${role === selectedRole ? 'selected' : ''}>${role.charAt(0).toUpperCase() + role.slice(1)}</option>`
+        ).join('');
+    }
+
+    getStatusOptions(selectedStatus = 'active') {
+        const statuses = ['active', 'inactive', 'suspended'];
+        return statuses.map(status => 
+            `<option value="${status}" ${status === selectedStatus ? 'selected' : ''}>${status.charAt(0).toUpperCase() + status.slice(1)}</option>`
+        ).join('');
+    }
+
+    showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        const colors = {
+            success: 'bg-green-500',
+            error: 'bg-red-500',
+            info: 'bg-blue-500',
+            warning: 'bg-yellow-500'
         };
         
-        await apiClient.assignDelivery(deliveryId, assignmentData);
-        showNotification('Delivery assigned successfully!', 'success');
-        closeDeliveryAssignmentModal();
+        notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 text-white ${colors[type] || colors.info}`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
         
-        // Refresh relevant data
-        await loadOrders();
-        
-    } catch (error) {
-        console.error('Error assigning delivery:', error);
-        showNotification('Failed to assign delivery: ' + error.message, 'error');
+        setTimeout(() => notification.remove(), 5000);
     }
-}
 
-// Close delivery assignment modal
-function closeDeliveryAssignmentModal() {
-    const modal = document.getElementById('deliveryAssignmentModal');
-    if (modal) {
-        modal.remove();
+    setupEventListeners() {
+        // Refresh button
+        const refreshBtn = document.getElementById('refreshData');
+        if (refreshBtn) {
+            refreshBtn.onclick = () => this.refreshData();
+        }
+
+        // Logout button
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.onclick = () => this.logout();
+        }
+
+        // Maintenance toggle button
+        const maintenanceBtn = document.getElementById('maintenanceToggle');
+        if (maintenanceBtn) {
+            maintenanceBtn.onclick = () => this.toggleMaintenanceMode();
+        }
     }
-}
 
-// Load deliveries for admin view
-async function loadDeliveries() {
-    try {
-        const response = await apiClient.getDeliveries();
-        const deliveriesList = apiClient.extractArrayData(response) || [];
-        
-        console.log('Deliveries loaded for admin:', deliveriesList);
-        displayDeliveriesTable(deliveriesList);
-        
-    } catch (error) {
-        console.error('Error loading deliveries:', error);
-        showNotification('Failed to load deliveries', 'error');
+    logout() {
+        localStorage.removeItem('currentUser');
+        window.location.href = 'index.html';
     }
-}
 
-// Display deliveries in admin table
-function displayDeliveriesTable(deliveriesList) {
-    const tableBody = document.querySelector('#deliveriesTable tbody');
-    if (!tableBody) return;
-    
-    if (deliveriesList.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="8" class="text-center py-8">
-                    <div class="text-gray-400 text-4xl mb-4">📦</div>
-                    <p class="text-gray-600 mb-4">No deliveries found.</p>
-                    <button class="btn-primary" onclick="showDeliveryAssignmentModal()">Assign Deliveries</button>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    tableBody.innerHTML = deliveriesList.map(delivery => {
-        const assignedUser = delivery.assigned_to ? 
-            users.find(u => u.id == delivery.assigned_to) : null;
-        const assignedName = assignedUser ? assignedUser.name : 'Unassigned';
-        
-        return `
-            <tr>
-                <td class="font-mono">#${delivery.id}</td>
-                <td>
-                    ${delivery.order ? `
-                        <div class="text-sm">
-                            <div class="font-medium">Order #${delivery.order.id}</div>
-                            <div class="text-gray-600">${delivery.order.order_number || ''}</div>
-                        </div>
-                    ` : 'No order'}
-                </td>
-                <td>${delivery.customer_name || delivery.order?.customer_name || 'Unknown'}</td>
-                <td class="text-sm max-w-xs truncate">${delivery.delivery_address || 'Not specified'}</td>
-                <td>
-                    <span class="status-${delivery.status || 'pending'}">${(delivery.status || 'pending').replace('_', ' ')}</span>
-                </td>
-                <td>
-                    <span class="priority-${delivery.priority || 'medium'}">${delivery.priority || 'medium'}</span>
-                </td>
-                <td>
-                    <span class="${delivery.assigned_to ? 'text-green-600 font-medium' : 'text-red-600'}">
-                        ${assignedName}
-                    </span>
-                </td>
-                <td>
-                    <div class="flex gap-2">
-                        ${!delivery.assigned_to ? `
-                            <button class="btn-primary text-sm" onclick="assignSingleDelivery('${delivery.id}')">
-                                Assign
-                            </button>
-                        ` : `
-                            <button class="btn-secondary text-sm" onclick="reassignDelivery('${delivery.id}')">
-                                Reassign
-                            </button>
-                        `}
-                        <button class="btn-secondary text-sm" onclick="viewDeliveryDetails('${delivery.id}')">
-                            View
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    }).join('');
-}
-
-// Assign single delivery
-async function assignSingleDelivery(deliveryId) {
-    try {
-        const usersResponse = await apiClient.getUsers();
-        const usersList = apiClient.extractArrayData(usersResponse) || [];
-        const logisticsUsers = usersList.filter(user => user.role === 'logistics');
-        
-        if (logisticsUsers.length === 0) {
-            showNotification('No logistics users available', 'error');
+    async refreshData() {
+        // Prevent multiple simultaneous refresh operations
+        if (this.isLoadingData) {
+            this.showNotification('Refresh already in progress...', 'warning');
             return;
         }
         
-        const logisticsOptions = logisticsUsers.map(user => 
-            `<option value="${user.id}">${user.name} (${user.email})</option>`
-        ).join('');
-        
-        const modalHtml = `
-            <div id="singleDeliveryAssignmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div class="bg-white rounded-lg p-6 w-full max-w-md">
-                    <h3 class="text-lg font-semibold mb-4">Assign Delivery #${deliveryId}</h3>
-                    <form id="singleDeliveryAssignmentForm">
-                        <div class="form-group mb-4">
-                            <label for="singleLogisticsUserSelect">Assign to Logistics User</label>
-                            <select id="singleLogisticsUserSelect" required class="w-full p-2 border rounded">
-                                <option value="">Choose Logistics User</option>
-                                ${logisticsOptions}
-                            </select>
-                        </div>
-                        <div class="form-group mb-4">
-                            <label for="singleAssignmentNotes">Assignment Notes (optional)</label>
-                            <textarea id="singleAssignmentNotes" class="w-full p-2 border rounded" rows="3" placeholder="Add any special instructions..."></textarea>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button type="submit" class="btn-primary flex-1">Assign</button>
-                            <button type="button" onclick="closeSingleDeliveryAssignmentModal()" class="btn-secondary flex-1">Cancel</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        `;
-        
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
-        document.getElementById('singleDeliveryAssignmentForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const logisticsUserId = document.getElementById('singleLogisticsUserSelect').value;
-            const notes = document.getElementById('singleAssignmentNotes').value;
-            
-            if (!logisticsUserId) {
-                showNotification('Please select a logistics user', 'warning');
-                return;
-            }
-            
-            try {
-                const assignmentData = {
-                    assigned_to: logisticsUserId,
-                    status: 'assigned',
-                    notes: notes
-                };
-                
-                await apiClient.assignDelivery(deliveryId, assignmentData);
-                showNotification('Delivery assigned successfully!', 'success');
-                closeSingleDeliveryAssignmentModal();
-                await loadDeliveries();
-                
-            } catch (error) {
-                console.error('Error assigning delivery:', error);
-                showNotification('Failed to assign delivery: ' + error.message, 'error');
-            }
-        });
-        
-    } catch (error) {
-        console.error('Error loading logistics users:', error);
-        showNotification('Failed to load logistics users', 'error');
-    }
-}
-
-// Close single delivery assignment modal
-function closeSingleDeliveryAssignmentModal() {
-    const modal = document.getElementById('singleDeliveryAssignmentModal');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-// Reassign delivery (alias for assign single delivery)
-function reassignDelivery(deliveryId) {
-    assignSingleDelivery(deliveryId);
-}
-
-// View delivery details
-function viewDeliveryDetails(deliveryId) {
-    // This would typically show detailed delivery information
-    // For now, show a basic alert (can be enhanced with a proper modal)
-    showNotification(`Viewing delivery #${deliveryId} details...`, 'info');
-}
-
-// Show assign order modal
-async function showAssignOrderModal(orderId) {
-    const order = orders.find(o => o.id == orderId);
-    if (!order) {
-        showNotification('Order not found', 'error');
-        return;
-    }
-    
-    try {
-        const usersResponse = await apiClient.getUsers();
-        const usersList = apiClient.extractArrayData(usersResponse) || [];
-        const logisticsUsers = usersList.filter(user => user.role === 'logistics');
-        
-        if (logisticsUsers.length === 0) {
-            showNotification('No logistics users available', 'error');
-            return;
+        try {
+            await this.loadAllData();
+            this.showNotification('System Data refreshed with latest information!', 'success');
+        } catch (error) {
+            console.error('Error refreshing data:', error);
+            this.showNotification('Failed to refresh System Data!', 'error');
         }
-        
-        const logisticsOptions = logisticsUsers.map(user => 
-            `<option value="${user.id}">${user.name} (${user.email})</option>`
-        ).join('');
-        
-        const modalHtml = `
-            <div id="assignOrderModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div class="bg-white rounded-lg p-6 w-full max-w-md">
-                    <h3 class="text-lg font-semibold mb-4">Assign Order to Logistics User</h3>
-                    <div class="mb-4">
-                        <p class="text-sm text-gray-600 mb-2">Order #${order.id}</p>
-                        <p class="text-sm text-gray-600 mb-2">Customer: ${order.user?.name || order.customer_name || 'N/A'}</p>
-                        <p class="text-sm text-gray-600 mb-4">Amount: Ksh${parseFloat(order.total_amount || 0).toLocaleString()}</p>
-                    </div>
-                    <form id="assignOrderForm">
-                        <div class="form-group mb-4">
-                            <label for="assignLogisticsUser">Assign to Logistics User</label>
-                            <select id="assignLogisticsUser" required class="w-full p-2 border rounded">
-                                <option value="">Choose Logistics User</option>
-                                ${logisticsOptions}
-                            </select>
-                        </div>
-                        <div class="form-group mb-4">
-                            <label for="deliveryAddress">Delivery Address</label>
-                            <textarea id="deliveryAddress" class="w-full p-2 border rounded" rows="3" required placeholder="Enter delivery address...">${order.delivery_address || ''}</textarea>
-                        </div>
-                        <div class="form-group mb-4">
-                            <label for="assignmentNotes">Notes (optional)</label>
-                            <textarea id="assignmentNotes" class="w-full p-2 border rounded" rows="3" placeholder="Add any special instructions..."></textarea>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button type="submit" class="btn-primary flex-1">Assign Order</button>
-                            <button type="button" onclick="closeAssignOrderModal()" class="btn-secondary flex-1">Cancel</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        `;
-        
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
-        document.getElementById('assignOrderForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const logisticsUserId = document.getElementById('assignLogisticsUser').value;
-            const deliveryAddress = document.getElementById('deliveryAddress').value;
-            const notes = document.getElementById('assignmentNotes').value;
-            
-            if (!logisticsUserId || !deliveryAddress) {
-                showNotification('Please select logistics user and provide delivery address', 'warning');
-                return;
-            }
-            
-            try {
-                // First create a delivery record, then assign it
-                const deliveryData = {
-                    order_id: orderId,
-                    assigned_to: logisticsUserId,
-                    delivery_address: deliveryAddress,
-                    status: 'assigned',
-                    priority: 'medium',
-                    notes: notes
-                };
-                
-                // Create delivery first
-                const deliveryResponse = await apiClient.createDelivery(deliveryData);
-                
-                showNotification('Order assigned to logistics user successfully!', 'success');
-                closeAssignOrderModal();
-                await loadOrders(); // Refresh orders list
-                
-            } catch (error) {
-                console.error('Error assigning order:', error);
-                showNotification('Failed to assign order: ' + error.message, 'error');
-            }
-        });
-        
-    } catch (error) {
-        console.error('Error loading logistics users:', error);
-        showNotification('Failed to load logistics users', 'error');
     }
 }
 
-// Close assign order modal
-function closeAssignOrderModal() {
-    const modal = document.getElementById('assignOrderModal');
-    if (modal) {
-        modal.remove();
-    }
-}
+// Initialize dashboard when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    window.dashboard = new AdminDashboard();
+});
 
-// Cancel order function - for admin use updateOrderStatus instead
-async function cancelOrder(orderId) {
-    if (!confirm('Are you sure you want to cancel this order?')) return;
-    
-    try {
-        // Since admin can't use cancel endpoint, update status to cancelled
-        await apiClient.updateOrderStatus(orderId, 'cancelled');
-        showNotification('Order cancelled successfully', 'success');
-        await loadOrders(); // Refresh orders list
-    } catch (error) {
-        console.error('Error cancelling order:', error);
-        showNotification('Failed to cancel order: ' + error.message, 'error');
-    }
-}
+// Make methods globally available for onclick handlers
+window.dashboard = null;
 
-// Make functions globally available
-window.showCreateUserModal = showCreateUserModal;
-window.editUser = editUser;
-window.closeUserModal = closeUserModal;
-window.viewUserDetails = viewUserDetails;
-window.toggleUserStatus = toggleUserStatus;
-window.deleteUser = deleteUser;
-window.toggleMaintenanceMode = toggleMaintenanceMode;
-window.viewOrderDetails = viewOrderDetails;
-window.updateOrderStatus = updateOrderStatus;
-window.closeOrderStatusModal = closeOrderStatusModal;
-window.cancelOrder = cancelOrder;
-window.showAssignOrderModal = showAssignOrderModal;
-window.closeAssignOrderModal = closeAssignOrderModal;
-window.showDeliveryAssignmentModal = showDeliveryAssignmentModal;
-window.closeDeliveryAssignmentModal = closeDeliveryAssignmentModal;
-window.loadDeliveries = loadDeliveries;
-window.assignSingleDelivery = assignSingleDelivery;
-window.closeSingleDeliveryAssignmentModal = closeSingleDeliveryAssignmentModal;
-window.reassignDelivery = reassignDelivery;
-window.viewDeliveryDetails = viewDeliveryDetails;
-window.refreshData = refreshData;
-window.loadUsers = loadUsers;
-window.logout = logout;
+// Global function wrappers for onclick handlers that need to be accessible from HTML
+window.toggleMaintenanceMode = function() {
+    if (window.dashboard) {
+        window.dashboard.toggleMaintenanceMode();
+    }
+};
+
+window.refreshData = function() {
+    if (window.dashboard) {
+        window.dashboard.refreshData();
+    }
+};
+
+window.logout = function() {
+    if (window.dashboard) {
+        window.dashboard.logout();
+    }
+};

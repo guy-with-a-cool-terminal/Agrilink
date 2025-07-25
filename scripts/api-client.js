@@ -13,27 +13,38 @@ class ApiClient {
             PRODUCT: (id) => `/products/${id}`,
             PRODUCT_INVENTORY: (id) => `/products/${id}/inventory`,
             
-            // Orders
+            // Orders - FIXED ROUTES
             ORDERS: '/orders',
             ORDER: (id) => `/orders/${id}`,
+            ORDER_STATUS: (id) => `/orders/${id}`, // Changed from /orders/{id}/status
             ORDER_CANCEL: (id) => `/orders/${id}/cancel`,
             
-            // Deliveries
+            // Deliveries - FIXED ROUTES
             DELIVERIES: '/deliveries',
             DELIVERY: (id) => `/deliveries/${id}`,
+            DELIVERY_STATUS: (id) => `/deliveries/${id}`, // Changed from /deliveries/{id}/status
             DELIVERY_ASSIGN: (id) => `/deliveries/${id}/assign`,
-            DELIVERY_STATUS: (id) => `/deliveries/${id}/status`,
-            DELIVERY_TRACK: (tracking) => `/deliveries/track/${tracking}`,
+            DELIVERY_TRACK: '/deliveries/track',
+            USER_DELIVERIES: '/user/deliveries',
             
             // Admin
             ADMIN_USERS: '/admin/users',
             ADMIN_USER: (id) => `/admin/users/${id}`,
-            ADMIN_USER_STATUS: (id) => `/admin/users/${id}/status`,
+            ADMIN_USER_STATUS: (id) => `/admin/users/${id}`, // Changed from /admin/users/{id}/status
             ADMIN_ANALYTICS: '/admin/analytics',
+            
+            // Maintenance
+            MAINTENANCE_STATUS: '/admin/maintenance/status',
+            MAINTENANCE_ENABLE: '/admin/maintenance/enable',
+            MAINTENANCE_DISABLE: '/admin/maintenance/disable',
+            
+            // Payments
+            PAYMENTS_PROCESS: '/payments/process',
             
             // Promotions
             PROMOTIONS: '/promotions',
-            PROMOTION: (id) => `/promotions/${id}`
+            PROMOTION: (id) => `/promotions/${id}`,
+            PROMOTIONS_CALCULATE_DISCOUNT: '/promotions/calculate-discount'
         };
     }
 
@@ -62,88 +73,124 @@ class ApiClient {
         const url = `${this.baseURL}${endpoint}`;
         const config = {
             ...options,
-            headers: this.getHeaders(options.auth !== false)
+            headers: this.getHeaders(options.auth !== false),
         };
 
         try {
-            console.log(`API Request: ${config.method || 'GET'} ${url}`);
-            const response = await fetch(url, config);
-            
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            console.log(`\n--- API REQUEST START ---`);
+            console.log(`Method: ${config.method || 'GET'}`);
+            console.log(`URL: ${url}`);
+            console.log(`Headers:`, config.headers);
+            if (config.body) {
+                console.log('Request Body:', config.body);
             }
 
-            const data = await response.json();
-            console.log(`API Response:`, data);
+            const response = await fetch(url, config);
+            console.log(`Response Status: ${response.status}`);
+            console.log(`Response Headers:`, [...response.headers.entries()]);
+
+            // Try to parse response as JSON if possible
+            let data = null;
+            const contentType = response.headers.get("content-type");
+            const isJson = contentType && contentType.includes("application/json");
+
+            if (isJson) {
+                try {
+                    data = await response.json();
+                    console.log("Parsed JSON Response:", data);
+                } catch (parseErr) {
+                    console.warn("Failed to parse JSON:", parseErr);
+                }
+            } else {
+                console.warn("Response is not JSON. Content-Type:", contentType);
+            }
+
+            // Handle non-OK responses
+            if (!response.ok) {
+                const errorMessage =
+                    (data && data.message) ||
+                    response.statusText ||
+                    `HTTP error! status: ${response.status}`;
+
+                if (response.status === 422 && data?.errors) {
+                    console.error("Validation Errors:", data.errors);
+                    const errorMessages = Object.values(data.errors).flat();
+                    throw new Error(`Validation failed: ${errorMessages.join(', ')}`);
+                }
+
+                throw new Error(errorMessage);
+            }
+
+            console.log(`--- API REQUEST SUCCESS ---\n`);
             return data;
         } catch (error) {
-            console.error('API Request Error:', error);
+            console.error("API Request Error:", error);
+            console.error("--- API REQUEST FAILED ---\n");
             throw error;
         }
     }
 
-   // Helper method to extract array data from nested responses, including pagination
+    // Helper method to extract array data from nested responses, including pagination
     extractArrayData(response, key = 'data') {
-    // 1. Direct array response
-    if (Array.isArray(response)) {
-        return response;
+        // 1. Direct array response
+        if (Array.isArray(response)) {
+            return response;
+        }
+
+        // 2. Laravel pagination: { data: [...] }
+        if (response?.data && Array.isArray(response.data)) {
+            return response.data;
+        }
+
+        // 3. Nested Laravel-style: { data: { items: [...] } }
+        if (response?.data?.items && Array.isArray(response.data.items)) {
+            return response.data.items;
+        }
+
+        // 4. Products: { products: { data: [...] } }
+        if (response?.products?.data && Array.isArray(response.products.data)) {
+            return response.products.data;
+        }
+
+        // 5. Orders: { orders: { data: [...] } } or { orders: [...] }
+        if (response?.orders?.data && Array.isArray(response.orders.data)) {
+            return response.orders.data;
+        }
+        if (Array.isArray(response?.orders)) {
+            return response.orders;
+        }
+
+        // 6. Users: { users: { data: [...] } } or { users: [...] }
+        if (response?.users?.data && Array.isArray(response.users.data)) {
+            return response.users.data;
+        }
+        if (Array.isArray(response?.users)) {
+            return response.users;
+        }
+
+        // 7. Deliveries: { deliveries: { data: [...] } } or { deliveries: [...] }
+        if (response?.deliveries?.data && Array.isArray(response.deliveries.data)) {
+            return response.deliveries.data;
+        }
+        if (Array.isArray(response?.deliveries)) {
+            return response.deliveries;
+        }
+
+        // 8. Direct key-based array
+        if (response && Array.isArray(response[key])) {
+            return response[key];
+        }
+
+        // 9. Fallback: top-level key holding paginated data
+        if (response?.[key]?.data && Array.isArray(response[key].data)) {
+            return response[key].data;
+        }
+
+        console.warn('Expected array data but received:', response);
+        return [];
     }
 
-    // 2. Laravel pagination: { data: [...] }
-    if (response?.data && Array.isArray(response.data)) {
-        return response.data;
-    }
-
-    // 3. Nested Laravel-style: { data: { items: [...] } }
-    if (response?.data?.items && Array.isArray(response.data.items)) {
-        return response.data.items;
-    }
-
-    // 4. Products: { products: { data: [...] } }
-    if (response?.products?.data && Array.isArray(response.products.data)) {
-        return response.products.data;
-    }
-
-    // 5. Orders: { orders: { data: [...] } } or { orders: [...] }
-    if (response?.orders?.data && Array.isArray(response.orders.data)) {
-        return response.orders.data;
-    }
-    if (Array.isArray(response?.orders)) {
-        return response.orders;
-    }
-
-    // 6. Users: { users: { data: [...] } } or { users: [...] }
-    if (response?.users?.data && Array.isArray(response.users.data)) {
-        return response.users.data;
-    }
-    if (Array.isArray(response?.users)) {
-        return response.users;
-    }
-
-    // 7. Deliveries: { deliveries: { data: [...] } } or { deliveries: [...] }
-    if (response?.deliveries?.data && Array.isArray(response.deliveries.data)) {
-        return response.deliveries.data;
-    }
-    if (Array.isArray(response?.deliveries)) {
-        return response.deliveries;
-    }
-
-    // 8. Direct key-based array
-    if (response && Array.isArray(response[key])) {
-        return response[key];
-    }
-
-    // 9. Fallback: top-level key holding paginated data
-    if (response?.[key]?.data && Array.isArray(response[key].data)) {
-        return response[key].data;
-    }
-
-    console.warn('Expected array data but received:', response);
-    return [];
-}
-
- // Authentication
+    // Authentication
     async login(credentials) {
         return this.request(this.endpoints.LOGIN, {
             method: 'POST',
@@ -178,8 +225,9 @@ class ApiClient {
         });
     }
 
+    // Update user status using the exact Laravel route
     async updateUserStatus(userId, status) {
-        return this.request(this.endpoints.ADMIN_USER_STATUS(userId), {
+        return this.request(`/admin/users/${userId}/status`, {
             method: 'PUT',
             body: JSON.stringify({ status })
         });
@@ -251,8 +299,10 @@ class ApiClient {
         });
     }
 
+    // Update order status using the exact Laravel route
     async updateOrderStatus(id, status) {
-        return this.request(this.endpoints.ORDER(id), {
+        console.log(`Updating order ${id} status to: ${status}`);
+        return this.request(`/orders/${id}/status`, {
             method: 'PUT',
             body: JSON.stringify({ status })
         });
@@ -264,41 +314,158 @@ class ApiClient {
         });
     }
 
-    // Deliveries
+    // Deliveries - FULLY IMPLEMENTED SECTION
     async getDeliveries() {
-        return this.request(this.endpoints.DELIVERIES);
+        try {
+            console.log('Fetching deliveries...');
+            const response = await this.request(this.endpoints.DELIVERIES);
+            console.log('Deliveries fetched successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching deliveries:', error);
+            throw error;
+        }
     }
 
-    async updateDeliveryStatus(id, statusData) {
-        return this.request(this.endpoints.DELIVERY_STATUS(id), {
-            method: 'POST',
-            body: JSON.stringify(statusData)
-        });
+    async getDelivery(deliveryId) {
+        try {
+            console.log('Fetching delivery:', deliveryId);
+            const response = await this.request(this.endpoints.DELIVERY(deliveryId));
+            console.log('Delivery fetched successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching delivery:', error);
+            throw error;
+        }
     }
 
-    async updateDelivery(id, deliveryData) {
-        return this.request(this.endpoints.DELIVERY(id), {
-            method: 'PUT',
-            body: JSON.stringify(deliveryData)
-        });
-    }
-
+    // FIXED: Create delivery method with proper error handling
     async createDelivery(deliveryData) {
-        return this.request(this.endpoints.DELIVERIES, {
-            method: 'POST',
-            body: JSON.stringify(deliveryData)
-        });
+        try {
+            console.log('Creating delivery with data:', deliveryData);
+            
+            // Validate required fields on the frontend
+            const requiredFields = ['order_id', 'scheduled_date', 'delivery_address'];
+            const missingFields = requiredFields.filter(field => !deliveryData[field]);
+            
+            if (missingFields.length > 0) {
+                throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+            }
+
+            // Ensure scheduled_date is in the future and properly formatted
+            const scheduledDate = new Date(deliveryData.scheduled_date);
+            const now = new Date();
+            
+            if (scheduledDate <= now) {
+                throw new Error('Scheduled date must be in the future');
+            }
+
+            // Format the data properly for Laravel
+            const formattedData = {
+                order_id: parseInt(deliveryData.order_id),
+                assigned_to: deliveryData.assigned_to ? parseInt(deliveryData.assigned_to) : null,
+                scheduled_date: scheduledDate.toISOString(),
+                delivery_address: deliveryData.delivery_address.trim(),
+                priority: deliveryData.priority || 'medium',
+                delivery_notes: deliveryData.delivery_notes?.trim() || null
+            };
+
+            console.log('Formatted delivery data:', formattedData);
+
+            const response = await this.request(this.endpoints.DELIVERIES, {
+                method: 'POST',
+                body: JSON.stringify(formattedData)
+            });
+            console.log('Delivery created successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error creating delivery:', error);
+            throw error;
+        }
+    }
+
+    async updateDelivery(deliveryId, deliveryData) {
+        try {
+            console.log('Updating delivery:', deliveryId, 'with data:', deliveryData);
+            const response = await this.request(this.endpoints.DELIVERY(deliveryId), {
+                method: 'PUT',
+                body: JSON.stringify(deliveryData)
+            });
+            console.log('Delivery updated successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error updating delivery:', error);
+            throw error;
+        }
+    }
+
+    // Update delivery status using the exact Laravel route
+    async updateDeliveryStatus(id, statusData) {
+        try {
+            console.log('Updating delivery status:', id, 'with data:', statusData);
+            const response = await this.request(`/deliveries/${id}/status`, {
+                method: 'PUT',
+                body: JSON.stringify(statusData)
+            });
+            console.log('Delivery status updated successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error updating delivery status:', error);
+            throw error;
+        }
     }
 
     async trackDelivery(trackingNumber) {
-        return this.request(this.endpoints.DELIVERY_TRACK);
+        try {
+            console.log('Tracking delivery:', trackingNumber);
+            const response = await this.request(`${this.endpoints.DELIVERY_TRACK}/${trackingNumber}`);
+            console.log('Delivery tracking info:', response);
+            return response;
+        } catch (error) {
+            console.error('Error tracking delivery:', error);
+            throw error;
+        }
     }
 
     async assignDelivery(deliveryId, assignmentData) {
-        return this.request(this.endpoints.DELIVERY_ASSIGN(deliveryId), {
-            method: 'POST',
-            body: JSON.stringify(assignmentData)
-        });
+        try {
+            console.log('Assigning delivery:', deliveryId, 'with data:', assignmentData);
+            const response = await this.request(this.endpoints.DELIVERY_ASSIGN(deliveryId), {
+                method: 'POST',
+                body: JSON.stringify(assignmentData)
+            });
+            console.log('Delivery assigned successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error assigning delivery:', error);
+            throw error;
+        }
+    }
+
+    // Get deliveries assigned to current user (for logistics dashboard)
+    async getUserDeliveries() {
+        try {
+            console.log('Fetching user deliveries...');
+            const response = await this.request(this.endpoints.USER_DELIVERIES);
+            console.log('User deliveries fetched successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching user deliveries:', error);
+            throw error;
+        }
+    }
+
+    // Get deliveries assigned to specific user
+    async getUserDeliveriesByUserId(userId) {
+        try {
+            console.log('Fetching deliveries for user:', userId);
+            const response = await this.request(`${this.endpoints.DELIVERIES}?assigned_to=${userId}`);
+            console.log('User deliveries fetched successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching user deliveries:', error);
+            throw error;
+        }
     }
 
     // Promotions
@@ -347,9 +514,11 @@ class ApiClient {
         return this.request(this.endpoints.ADMIN_USERS);
     }
 
+    // FIXED: Toggle user status using the main user endpoint with PATCH
     async toggleUserStatus(userId) {
-        return this.request(this.endpoints.ADMIN_USER_STATUS(userId), {
-            method: 'PUT'
+        return this.request(this.endpoints.ADMIN_USER(userId), {
+            method: 'PATCH',
+            body: JSON.stringify({ action: 'toggle_status' })
         });
     }
 
@@ -392,8 +561,14 @@ class ApiClient {
             body: JSON.stringify(inventoryData)
         });
     }
+
+    // Remove token helper method
+    removeToken() {
+        localStorage.removeItem('currentUser');
+    }
 }
 
-if (typeof window.apiClient === 'undefined') {
+// Initialize the API client
+if (typeof window !== 'undefined' && typeof window.apiClient === 'undefined') {
     window.apiClient = new ApiClient();
 }

@@ -1,7 +1,6 @@
 
 # AgriLink - Smart Agricultural Platform
 
-
 A comprehensive web-based platform connecting farmers, consumers, retailers, logistics managers, and administrators in the agricultural supply chain.
 
 ## Project Overview
