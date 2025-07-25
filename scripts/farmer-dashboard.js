@@ -1,4 +1,3 @@
-
 // Farmer Dashboard Logic
 console.log('Farmer dashboard script loaded');
 
@@ -152,7 +151,7 @@ function displayProducts(productsToShow) {
     });
 }
 
-// Load farmer-specific statistics (no admin analytics)
+// Enhanced loadFarmerStats to include recent orders
 async function loadFarmerStats() {
     try {
         console.log('Loading farmer stats...');
@@ -169,6 +168,9 @@ async function loadFarmerStats() {
                 return product && product.farmer_id == currentUser.id;
             });
         });
+        
+        // Display recent orders
+        displayFarmerOrders(farmerOrders.slice(0, 10)); // Show last 10 orders
         
         // Calculate farmer-specific metrics
         const totalProducts = products.length;
@@ -213,6 +215,60 @@ async function loadFarmerStats() {
         updateStatCard('monthlyRevenue', `Ksh${(totalRevenue * 0.05).toFixed(2)}`); // Estimate 5% monthly
         
         showNotification('Using estimated statistics - connect to get real sales data', 'info');
+    }
+}
+
+function displayFarmerOrders(farmerOrders) {
+    const ordersContainer = document.getElementById('ordersContainer');
+    const ordersTableBody = document.querySelector('#ordersTable tbody');
+    
+    if (!ordersTableBody) return;
+    
+    if (!Array.isArray(farmerOrders) || farmerOrders.length === 0) {
+        ordersTableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-8">
+                    <p class="text-gray-500">No recent orders for your products</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    ordersTableBody.innerHTML = farmerOrders.map(order => {
+        const farmerItems = order.items?.filter(item => {
+            const product = products.find(p => p.id == item.product_id);
+            return product && product.farmer_id == currentUser.id;
+        }) || [];
+        
+        const totalAmount = farmerItems.reduce((sum, item) => 
+            sum + (parseFloat(item.unit_price || 0) * parseInt(item.quantity || 0)), 0
+        );
+        
+        return `
+            <tr>
+                <td class="font-mono">#${order.id}</td>
+                <td>
+                    ${farmerItems.map(item => `
+                        <div class="text-sm">
+                            <div class="font-medium">${item.name}</div>
+                            <div class="text-gray-600">Qty: ${item.quantity}</div>
+                        </div>
+                    `).join('')}
+                </td>
+                <td>${farmerItems.reduce((sum, item) => sum + parseInt(item.quantity || 0), 0)}</td>
+                <td>${order.customer_name || order.user?.name || 'Unknown'}</td>
+                <td>
+                    <span class="status-${order.status || 'pending'}">${(order.status || 'pending').replace('_', ' ')}</span>
+                </td>
+                <td class="font-medium">Ksh${totalAmount.toFixed(2)}</td>
+                <td class="text-sm text-gray-600">${new Date(order.created_at).toLocaleDateString()}</td>
+            </tr>
+        `;
+    }).join('');
+    
+    if (ordersContainer) {
+        ordersContainer.style.display = 'block';
     }
 }
 

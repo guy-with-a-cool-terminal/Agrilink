@@ -82,7 +82,7 @@ async function loadConsumerData() {
   try {
     if (loadingState) loadingState.style.display = 'block';
     if (productGrid) productGrid.style.display = 'none';
-    await Promise.all([loadProducts(), loadConsumerStats(), loadOrders()]);
+    await Promise.all([loadProducts(), loadConsumerStats(), loadOrderHistory()]);
     if (loadingState) loadingState.style.display = 'none';
     if (productGrid) productGrid.style.display = 'grid';
   } catch {
@@ -592,6 +592,86 @@ function displayProducts(productsToShow) {
     `).join('');
 }
 
+// Load order history for consumer
+async function loadOrderHistory() {
+    try {
+        const response = await apiClient.getOrders();
+        const ordersList = apiClient.extractArrayData(response) || [];
+        
+        // Filter orders for current user
+        const userOrders = ordersList.filter(order => 
+            order.user_id == currentUser.id || 
+            order.customer_email === currentUser.email
+        );
+        
+        displayOrderHistory(userOrders);
+        
+    } catch (error) {
+        console.error('Error loading order history:', error);
+        displayOrderHistory([]);
+    }
+}
+
+function displayOrderHistory(userOrders) {
+    const orderHistoryTable = document.getElementById('orderHistoryTable');
+    if (!orderHistoryTable) return;
+    
+    if (!Array.isArray(userOrders) || userOrders.length === 0) {
+        orderHistoryTable.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-8">
+                    <p class="text-gray-500">No orders found</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    orderHistoryTable.innerHTML = userOrders.map(order => `
+        <tr>
+            <td class="font-mono">#${order.id}</td>
+            <td>
+                ${order.items ? order.items.map(item => `
+                    <div class="text-sm">
+                        <div class="font-medium">${item.name}</div>
+                        <div class="text-gray-600">Qty: ${item.quantity} @ Ksh${parseFloat(item.unit_price || 0).toFixed(2)}</div>
+                    </div>
+                `).join('') : 'No items'}
+            </td>
+            <td class="font-medium">Ksh${parseFloat(order.total_amount || 0).toFixed(2)}</td>
+            <td>
+                <span class="status-${order.status || 'pending'}">${(order.status || 'pending').replace('_', ' ')}</span>
+            </td>
+            <td class="text-sm text-gray-600">${new Date(order.created_at).toLocaleDateString()}</td>
+            <td>
+                ${['pending', 'confirmed'].includes(order.status) ? 
+                    `<button class="btn-danger text-sm" onclick="cancelOrder(${order.id})">Cancel</button>` :
+                    '<span class="text-gray-400 text-sm">No actions</span>'
+                }
+            </td>
+        </tr>
+    `).join('');
+}
+
+function refreshOrders() {
+    loadOrderHistory();
+    loadConsumerStats();
+}
+
+function cancelOrder(orderId) {
+    if (!confirm('Are you sure you want to cancel this order?')) return;
+    
+    apiClient.cancelOrder(orderId)
+        .then(() => {
+            showNotification('Order cancelled successfully', 'success');
+            refreshOrders();
+        })
+        .catch(error => {
+            console.error('Error cancelling order:', error);
+            showNotification('Failed to cancel order', 'error');
+        });
+}
+
 // Make functions globally available
 window.searchProducts = searchProducts;
 window.addToCart = addToCart;
@@ -602,3 +682,5 @@ window.proceedToCheckout = proceedToCheckout;
 window.placeOrder = placeOrder;
 window.closeModal = closeModal;
 window.logout = logout;
+window.refreshOrders = refreshOrders;
+window.cancelOrder = cancelOrder;

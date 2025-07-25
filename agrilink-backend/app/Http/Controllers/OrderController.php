@@ -137,15 +137,8 @@ class OrderController extends Controller
                 ]);
             }
 
-            // Create delivery record - This is crucial for logistics dashboard
-            $delivery = Delivery::create([
-                'order_id' => $order->id,
-                'delivery_address' => $request->delivery_address,
-                'scheduled_date' => $request->delivery_date ?? now()->addDays(1),
-                'status' => Delivery::STATUS_ASSIGNED,
-                'priority' => $request->priority ?? Delivery::PRIORITY_MEDIUM,
-                'notes' => $request->notes,
-            ]);
+            // NOTE: Delivery record will be created by admin through DeliveryController when assigned
+            // This removes the automatic delivery creation conflict
 
             DB::commit();
 
@@ -153,15 +146,14 @@ class OrderController extends Controller
             $order->load([
                 'user',
                 'orderItems.product.farmer',
-                'payment',
-                'delivery'
+                'payment'
+                // Note: No delivery relation since it's not created yet
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Order placed successfully',
-                'order' => $order,
-                'delivery' => $delivery
+                'message' => 'Order placed successfully. Awaiting admin confirmation and delivery assignment.',
+                'order' => $order
             ], 201);
 
         } catch (\Exception $e) {
@@ -294,6 +286,71 @@ class OrderController extends Controller
     }
 
     /**
+     * Update order status only - ADDED METHOD
+     */
+    public function updateStatus(Request $request, Order $order): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            
+            // Check permissions based on role
+            $canUpdate = false;
+            
+            switch ($user->role) {
+                case 'admin':
+                    // Admin can update any order
+                    $canUpdate = true;
+                    break;
+                    
+                case 'logistics':
+                    // Logistics can update order status for delivery management
+                    $canUpdate = true;
+                    break;
+                    
+                case 'farmer':
+                    // Farmers can update orders containing their products (limited updates)
+                    $canUpdate = $order->orderItems()->whereHas('product', function ($q) use ($user) {
+                        $q->where('farmer_id', $user->id);
+                    })->exists();
+                    break;
+                    
+                default:
+                    $canUpdate = false;
+                    break;
+            }
+            
+            if (!$canUpdate) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized to update order status'
+                ], 403);
+            }
+
+            $validatedData = $request->validate([
+                'status' => 'required|in:' . implode(',', Order::getStatuses())
+            ]);
+
+            $order->update(['status' => $validatedData['status']]);
+
+            // Load relationships for complete response
+            $order->load(['user', 'orderItems.product.farmer', 'payment', 'delivery']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order status updated successfully',
+                'order' => $order
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update order status',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Cancel the specified order
      */
     public function cancel(Order $order): JsonResponse
@@ -353,6 +410,11 @@ class OrderController extends Controller
             // Update payment status if exists
             if ($order->payment) {
                 $order->payment->update(['status' => 'refunded']);
+            }
+
+            // Cancel delivery if exists
+            if ($order->delivery) {
+                $order->delivery->update(['status' => 'cancelled']);
             }
 
             DB::commit();

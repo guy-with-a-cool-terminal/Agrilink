@@ -223,8 +223,8 @@ function displayOrderHistory() {
     if (!tableBody) return;
     
     // Filter orders for current user
-    const userOrders = orders.filter(order => 
-        order.user_id == currentUser.id || 
+    const userOrders = orders.filter(order =>
+        order.user_id == currentUser.id ||
         order.customer_email === currentUser.email
     );
     
@@ -243,14 +243,43 @@ function displayOrderHistory() {
         const orderDate = new Date(order.created_at).toLocaleDateString();
         const statusClass = getStatusClass(order.status);
         
-        // Get first product name or "Multiple Products"
-        let productName = 'Multiple Products';
-        if (order.items && order.items.length === 1) {
-            productName = order.items[0].product?.name || order.items[0].name || 'Unknown Product';
-        }
+        // Get product names - handle different data structures
+        let productName = 'No products';
+        let totalQuantity = 0;
         
-        const totalQuantity = order.items ? 
-            order.items.reduce((sum, item) => sum + (item.quantity || 0), 0) : 0;
+        // Check for order_items (the correct field name)
+        if (order.order_items && Array.isArray(order.order_items) && order.order_items.length > 0) {
+            if (order.order_items.length === 1) {
+                const item = order.order_items[0];
+                productName = item.product?.name || item.name || item.product_name || 'Unknown Product';
+            } else {
+                const firstItem = order.order_items[0];
+                const firstName = firstItem.product?.name || firstItem.name || firstItem.product_name || 'Product';
+                productName = `${firstName} + ${order.order_items.length - 1} more`;
+            }
+            totalQuantity = order.order_items.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0);
+        } else if (order.items && Array.isArray(order.items) && order.items.length > 0) {
+            // Fallback to items array if order_items doesn't exist
+            if (order.items.length === 1) {
+                productName = order.items[0].product?.name || order.items[0].name || order.items[0].product_name || 'Unknown Product';
+            } else {
+                const firstName = order.items[0].product?.name || order.items[0].name || order.items[0].product_name || 'Product';
+                productName = `${firstName} + ${order.items.length - 1} more`;
+            }
+            totalQuantity = order.items.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0);
+        } else if (order.product_name) {
+            // Direct product info on order
+            productName = order.product_name;
+            totalQuantity = parseInt(order.quantity) || 0;
+        } else {
+            // Debug: log one order to see the order_items structure
+            if (order.id === 49) {
+                console.log('Sample order_items structure:', {
+                    order_items: order.order_items,
+                    first_item: order.order_items?.[0]
+                });
+            }
+        }
         
         return `
             <tr>
@@ -264,12 +293,15 @@ function displayOrderHistory() {
                     <button class="btn-secondary text-sm" onclick="viewOrderDetails(${order.id})">
                         View Details
                     </button>
+                    ${['pending', 'confirmed'].includes(order.status) ?
+                        `<button class="btn-danger text-sm ml-2" onclick="cancelOrder(${order.id})">Cancel</button>` :
+                        ''
+                    }
                 </td>
             </tr>
         `;
     }).join('');
 }
-
 // Get status class for styling
 function getStatusClass(status) {
     const statusClasses = {
@@ -281,6 +313,21 @@ function getStatusClass(status) {
         'cancelled': 'bg-red-100 text-red-800'
     };
     return statusClasses[status] || 'bg-gray-100 text-gray-800';
+}
+// Add order cancellation function
+function cancelOrder(orderId) {
+    if (!confirm('Are you sure you want to cancel this bulk order?')) return;
+    
+    apiClient.cancelOrder(orderId)
+        .then(() => {
+            showNotification('Order cancelled successfully', 'success');
+            loadOrderHistory();
+            loadRetailerStats();
+        })
+        .catch(error => {
+            console.error('Error cancelling order:', error);
+            showNotification('Failed to cancel order', 'error');
+        });
 }
 
 // Populate order select for delivery scheduling
@@ -743,6 +790,7 @@ function showNotification(message, type = 'info') {
 
 // Make functions globally available
 window.placeBulkOrder = placeBulkOrder;
+window.cancelOrder = cancelOrder;
 window.showMpesaPaymentModal = showMpesaPaymentModal;
 window.showCardPaymentModal = showCardPaymentModal;
 window.closePaymentModal = closePaymentModal;
