@@ -1,4 +1,4 @@
-// Updated Admin Dashboard JavaScript - Better Order/Delivery Flow
+// Updated Admin Dashboard JavaScript - Better Order/Delivery Flow with Race Condition Fixes
 
 class AdminDashboard {
     constructor() {
@@ -10,6 +10,8 @@ class AdminDashboard {
             products: [],
             deliveries: []
         };
+        // Add request tracking to prevent race conditions
+        this.pendingRequests = new Set();
         this.init();
     }
 
@@ -279,11 +281,24 @@ class AdminDashboard {
         return `<div class="flex space-x-2">${actions}</div>`;
     }
 
-    // RENAMED METHOD: assignOrder -> assignDelivery (clearer naming)
+    // FIXED: assignDelivery with race condition prevention
     async assignDelivery(orderId) {
+        const requestKey = `delivery-assign-${orderId}`;
+        
+        // Prevent multiple simultaneous requests for the same order
+        if (this.pendingRequests.has(requestKey)) {
+            this.showNotification(`Assignment already in progress for Order #${orderId}...`, 'warning');
+            return;
+        }
+
+        this.pendingRequests.add(requestKey);
+
         try {
-            // Double-check no delivery exists
-            const existingDelivery = this.data.deliveries.find(d => parseInt(d.order_id) === parseInt(orderId));
+            // Fresh server-side check instead of relying on potentially stale local cache
+            const serverDeliveriesRes = await apiClient.getDeliveries();
+            const serverDeliveries = apiClient.extractArrayData(serverDeliveriesRes);
+            
+            const existingDelivery = serverDeliveries.find(d => parseInt(d.order_id) === parseInt(orderId));
             if (existingDelivery) {
                 this.showNotification(`Order #${orderId} already has a delivery assigned`, 'warning');
                 return;
@@ -355,7 +370,7 @@ class AdminDashboard {
                                   placeholder="Special instructions, contact info, etc."></textarea>
                     </div>
                     <div class="flex space-x-2">
-                        <button type="submit" class="btn-primary flex-1">Assign Delivery</button>
+                        <button type="submit" class="btn-primary flex-1" id="assignDeliveryBtn">Assign Delivery</button>
                         <button type="button" onclick="dashboard.closeModal('assignDeliveryModal')" class="btn-secondary flex-1">Cancel</button>
                     </div>
                 </form>
@@ -364,6 +379,11 @@ class AdminDashboard {
             document.getElementById('assignDeliveryForm').onsubmit = async (e) => {
                 e.preventDefault();
                 
+                const submitBtn = document.getElementById('assignDeliveryBtn');
+                const originalText = submitBtn.textContent;
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Assigning...';
+
                 const deliveryData = {
                     order_id: parseInt(orderId),
                     assigned_to: parseInt(document.getElementById('logisticsUser').value),
@@ -376,15 +396,31 @@ class AdminDashboard {
                 // Validate required fields
                 if (!deliveryData.assigned_to) {
                     this.showNotification('Please select a logistics user', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
                     return;
                 }
 
                 if (!deliveryData.delivery_address) {
                     this.showNotification('Please enter delivery address', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
                     return;
                 }
 
                 try {
+                    // Final check before creating delivery
+                    const finalCheckRes = await apiClient.getDeliveries();
+                    const finalCheckDeliveries = apiClient.extractArrayData(finalCheckRes);
+                    const finalExistingDelivery = finalCheckDeliveries.find(d => parseInt(d.order_id) === parseInt(orderId));
+                    
+                    if (finalExistingDelivery) {
+                        this.showNotification(`Order #${orderId} already has a delivery assigned (detected just before creation)`, 'warning');
+                        this.closeModal('assignDeliveryModal');
+                        await this.loadAllData(); // Refresh to show current state
+                        return;
+                    }
+
                     const response = await apiClient.createDelivery(deliveryData);
                     this.showNotification('Delivery assigned successfully!', 'success');
                     this.closeModal('assignDeliveryModal');
@@ -392,12 +428,17 @@ class AdminDashboard {
                 } catch (error) {
                     console.error('Error assigning delivery:', error);
                     this.showNotification('Failed to assign delivery: ' + (error.message || 'Unknown error'), 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
                 }
             };
 
         } catch (error) {
             console.error('Error in assignDelivery:', error);
-            this.showNotification('Failed to load assignment data', 'error');
+            this.showNotification('Failed to load assignment data: ' + (error.message || 'Unknown error'), 'error');
+        } finally {
+            // Always remove the request lock
+            this.pendingRequests.delete(requestKey);
         }
     }
 

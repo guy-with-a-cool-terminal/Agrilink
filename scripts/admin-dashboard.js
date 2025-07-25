@@ -1,4 +1,4 @@
-// Updated Admin Dashboard JavaScript - Better Order/Delivery Flow
+// Updated Admin Dashboard JavaScript - Better Order/Delivery Flow with Race Condition Fixes
 
 class AdminDashboard {
     constructor() {
@@ -10,6 +10,9 @@ class AdminDashboard {
             products: [],
             deliveries: []
         };
+        // Add request tracking to prevent race conditions
+        this.pendingRequests = new Set();
+        this.isLoadingData = false;
         this.init();
     }
 
@@ -55,19 +58,39 @@ class AdminDashboard {
     }
 
     async loadAllData() {
+        // Prevent multiple simultaneous data loading
+        if (this.isLoadingData) {
+            console.log('Data loading already in progress, skipping...');
+            return;
+        }
+
+        this.isLoadingData = true;
+        
         try {
             this.showNotification('Loading dashboard data...', 'info');
             
-            const [usersRes, ordersRes, productsRes, deliveriesRes] = await Promise.all([
-                apiClient.getUsers().catch(e => ({ error: e })),
-                apiClient.getOrders().catch(e => ({ error: e })),
-                apiClient.getProducts().catch(e => ({ error: e })),
-                apiClient.getDeliveries().catch(e => ({ error: e }))
-            ]);
-
+            // Load data sequentially instead of all at once to reduce server load
+            console.log('Loading users...');
+            const usersRes = await apiClient.getUsers().catch(e => ({ error: e, data: [] }));
             this.data.users = usersRes.error ? [] : apiClient.extractArrayData(usersRes);
+            
+            // Add small delay to prevent overwhelming local server
+            await this.delay(100);
+            
+            console.log('Loading orders...');
+            const ordersRes = await apiClient.getOrders().catch(e => ({ error: e, data: [] }));
             this.data.orders = ordersRes.error ? [] : apiClient.extractArrayData(ordersRes);
+            
+            await this.delay(100);
+            
+            console.log('Loading products...');
+            const productsRes = await apiClient.getProducts().catch(e => ({ error: e, data: [] }));
             this.data.products = productsRes.error ? [] : apiClient.extractArrayData(productsRes);
+            
+            await this.delay(100);
+            
+            console.log('Loading deliveries...');
+            const deliveriesRes = await apiClient.getDeliveries().catch(e => ({ error: e, data: [] }));
             this.data.deliveries = deliveriesRes.error ? [] : apiClient.extractArrayData(deliveriesRes);
 
             console.log('Data loaded:', this.data);
@@ -82,7 +105,14 @@ class AdminDashboard {
         } catch (error) {
             console.error('Error loading dashboard data:', error);
             this.showNotification('Failed to load dashboard data', 'error');
+        } finally {
+            this.isLoadingData = false;
         }
+    }
+
+    // Helper method to add delays
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     updateAnalytics() {
@@ -279,17 +309,31 @@ class AdminDashboard {
         return `<div class="flex space-x-2">${actions}</div>`;
     }
 
-    // RENAMED METHOD: assignOrder -> assignDelivery (clearer naming)
+    // FIXED: assignDelivery with race condition prevention
     async assignDelivery(orderId) {
+        const requestKey = `delivery-assign-${orderId}`;
+        
+        // Prevent multiple simultaneous requests for the same order
+        if (this.pendingRequests.has(requestKey)) {
+            this.showNotification(`Assignment already in progress for Order #${orderId}...`, 'warning');
+            return;
+        }
+
+        this.pendingRequests.add(requestKey);
+
         try {
-            // Double-check no delivery exists
-            const existingDelivery = this.data.deliveries.find(d => parseInt(d.order_id) === parseInt(orderId));
+            // Fresh server-side check instead of relying on potentially stale local cache
+            console.log('Checking for existing deliveries...');
+            const serverDeliveriesRes = await apiClient.getDeliveries();
+            const serverDeliveries = apiClient.extractArrayData(serverDeliveriesRes);
+            
+            const existingDelivery = serverDeliveries.find(d => parseInt(d.order_id) === parseInt(orderId));
             if (existingDelivery) {
                 this.showNotification(`Order #${orderId} already has a delivery assigned`, 'warning');
                 return;
             }
 
-            // Get logistics users
+            // Get logistics users from current data (no need to refetch)
             const logisticsUsers = this.data.users.filter(u => u.role === 'logistics');
             if (logisticsUsers.length === 0) {
                 this.showNotification('No logistics users available. Please create logistics users first.', 'error');
@@ -355,7 +399,7 @@ class AdminDashboard {
                                   placeholder="Special instructions, contact info, etc."></textarea>
                     </div>
                     <div class="flex space-x-2">
-                        <button type="submit" class="btn-primary flex-1">Assign Delivery</button>
+                        <button type="submit" class="btn-primary flex-1" id="assignDeliveryBtn">Assign Delivery</button>
                         <button type="button" onclick="dashboard.closeModal('assignDeliveryModal')" class="btn-secondary flex-1">Cancel</button>
                     </div>
                 </form>
@@ -364,6 +408,11 @@ class AdminDashboard {
             document.getElementById('assignDeliveryForm').onsubmit = async (e) => {
                 e.preventDefault();
                 
+                const submitBtn = document.getElementById('assignDeliveryBtn');
+                const originalText = submitBtn.textContent;
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Assigning...';
+
                 const deliveryData = {
                     order_id: parseInt(orderId),
                     assigned_to: parseInt(document.getElementById('logisticsUser').value),
@@ -376,32 +425,85 @@ class AdminDashboard {
                 // Validate required fields
                 if (!deliveryData.assigned_to) {
                     this.showNotification('Please select a logistics user', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
                     return;
                 }
 
                 if (!deliveryData.delivery_address) {
                     this.showNotification('Please enter delivery address', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
                     return;
                 }
 
                 try {
+                    // Final check before creating delivery
+                    console.log('Final check before creating delivery...');
+                    const finalCheckRes = await apiClient.getDeliveries();
+                    const finalCheckDeliveries = apiClient.extractArrayData(finalCheckRes);
+                    const finalExistingDelivery = finalCheckDeliveries.find(d => parseInt(d.order_id) === parseInt(orderId));
+                    
+                    if (finalExistingDelivery) {
+                        this.showNotification(`Order #${orderId} already has a delivery assigned (detected just before creation)`, 'warning');
+                        this.closeModal('assignDeliveryModal');
+                        // Only refresh deliveries data instead of all data
+                        await this.refreshDeliveriesOnly();
+                        return;
+                    }
+
+                    console.log('Creating delivery...');
                     const response = await apiClient.createDelivery(deliveryData);
                     this.showNotification('Delivery assigned successfully!', 'success');
                     this.closeModal('assignDeliveryModal');
-                    await this.loadAllData(); // Refresh data
+                    // Only refresh deliveries and orders data instead of everything
+                    await this.refreshDeliveriesAndOrders();
                 } catch (error) {
                     console.error('Error assigning delivery:', error);
                     this.showNotification('Failed to assign delivery: ' + (error.message || 'Unknown error'), 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
                 }
             };
 
         } catch (error) {
             console.error('Error in assignDelivery:', error);
-            this.showNotification('Failed to load assignment data', 'error');
+            this.showNotification('Failed to load assignment data: ' + (error.message || 'Unknown error'), 'error');
+        } finally {
+            // Always remove the request lock
+            this.pendingRequests.delete(requestKey);
         }
     }
 
-    // Helper method to confirm order before delivery assignment
+    // Optimized refresh methods to reduce server load
+    async refreshDeliveriesOnly() {
+        try {
+            console.log('Refreshing deliveries data only...');
+            const deliveriesRes = await apiClient.getDeliveries();
+            this.data.deliveries = apiClient.extractArrayData(deliveriesRes);
+            this.updateOrdersTable(); // Update orders table to reflect delivery changes
+        } catch (error) {
+            console.error('Error refreshing deliveries:', error);
+        }
+    }
+
+    async refreshDeliveriesAndOrders() {
+        try {
+            console.log('Refreshing deliveries and orders...');
+            const deliveriesRes = await apiClient.getDeliveries();
+            this.data.deliveries = apiClient.extractArrayData(deliveriesRes);
+            
+            await this.delay(100); // Small delay to prevent server overload
+            
+            const ordersRes = await apiClient.getOrders();
+            this.data.orders = apiClient.extractArrayData(ordersRes);
+            
+            this.updateOrdersTable();
+            this.updateAnalytics();
+        } catch (error) {
+            console.error('Error refreshing deliveries and orders:', error);
+        }
+    }
     async confirmOrderFirst(order) {
         try {
             await apiClient.updateOrderStatus(order.id, 'confirmed');
@@ -522,7 +624,7 @@ Notes: ${delivery.delivery_notes || 'None'}`);
                 this.showNotification(`Delivery status updated to ${newStatus}`, 'success');
                 this.closeModal('updateDeliveryStatusModal');
                 this.closeModal('manageDeliveryModal');
-                await this.loadAllData();
+                await this.refreshDeliveriesAndOrders(); // Optimized refresh
             } catch (error) {
                 console.error('Error updating delivery status:', error);
                 this.showNotification('Failed to update delivery status: ' + error.message, 'error');
@@ -721,7 +823,8 @@ Has Delivery: ${hasDelivery ? 'Yes' : 'No'}`);
                 await apiClient.updateOrderStatus(orderId, newStatus);
                 this.showNotification(`Order status updated to ${newStatus}`, 'success');
                 this.closeModal('orderStatusModal');
-                await this.loadAllData();
+                // Only refresh orders and deliveries instead of all data
+                await this.refreshDeliveriesAndOrders();
             } catch (error) {
                 console.error('Error updating order status:', error);
                 this.showNotification('Failed to update order status: ' + error.message, 'error');
@@ -847,6 +950,12 @@ Has Delivery: ${hasDelivery ? 'Yes' : 'No'}`);
     }
 
     async refreshData() {
+        // Prevent multiple simultaneous refresh operations
+        if (this.isLoadingData) {
+            this.showNotification('Refresh already in progress...', 'warning');
+            return;
+        }
+        
         try {
             await this.loadAllData();
             this.showNotification('System Data refreshed with latest information!', 'success');
