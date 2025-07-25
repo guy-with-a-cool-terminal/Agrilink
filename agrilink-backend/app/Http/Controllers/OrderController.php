@@ -294,6 +294,71 @@ class OrderController extends Controller
     }
 
     /**
+     * Update order status only - ADDED METHOD
+     */
+    public function updateStatus(Request $request, Order $order): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            
+            // Check permissions based on role
+            $canUpdate = false;
+            
+            switch ($user->role) {
+                case 'admin':
+                    // Admin can update any order
+                    $canUpdate = true;
+                    break;
+                    
+                case 'logistics':
+                    // Logistics can update order status for delivery management
+                    $canUpdate = true;
+                    break;
+                    
+                case 'farmer':
+                    // Farmers can update orders containing their products (limited updates)
+                    $canUpdate = $order->orderItems()->whereHas('product', function ($q) use ($user) {
+                        $q->where('farmer_id', $user->id);
+                    })->exists();
+                    break;
+                    
+                default:
+                    $canUpdate = false;
+                    break;
+            }
+            
+            if (!$canUpdate) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized to update order status'
+                ], 403);
+            }
+
+            $validatedData = $request->validate([
+                'status' => 'required|in:' . implode(',', Order::getStatuses())
+            ]);
+
+            $order->update(['status' => $validatedData['status']]);
+
+            // Load relationships for complete response
+            $order->load(['user', 'orderItems.product.farmer', 'payment', 'delivery']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order status updated successfully',
+                'order' => $order
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update order status',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Cancel the specified order
      */
     public function cancel(Order $order): JsonResponse

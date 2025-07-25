@@ -13,24 +13,24 @@ class ApiClient {
             PRODUCT: (id) => `/products/${id}`,
             PRODUCT_INVENTORY: (id) => `/products/${id}/inventory`,
             
-            // Orders
+            // Orders - FIXED ROUTES
             ORDERS: '/orders',
             ORDER: (id) => `/orders/${id}`,
-            ORDER_STATUS: (id) => `/orders/${id}/status`,
+            ORDER_STATUS: (id) => `/orders/${id}`, // Changed from /orders/{id}/status
             ORDER_CANCEL: (id) => `/orders/${id}/cancel`,
             
-            // Deliveries
+            // Deliveries - FIXED ROUTES
             DELIVERIES: '/deliveries',
             DELIVERY: (id) => `/deliveries/${id}`,
-            DELIVERY_STATUS: (id) => `/deliveries/${id}/status`,
+            DELIVERY_STATUS: (id) => `/deliveries/${id}`, // Changed from /deliveries/{id}/status
             DELIVERY_ASSIGN: (id) => `/deliveries/${id}/assign`,
             DELIVERY_TRACK: '/deliveries/track',
-            USER_DELIVERIES: '/user/deliveries', // For user-specific deliveries
+            USER_DELIVERIES: '/user/deliveries',
             
             // Admin
             ADMIN_USERS: '/admin/users',
             ADMIN_USER: (id) => `/admin/users/${id}`,
-            ADMIN_USER_STATUS: (id) => `/admin/users/${id}/status`,
+            ADMIN_USER_STATUS: (id) => `/admin/users/${id}`, // Changed from /admin/users/{id}/status
             ADMIN_ANALYTICS: '/admin/analytics',
             
             // Maintenance
@@ -69,129 +69,128 @@ class ApiClient {
         return headers;
     }
 
-async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
-    const config = {
-        ...options,
-        headers: this.getHeaders(options.auth !== false),
-    };
+    async request(endpoint, options = {}) {
+        const url = `${this.baseURL}${endpoint}`;
+        const config = {
+            ...options,
+            headers: this.getHeaders(options.auth !== false),
+        };
 
-    try {
-        console.log(`\n--- API REQUEST START ---`);
-        console.log(`Method: ${config.method || 'GET'}`);
-        console.log(`URL: ${url}`);
-        console.log(`Headers:`, config.headers);
-        if (config.body) {
-            console.log('Request Body:', config.body);
-        }
-
-        const response = await fetch(url, config);
-        console.log(`Response Status: ${response.status}`);
-        console.log(`Response Headers:`, [...response.headers.entries()]);
-
-        // Try to parse response as JSON if possible
-        let data = null;
-        const contentType = response.headers.get("content-type");
-        const isJson = contentType && contentType.includes("application/json");
-
-        if (isJson) {
-            try {
-                data = await response.json();
-                console.log("Parsed JSON Response:", data);
-            } catch (parseErr) {
-                console.warn("Failed to parse JSON:", parseErr);
-            }
-        } else {
-            console.warn("Response is not JSON. Content-Type:", contentType);
-        }
-
-        // Handle non-OK responses
-        if (!response.ok) {
-            const errorMessage =
-                (data && data.message) ||
-                response.statusText ||
-                `HTTP error! status: ${response.status}`;
-
-            if (response.status === 422 && data?.errors) {
-                console.error("Validation Errors:", data.errors);
-                const errorMessages = Object.values(data.errors).flat();
-                throw new Error(`Validation failed: ${errorMessages.join(', ')}`);
+        try {
+            console.log(`\n--- API REQUEST START ---`);
+            console.log(`Method: ${config.method || 'GET'}`);
+            console.log(`URL: ${url}`);
+            console.log(`Headers:`, config.headers);
+            if (config.body) {
+                console.log('Request Body:', config.body);
             }
 
-            throw new Error(errorMessage);
-        }
+            const response = await fetch(url, config);
+            console.log(`Response Status: ${response.status}`);
+            console.log(`Response Headers:`, [...response.headers.entries()]);
 
-        console.log(`--- API REQUEST SUCCESS ---\n`);
-        return data;
-    } catch (error) {
-        console.error("API Request Error:", error);
-        console.error("--- API REQUEST FAILED ---\n");
-        throw error;
+            // Try to parse response as JSON if possible
+            let data = null;
+            const contentType = response.headers.get("content-type");
+            const isJson = contentType && contentType.includes("application/json");
+
+            if (isJson) {
+                try {
+                    data = await response.json();
+                    console.log("Parsed JSON Response:", data);
+                } catch (parseErr) {
+                    console.warn("Failed to parse JSON:", parseErr);
+                }
+            } else {
+                console.warn("Response is not JSON. Content-Type:", contentType);
+            }
+
+            // Handle non-OK responses
+            if (!response.ok) {
+                const errorMessage =
+                    (data && data.message) ||
+                    response.statusText ||
+                    `HTTP error! status: ${response.status}`;
+
+                if (response.status === 422 && data?.errors) {
+                    console.error("Validation Errors:", data.errors);
+                    const errorMessages = Object.values(data.errors).flat();
+                    throw new Error(`Validation failed: ${errorMessages.join(', ')}`);
+                }
+
+                throw new Error(errorMessage);
+            }
+
+            console.log(`--- API REQUEST SUCCESS ---\n`);
+            return data;
+        } catch (error) {
+            console.error("API Request Error:", error);
+            console.error("--- API REQUEST FAILED ---\n");
+            throw error;
+        }
     }
-}
 
-
-   // Helper method to extract array data from nested responses, including pagination
+    // Helper method to extract array data from nested responses, including pagination
     extractArrayData(response, key = 'data') {
-    // 1. Direct array response
-    if (Array.isArray(response)) {
-        return response;
+        // 1. Direct array response
+        if (Array.isArray(response)) {
+            return response;
+        }
+
+        // 2. Laravel pagination: { data: [...] }
+        if (response?.data && Array.isArray(response.data)) {
+            return response.data;
+        }
+
+        // 3. Nested Laravel-style: { data: { items: [...] } }
+        if (response?.data?.items && Array.isArray(response.data.items)) {
+            return response.data.items;
+        }
+
+        // 4. Products: { products: { data: [...] } }
+        if (response?.products?.data && Array.isArray(response.products.data)) {
+            return response.products.data;
+        }
+
+        // 5. Orders: { orders: { data: [...] } } or { orders: [...] }
+        if (response?.orders?.data && Array.isArray(response.orders.data)) {
+            return response.orders.data;
+        }
+        if (Array.isArray(response?.orders)) {
+            return response.orders;
+        }
+
+        // 6. Users: { users: { data: [...] } } or { users: [...] }
+        if (response?.users?.data && Array.isArray(response.users.data)) {
+            return response.users.data;
+        }
+        if (Array.isArray(response?.users)) {
+            return response.users;
+        }
+
+        // 7. Deliveries: { deliveries: { data: [...] } } or { deliveries: [...] }
+        if (response?.deliveries?.data && Array.isArray(response.deliveries.data)) {
+            return response.deliveries.data;
+        }
+        if (Array.isArray(response?.deliveries)) {
+            return response.deliveries;
+        }
+
+        // 8. Direct key-based array
+        if (response && Array.isArray(response[key])) {
+            return response[key];
+        }
+
+        // 9. Fallback: top-level key holding paginated data
+        if (response?.[key]?.data && Array.isArray(response[key].data)) {
+            return response[key].data;
+        }
+
+        console.warn('Expected array data but received:', response);
+        return [];
     }
 
-    // 2. Laravel pagination: { data: [...] }
-    if (response?.data && Array.isArray(response.data)) {
-        return response.data;
-    }
-
-    // 3. Nested Laravel-style: { data: { items: [...] } }
-    if (response?.data?.items && Array.isArray(response.data.items)) {
-        return response.data.items;
-    }
-
-    // 4. Products: { products: { data: [...] } }
-    if (response?.products?.data && Array.isArray(response.products.data)) {
-        return response.products.data;
-    }
-
-    // 5. Orders: { orders: { data: [...] } } or { orders: [...] }
-    if (response?.orders?.data && Array.isArray(response.orders.data)) {
-        return response.orders.data;
-    }
-    if (Array.isArray(response?.orders)) {
-        return response.orders;
-    }
-
-    // 6. Users: { users: { data: [...] } } or { users: [...] }
-    if (response?.users?.data && Array.isArray(response.users.data)) {
-        return response.users.data;
-    }
-    if (Array.isArray(response?.users)) {
-        return response.users;
-    }
-
-    // 7. Deliveries: { deliveries: { data: [...] } } or { deliveries: [...] }
-    if (response?.deliveries?.data && Array.isArray(response.deliveries.data)) {
-        return response.deliveries.data;
-    }
-    if (Array.isArray(response?.deliveries)) {
-        return response.deliveries;
-    }
-
-    // 8. Direct key-based array
-    if (response && Array.isArray(response[key])) {
-        return response[key];
-    }
-
-    // 9. Fallback: top-level key holding paginated data
-    if (response?.[key]?.data && Array.isArray(response[key].data)) {
-        return response[key].data;
-    }
-
-    console.warn('Expected array data but received:', response);
-    return [];
-}
-
- // Authentication
+    // Authentication
     async login(credentials) {
         return this.request(this.endpoints.LOGIN, {
             method: 'POST',
@@ -226,8 +225,9 @@ async request(endpoint, options = {}) {
         });
     }
 
+    // Update user status using the exact Laravel route
     async updateUserStatus(userId, status) {
-        return this.request(this.endpoints.ADMIN_USER_STATUS(userId), {
+        return this.request(`/admin/users/${userId}/status`, {
             method: 'PUT',
             body: JSON.stringify({ status })
         });
@@ -299,8 +299,10 @@ async request(endpoint, options = {}) {
         });
     }
 
+    // Update order status using the exact Laravel route
     async updateOrderStatus(id, status) {
-        return this.request(this.endpoints.ORDER_STATUS(id), {
+        console.log(`Updating order ${id} status to: ${status}`);
+        return this.request(`/orders/${id}/status`, {
             method: 'PUT',
             body: JSON.stringify({ status })
         });
@@ -337,7 +339,7 @@ async request(endpoint, options = {}) {
         }
     }
 
-    // Create delivery method - Enhanced with better validation
+    // FIXED: Create delivery method with proper error handling
     async createDelivery(deliveryData) {
         try {
             console.log('Creating delivery with data:', deliveryData);
@@ -358,11 +360,17 @@ async request(endpoint, options = {}) {
                 throw new Error('Scheduled date must be in the future');
             }
 
-            // Format the date properly for Laravel (ISO string)
+            // Format the data properly for Laravel
             const formattedData = {
-                ...deliveryData,
-                scheduled_date: scheduledDate.toISOString()
+                order_id: parseInt(deliveryData.order_id),
+                assigned_to: deliveryData.assigned_to ? parseInt(deliveryData.assigned_to) : null,
+                scheduled_date: scheduledDate.toISOString(),
+                delivery_address: deliveryData.delivery_address.trim(),
+                priority: deliveryData.priority || 'medium',
+                delivery_notes: deliveryData.delivery_notes?.trim() || null
             };
+
+            console.log('Formatted delivery data:', formattedData);
 
             const response = await this.request(this.endpoints.DELIVERIES, {
                 method: 'POST',
@@ -391,10 +399,11 @@ async request(endpoint, options = {}) {
         }
     }
 
+    // Update delivery status using the exact Laravel route
     async updateDeliveryStatus(id, statusData) {
         try {
             console.log('Updating delivery status:', id, 'with data:', statusData);
-            const response = await this.request(this.endpoints.DELIVERY_STATUS(id), {
+            const response = await this.request(`/deliveries/${id}/status`, {
                 method: 'PUT',
                 body: JSON.stringify(statusData)
             });
@@ -505,9 +514,11 @@ async request(endpoint, options = {}) {
         return this.request(this.endpoints.ADMIN_USERS);
     }
 
+    // FIXED: Toggle user status using the main user endpoint with PATCH
     async toggleUserStatus(userId) {
-        return this.request(this.endpoints.ADMIN_USER_STATUS(userId), {
-            method: 'PUT'
+        return this.request(this.endpoints.ADMIN_USER(userId), {
+            method: 'PATCH',
+            body: JSON.stringify({ action: 'toggle_status' })
         });
     }
 
@@ -557,6 +568,7 @@ async request(endpoint, options = {}) {
     }
 }
 
-if (typeof window.apiClient === 'undefined') {
+// Initialize the API client
+if (typeof window !== 'undefined' && typeof window.apiClient === 'undefined') {
     window.apiClient = new ApiClient();
 }
