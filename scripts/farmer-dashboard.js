@@ -1,9 +1,8 @@
-// Enhanced Farmer Dashboard Logic with Orders Management
 console.log('Enhanced Farmer dashboard script loaded');
 
 let currentUser = null;
 let products = [];
-let farmerOrders = []; // Add orders array to store farmer's orders
+let farmerOrders = [];
 
 // Initialize dashboard
 function initializeFarmerDashboard() {
@@ -50,17 +49,14 @@ function setupEventListeners() {
         });
     }
 
-    // NEW: Tab navigation for Products and Orders
     setupTabNavigation();
-    
-    // NEW: Orders refresh button
+
     const refreshOrdersBtn = document.getElementById('refreshOrdersBtn');
     if (refreshOrdersBtn) {
         refreshOrdersBtn.addEventListener('click', refreshOrdersData);
     }
 }
 
-// NEW: Setup tab navigation between Products and Orders
 function setupTabNavigation() {
     const productTab = document.getElementById('productTab');
     const ordersTab = document.getElementById('ordersTab');
@@ -99,7 +95,7 @@ async function loadDashboardData() {
         // Load products first (needed for filtering orders)
         await loadProducts();
         
-        // NEW: Load farmer orders
+        // Load farmer orders
         await loadFarmerOrders();
         
         // Load stats with both products and orders data
@@ -120,7 +116,7 @@ async function loadDashboardData() {
     }
 }
 
-// NEW: Load and filter orders for farmer's products
+// FIXED: Enhanced order loading with proper null checks
 async function loadFarmerOrders() {
     try {
         console.log('Loading farmer orders...');
@@ -140,7 +136,7 @@ async function loadFarmerOrders() {
             return;
         }
         
-        // Enhanced filtering with better debugging
+        // FIXED: Enhanced filtering with proper null/undefined checks
         farmerOrders = allOrders.filter(order => {
             console.log(`\n--- Checking Order #${order.id} ---`);
             console.log('Order data:', {
@@ -149,15 +145,22 @@ async function loadFarmerOrders() {
                 customer_name: order.customer_name,
                 status: order.status,
                 items: order.items,
-                order_items: order.order_items, // Check both possible field names
+                order_items: order.order_items,
                 created_at: order.created_at
             });
             
-            // Check both 'items' and 'order_items' fields (different APIs might use different names)
+            // FIXED: Proper null/undefined checks for order items
             let orderItems = order.items || order.order_items || [];
             
-            if (!Array.isArray(orderItems)) {
-                console.log('Order has no valid items array:', order.id);
+            // Additional safety check - ensure orderItems is actually an array
+            if (!orderItems || !Array.isArray(orderItems)) {
+                console.log('Order has no valid items array:', order.id, 'items:', orderItems);
+                return false;
+            }
+            
+            // FIXED: Extra check for empty arrays
+            if (orderItems.length === 0) {
+                console.log('Order has empty items array:', order.id);
                 return false;
             }
             
@@ -165,6 +168,12 @@ async function loadFarmerOrders() {
             
             // Check if any item in the order belongs to this farmer
             const hasFarmerProduct = orderItems.some(item => {
+                // FIXED: Additional null checks for item properties
+                if (!item) {
+                    console.log('Found null/undefined item in order:', order.id);
+                    return false;
+                }
+                
                 console.log('Checking item:', {
                     product_id: item.product_id,
                     name: item.name,
@@ -173,10 +182,12 @@ async function loadFarmerOrders() {
                 
                 // Find the product in farmer's products
                 const product = products.find(p => {
-                    // Handle both string and number IDs
-                    const matches = (p.id == item.product_id) || 
-                                   (p.id == item.id) || 
-                                   (p.name === item.name);
+                    // Handle both string and number IDs with null checks
+                    const matches = (p && item && (
+                        (p.id == item.product_id) || 
+                        (p.id == item.id) || 
+                        (p.name === item.name)
+                    ));
                     
                     if (matches) {
                         console.log('Found matching product:', {
@@ -233,7 +244,7 @@ async function loadFarmerOrders() {
     }
 }
 
-// NEW: Display farmer orders in a comprehensive table
+// FIXED: Display farmer orders with proper null checks
 function displayFarmerOrdersTable(ordersToShow) {
     const ordersTableBody = document.querySelector('#farmerOrdersTable tbody');
     if (!ordersTableBody) {
@@ -263,33 +274,45 @@ function displayFarmerOrdersTable(ordersToShow) {
     const sortedOrders = ordersToShow.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     sortedOrders.forEach(order => {
-        // Handle both 'items' and 'order_items' fields
+        // FIXED: Proper null checks for order items
         const allOrderItems = order.items || order.order_items || [];
         
-        // Filter items that belong to this farmer
+        // Safety check
+        if (!Array.isArray(allOrderItems)) {
+            console.warn(`Order ${order.id} has invalid items:`, allOrderItems);
+            return; // Skip this order
+        }
+        
+        // Filter items that belong to this farmer with null checks
         const farmerItems = allOrderItems.filter(item => {
+            if (!item) return false; // Skip null/undefined items
+            
             const product = products.find(p => 
-                (p.id == item.product_id) || 
-                (p.id == item.id) || 
-                (p.name === item.name)
+                p && item && (
+                    (p.id == item.product_id) || 
+                    (p.id == item.id) || 
+                    (p.name === item.name)
+                )
             );
             return product && product.farmer_id == currentUser.id;
         });
 
         console.log(`Order ${order.id} farmer items:`, farmerItems);
 
-        // Calculate totals for farmer's items only
+        // FIXED: Calculate totals with proper null checks
         const totalQuantity = farmerItems.reduce((sum, item) => {
+            if (!item) return sum;
             const qty = parseInt(item.quantity || 0);
-            console.log(`Item quantity: ${qty} for ${item.name}`);
+            console.log(`Item quantity: ${qty} for ${item.name || 'unknown'}`);
             return sum + qty;
         }, 0);
         
         const totalAmount = farmerItems.reduce((sum, item) => {
+            if (!item) return sum;
             const price = parseFloat(item.unit_price || item.price || 0);
             const qty = parseInt(item.quantity || 0);
             const itemTotal = price * qty;
-            console.log(`Item total: ${price} x ${qty} = ${itemTotal} for ${item.name}`);
+            console.log(`Item total: ${price} x ${qty} = ${itemTotal} for ${item.name || 'unknown'}`);
             return sum + itemTotal;
         }, 0);
 
@@ -319,10 +342,13 @@ function displayFarmerOrdersTable(ordersToShow) {
             <td>
                 <div class="text-sm space-y-1">
                     ${farmerItems.map(item => {
+                        if (!item) return '';
                         const product = products.find(p => 
-                            (p.id == item.product_id) || 
-                            (p.id == item.id) || 
-                            (p.name === item.name)
+                            p && (
+                                (p.id == item.product_id) || 
+                                (p.id == item.id) || 
+                                (p.name === item.name)
+                            )
                         );
                         const itemPrice = parseFloat(item.unit_price || item.price || 0);
                         return `
@@ -331,7 +357,7 @@ function displayFarmerOrdersTable(ordersToShow) {
                                     <span class="font-medium">${product?.name || item.name || 'Unknown Product'}</span>
                                     <br><small class="text-gray-500">Ksh${itemPrice.toFixed(2)} each</small>
                                 </div>
-                                <span class="text-gray-600 font-medium">×${item.quantity}</span>
+                                <span class="text-gray-600 font-medium">×${item.quantity || 0}</span>
                             </div>
                         `;
                     }).join('')}
@@ -354,9 +380,6 @@ function displayFarmerOrdersTable(ordersToShow) {
                         View
                     </button>
                     ${['pending', 'confirmed'].includes(order.status) ? `
-                        <button class="btn-primary text-xs px-2 py-1" onclick="updateOrderStatus(${order.id})">
-                            Update
-                        </button>
                     ` : ''}
                 </div>
             </td>
@@ -366,6 +389,7 @@ function displayFarmerOrdersTable(ordersToShow) {
     
     console.log(`Displayed ${sortedOrders.length} orders in farmer table`);
 }
+
 function debugOrdersData() {
     console.log('\n=== DEBUGGING ORDERS DATA ===');
     console.log('Current farmer:', currentUser);
@@ -390,6 +414,7 @@ function debugOrdersData() {
         alert('Error loading orders for debugging: ' + error.message);
     });
 }
+
 function updateOrderStats() {
     const totalOrders = farmerOrders.length;
     const pendingOrders = farmerOrders.filter(order => 
@@ -431,7 +456,7 @@ async function loadProducts() {
     }
 }
 
-// Enhanced loadFarmerStats with comprehensive order data
+// FIXED: Enhanced loadFarmerStats with corrected sales logic
 async function loadFarmerStats() {
     try {
         console.log('Loading farmer stats with orders data...');
@@ -440,56 +465,108 @@ async function loadFarmerStats() {
         const totalProducts = products.length;
         const activeProducts = products.filter(p => p.status === 'active').length;
         
-        // Calculate earnings from orders
-        let totalEarnings = 0;
+        // FIXED: Calculate earnings from orders with corrected logic
+        let totalSales = 0;  // Changed from totalEarnings to totalSales for clarity
         let monthlyRevenue = 0;
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
         
+        console.log(`Calculating for month ${currentMonth + 1}/${currentYear}`);
+        console.log('Processing farmer orders:', farmerOrders.length);
+        
         farmerOrders.forEach(order => {
+            // FIXED: Proper null checks for order and items
+            if (!order || (!order.items && !order.order_items)) {
+                console.log('Skipping order with no items:', order?.id);
+                return;
+            }
+            
+            const allOrderItems = order.items || order.order_items || [];
+            
+            // Safety check for items array
+            if (!Array.isArray(allOrderItems)) {
+                console.log('Order has invalid items array:', order.id, allOrderItems);
+                return;
+            }
+            
             // Calculate earnings only from farmer's products in each order
-            const farmerItems = order.items.filter(item => {
-                const product = products.find(p => p.id == item.product_id);
+            const farmerItems = allOrderItems.filter(item => {
+                if (!item) return false;
+                const product = products.find(p => p && p.id == item.product_id);
                 return product && product.farmer_id == currentUser.id;
             });
             
-            const orderAmount = farmerItems.reduce((sum, item) => 
-                sum + (parseFloat(item.unit_price || 0) * parseInt(item.quantity || 0)), 0
-            );
+            const orderAmount = farmerItems.reduce((sum, item) => {
+                if (!item) return sum;
+                const price = parseFloat(item.unit_price || item.price || 0);
+                const quantity = parseInt(item.quantity || 0);
+                return sum + (price * quantity);
+            }, 0);
             
-            // Only count delivered/completed orders for earnings
-            if (['delivered', 'completed', 'paid'].includes(order.status)) {
-                totalEarnings += orderAmount;
+            console.log(`Order ${order.id}: Status="${order.status}", Amount=Ksh${orderAmount}`);
+            
+            // FIXED: Include ALL non-pending orders for total sales
+            // This includes confirmed, delivered, completed, paid, processing, etc.
+            if (order.status && order.status !== 'pending' && order.status !== 'cancelled' && order.status !== 'rejected') {
+                totalSales += orderAmount;
+                console.log(`✓ Added Ksh${orderAmount} to total sales (status: ${order.status})`);
+            } else {
+                console.log(`⚠ Skipped order for total sales (status: ${order.status})`);
             }
             
-            // Monthly revenue calculation
+            // FIXED: Monthly revenue calculation - include ALL orders from current month
             const orderDate = new Date(order.created_at);
-            if (orderDate.getMonth() === currentMonth && 
-                orderDate.getFullYear() === currentYear && 
-                ['delivered', 'completed', 'paid'].includes(order.status)) {
-                monthlyRevenue += orderAmount;
+            const orderMonth = orderDate.getMonth();
+            const orderYear = orderDate.getFullYear();
+            
+            console.log(`Order date: ${orderDate.toDateString()}, Order month: ${orderMonth + 1}, Current month: ${currentMonth + 1}`);
+            
+            if (orderMonth === currentMonth && orderYear === currentYear) {
+                // Include all non-pending orders for monthly revenue
+                if (order.status && order.status !== 'pending' && order.status !== 'cancelled' && order.status !== 'rejected') {
+                    monthlyRevenue += orderAmount;
+                    console.log(`✓ Added Ksh${orderAmount} to monthly revenue (status: ${order.status})`);
+                } else {
+                    console.log(`⚠ Skipped order for monthly revenue (status: ${order.status})`);
+                }
             }
         });
         
+        // FIXED: Calculate order statistics correctly  
+        const totalOrders = farmerOrders.length;
+        
+        // Pending orders: orders that are still being processed
         const pendingOrders = farmerOrders.filter(order => 
-            ['pending', 'confirmed', 'processing'].includes(order.status)
+            ['pending', 'processing'].includes(order.status)
+        ).length;
+        
+        // Completed orders: orders that are finished/delivered  
+        const completedOrders = farmerOrders.filter(order => 
+            ['delivered', 'completed', 'fulfilled', 'paid'].includes(order.status)
         ).length;
 
-        const totalOrders = farmerOrders.length;
+        console.log('=== FINAL CALCULATIONS ===');
+        console.log('Total Products:', totalProducts);
+        console.log('Total Sales:', `Ksh${totalSales.toFixed(2)}`);
+        console.log('Monthly Revenue:', `Ksh${monthlyRevenue.toFixed(2)}`);
+        console.log('Total Orders:', totalOrders);
+        console.log('Pending Orders:', pendingOrders);
+        console.log('Completed Orders:', completedOrders);
 
         // Update stats display with accurate farmer data
         updateStatCard('totalProducts', totalProducts);
-        updateStatCard('totalSales', `Ksh${totalEarnings.toFixed(2)}`);
+        updateStatCard('totalSales', `Ksh${totalSales.toFixed(2)}`);  // This should now show correct value
         updateStatCard('pendingOrders', pendingOrders);
-        updateStatCard('monthlyRevenue', `Ksh${monthlyRevenue.toFixed(2)}`);
-        updateStatCard('totalOrders', totalOrders); // Add this if you have the element
+        updateStatCard('monthlyRevenue', `Ksh${monthlyRevenue.toFixed(2)}`);  // This should now show correct value
+        updateStatCard('totalOrders', totalOrders);
         
         console.log('Farmer stats updated successfully:', {
             totalProducts,
-            totalEarnings,
+            totalSales,
             pendingOrders,
             monthlyRevenue,
-            totalOrders
+            totalOrders,
+            completedOrders
         });
         
     } catch (error) {
@@ -506,7 +583,7 @@ async function loadFarmerStats() {
     }
 }
 
-// NEW: View detailed order information
+// FIXED: View detailed order information with proper null checks
 function viewOrderDetails(orderId) {
     const order = farmerOrders.find(o => o.id === orderId);
     if (!order) {
@@ -514,15 +591,27 @@ function viewOrderDetails(orderId) {
         return;
     }
 
+    // FIXED: Proper null checks for order items
+    const allOrderItems = order.items || order.order_items || [];
+    
+    if (!Array.isArray(allOrderItems)) {
+        showNotification('Order has invalid items data', 'error');
+        return;
+    }
+
     // Get farmer-specific items from this order
-    const farmerItems = order.items.filter(item => {
-        const product = products.find(p => p.id == item.product_id);
+    const farmerItems = allOrderItems.filter(item => {
+        if (!item) return false;
+        const product = products.find(p => p && p.id == item.product_id);
         return product && product.farmer_id == currentUser.id;
     });
 
-    const totalAmount = farmerItems.reduce((sum, item) => 
-        sum + (parseFloat(item.unit_price || 0) * parseInt(item.quantity || 0)), 0
-    );
+    const totalAmount = farmerItems.reduce((sum, item) => {
+        if (!item) return sum;
+        const price = parseFloat(item.unit_price || item.price || 0);
+        const quantity = parseInt(item.quantity || 0);
+        return sum + (price * quantity);
+    }, 0);
 
     // Create modal with order details
     const modal = document.createElement('div');
@@ -567,13 +656,16 @@ function viewOrderDetails(orderId) {
                         </thead>
                         <tbody>
                             ${farmerItems.map(item => {
-                                const product = products.find(p => p.id == item.product_id);
-                                const itemTotal = parseFloat(item.unit_price || 0) * parseInt(item.quantity || 0);
+                                if (!item) return '';
+                                const product = products.find(p => p && p.id == item.product_id);
+                                const price = parseFloat(item.unit_price || item.price || 0);
+                                const quantity = parseInt(item.quantity || 0);
+                                const itemTotal = price * quantity;
                                 return `
                                     <tr>
-                                        <td class="border border-gray-300 px-3 py-2">${product?.name || item.name}</td>
-                                        <td class="border border-gray-300 px-3 py-2 text-center">${item.quantity}</td>
-                                        <td class="border border-gray-300 px-3 py-2 text-right">Ksh${parseFloat(item.unit_price || 0).toFixed(2)}</td>
+                                        <td class="border border-gray-300 px-3 py-2">${product?.name || item.name || 'Unknown Product'}</td>
+                                        <td class="border border-gray-300 px-3 py-2 text-center">${quantity}</td>
+                                        <td class="border border-gray-300 px-3 py-2 text-right">Ksh${price.toFixed(2)}</td>
                                         <td class="border border-gray-300 px-3 py-2 text-right font-medium">Ksh${itemTotal.toFixed(2)}</td>
                                     </tr>
                                 `;
@@ -766,7 +858,7 @@ function addOrdersViewButton() {
     }
 }
 
-// NEW: Show detailed orders view in a modal
+// FIXED: Show detailed orders view in a modal with proper null checks
 function showDetailedOrdersView() {
     if (!farmerOrders || farmerOrders.length === 0) {
         showNotification('No orders found for your products', 'info');
@@ -795,11 +887,11 @@ function showDetailedOrdersView() {
                         <div class="text-sm text-blue-800">Total Orders</div>
                     </div>
                     <div class="bg-green-50 p-4 rounded-lg text-center">
-                        <div class="text-2xl font-bold text-green-600">${farmerOrders.filter(o => ['delivered', 'completed'].includes(o.status)).length}</div>
+                        <div class="text-2xl font-bold text-green-600">${farmerOrders.filter(o => ['delivered', 'completed','confirmed'].includes(o.status)).length}</div>
                         <div class="text-sm text-green-800">Completed</div>
                     </div>
                     <div class="bg-yellow-50 p-4 rounded-lg text-center">
-                        <div class="text-2xl font-bold text-yellow-600">${farmerOrders.filter(o => ['pending', 'confirmed', 'processing'].includes(o.status)).length}</div>
+                        <div class="text-2xl font-bold text-yellow-600">${farmerOrders.filter(o => ['pending', 'processing'].includes(o.status)).length}</div>
                         <div class="text-sm text-yellow-800">Pending</div>
                     </div>
                     <div class="bg-purple-50 p-4 rounded-lg text-center">
@@ -825,15 +917,27 @@ function showDetailedOrdersView() {
                         </thead>
                         <tbody>
                             ${farmerOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(order => {
-                                const farmerItems = order.items?.filter(item => {
-                                    const product = products.find(p => p.id == item.product_id);
-                                    return product && product.farmer_id == currentUser.id;
-                                }) || [];
+                                // FIXED: Proper null checks for order items
+                                const allOrderItems = order.items || order.order_items || [];
+                                if (!Array.isArray(allOrderItems)) return '';
                                 
-                                const totalQuantity = farmerItems.reduce((sum, item) => sum + parseInt(item.quantity || 0), 0);
-                                const totalAmount = farmerItems.reduce((sum, item) => 
-                                    sum + (parseFloat(item.unit_price || 0) * parseInt(item.quantity || 0)), 0
-                                );
+                                const farmerItems = allOrderItems.filter(item => {
+                                    if (!item) return false;
+                                    const product = products.find(p => p && p.id == item.product_id);
+                                    return product && product.farmer_id == currentUser.id;
+                                });
+                                
+                                const totalQuantity = farmerItems.reduce((sum, item) => {
+                                    if (!item) return sum;
+                                    return sum + parseInt(item.quantity || 0);
+                                }, 0);
+                                
+                                const totalAmount = farmerItems.reduce((sum, item) => {
+                                    if (!item) return sum;
+                                    const price = parseFloat(item.unit_price || item.price || 0);
+                                    const quantity = parseInt(item.quantity || 0);
+                                    return sum + (price * quantity);
+                                }, 0);
                                 
                                 const customerName = order.customer_name || order.user?.name || 'Unknown';
                                 const customerEmail = order.user?.email || '';
@@ -850,11 +954,13 @@ function showDetailedOrdersView() {
                                         <td class="border border-gray-300 px-3 py-2">
                                             <div class="space-y-1 max-w-xs">
                                                 ${farmerItems.map(item => {
-                                                    const product = products.find(p => p.id == item.product_id);
+                                                    if (!item) return '';
+                                                    const product = products.find(p => p && p.id == item.product_id);
+                                                    const price = parseFloat(item.unit_price || item.price || 0);
                                                     return `
                                                         <div class="text-xs bg-gray-50 p-1 rounded">
-                                                            <div class="font-medium">${product?.name || item.name}</div>
-                                                            <div class="text-gray-600">${item.quantity} × Ksh${parseFloat(item.unit_price || 0).toFixed(2)}</div>
+                                                            <div class="font-medium">${product?.name || item.name || 'Unknown Product'}</div>
+                                                            <div class="text-gray-600">${item.quantity || 0} × Ksh${price.toFixed(2)}</div>
                                                         </div>
                                                     `;
                                                 }).join('')}
@@ -889,21 +995,30 @@ function showDetailedOrdersView() {
     document.body.appendChild(modal);
 }
 
-// Helper function to calculate total earnings
+// FIXED: Helper function to calculate total earnings with proper null checks
 function calculateTotalEarnings() {
-    if (!farmerOrders) return 0;
+    if (!farmerOrders || !Array.isArray(farmerOrders)) return 0;
     
     return farmerOrders.reduce((total, order) => {
-        if (!['delivered', 'completed', 'paid'].includes(order.status)) return total;
+        if (!order || !['confirmed', 'delivered', 'completed', 'paid'].includes(order.status)) {
+            return total;
+        }
         
-        const farmerItems = order.items?.filter(item => {
-            const product = products.find(p => p.id == item.product_id);
+        const allOrderItems = order.items || order.order_items || [];
+        if (!Array.isArray(allOrderItems)) return total;
+        
+        const farmerItems = allOrderItems.filter(item => {
+            if (!item) return false;
+            const product = products.find(p => p && p.id == item.product_id);
             return product && product.farmer_id == currentUser.id;
-        }) || [];
+        });
         
-        const orderAmount = farmerItems.reduce((sum, item) => 
-            sum + (parseFloat(item.unit_price || 0) * parseInt(item.quantity || 0)), 0
-        );
+        const orderAmount = farmerItems.reduce((sum, item) => {
+            if (!item) return sum;
+            const price = parseFloat(item.unit_price || item.price || 0);
+            const quantity = parseInt(item.quantity || 0);
+            return sum + (price * quantity);
+        }, 0);
         
         return total + orderAmount;
     }, 0);
@@ -914,7 +1029,8 @@ async function refreshDetailedOrders() {
     try {
         showNotification('Refreshing orders...', 'info');
         await loadProducts(); // Refresh products first
-        await loadFarmerStats(); // This will reload orders
+        await loadFarmerOrders(); // This will reload orders
+        await loadFarmerStats(); // Update stats
         closeModal('detailedOrdersModal');
         showDetailedOrdersView(); // Reopen with fresh data
         showNotification('Orders refreshed successfully!', 'success');
@@ -922,100 +1038,6 @@ async function refreshDetailedOrders() {
         console.error('Error refreshing orders:', error);
         showNotification('Failed to refresh orders', 'error');
     }
-}
-
-function viewOrderDetails(orderId) {
-    const order = farmerOrders.find(o => o.id === orderId);
-    if (!order) {
-        showNotification('Order not found', 'error');
-        return;
-    }
-
-    const farmerItems = order.items?.filter(item => {
-        const product = products.find(p => p.id == item.product_id);
-        return product && product.farmer_id == currentUser.id;
-    }) || [];
-
-    const totalAmount = farmerItems.reduce((sum, item) => 
-        sum + (parseFloat(item.unit_price || 0) * parseInt(item.quantity || 0)), 0
-    );
-
-    const modal = document.createElement('div');
-    modal.id = 'orderDetailsModal';
-    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-    modal.innerHTML = `
-        <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-screen overflow-y-auto m-4">
-            <div class="flex justify-between items-start mb-4">
-                <h3 class="text-lg font-semibold">Order Details #${order.id}</h3>
-                <button onclick="closeModal('orderDetailsModal')" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <h4 class="font-semibold mb-2">Customer Information</h4>
-                    <p><strong>Name:</strong> ${order.customer_name || order.user?.name || 'N/A'}</p>
-                    <p><strong>Email:</strong> ${order.user?.email || 'N/A'}</p>
-                    <p><strong>Phone:</strong> ${order.user?.phone || 'N/A'}</p>
-                </div>
-                
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <h4 class="font-semibold mb-2">Order Information</h4>
-                    <p><strong>Status:</strong> <span class="status-${order.status}">${order.status}</span></p>
-                    <p><strong>Date:</strong> ${new Date(order.created_at).toLocaleString()}</p>
-                    <p><strong>Your Earnings:</strong> <span class="font-medium text-green-600">Ksh${totalAmount.toFixed(2)}</span></p>
-                </div>
-            </div>
-
-            <div class="mb-6">
-                <h4 class="font-semibold mb-3">Your Products in this Order</h4>
-                <div class="overflow-x-auto">
-                    <table class="w-full border-collapse border border-gray-300">
-                        <thead>
-                            <tr class="bg-gray-100">
-                                <th class="border border-gray-300 px-3 py-2 text-left">Product</th>
-                                <th class="border border-gray-300 px-3 py-2 text-center">Quantity</th>
-                                <th class="border border-gray-300 px-3 py-2 text-right">Unit Price</th>
-                                <th class="border border-gray-300 px-3 py-2 text-right">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${farmerItems.map(item => {
-                                const product = products.find(p => p.id == item.product_id);
-                                const itemTotal = parseFloat(item.unit_price || 0) * parseInt(item.quantity || 0);
-                                return `
-                                    <tr>
-                                        <td class="border border-gray-300 px-3 py-2">${product?.name || item.name}</td>
-                                        <td class="border border-gray-300 px-3 py-2 text-center">${item.quantity}</td>
-                                        <td class="border border-gray-300 px-3 py-2 text-right">Ksh${parseFloat(item.unit_price || 0).toFixed(2)}</td>
-                                        <td class="border border-gray-300 px-3 py-2 text-right font-medium">Ksh${itemTotal.toFixed(2)}</td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                        <tfoot>
-                            <tr class="bg-gray-100 font-semibold">
-                                <td class="border border-gray-300 px-3 py-2" colspan="3">Total for Your Products:</td>
-                                <td class="border border-gray-300 px-3 py-2 text-right text-green-600">Ksh${totalAmount.toFixed(2)}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>
-
-            ${order.delivery_address ? `
-            <div class="mb-4 bg-blue-50 p-4 rounded-lg">
-                <h4 class="font-semibold mb-2">Delivery Address</h4>
-                <p>${order.delivery_address}</p>
-            </div>
-            ` : ''}
-
-            <div class="flex justify-end">
-                <button onclick="closeModal('orderDetailsModal')" class="btn-secondary">Close</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
 }
 
 // Make functions globally available
@@ -1027,6 +1049,7 @@ window.viewOrderDetails = viewOrderDetails;
 window.refreshOrdersData = refreshOrdersData;
 window.showDetailedOrdersView = showDetailedOrdersView;
 window.refreshDetailedOrders = refreshDetailedOrders;
+window.debugOrdersData = debugOrdersData;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', initializeFarmerDashboard);
