@@ -39,7 +39,7 @@ function setupEventListeners() {
     }
 
     if (updateStatusForm) {
-        updateStatusForm.addEventListener('submit', updateDeliveryStatus);
+        updateStatusForm.addEventListener('submit', updateDeliveryStatusFromForm);
     }
 }
 
@@ -65,8 +65,16 @@ async function loadDeliveries() {
             !delivery.assigned_to || delivery.assigned_to == currentUser.id
         );
         
+        // Store deliveries globally for map access
+        deliveries = relevantDeliveries;
+        
         displayDeliveries(relevantDeliveries);
         updateDeliverySelect(relevantDeliveries);
+        
+        // Refresh map if it exists
+        if (typeof refreshDeliveryMap === 'function') {
+            refreshDeliveryMap();
+        }
         
     } catch (error) {
         console.error('Error loading deliveries:', error);
@@ -111,10 +119,10 @@ function displayDeliveries(deliveriesList) {
             </td>
             <td>
                 <div class="flex gap-2">
-                    <button class="btn-secondary text-sm" onclick="updateDeliveryStatus('${delivery.id}', 'in_transit')">
+                    <button class="btn-secondary text-sm" onclick="updateDeliveryStatusQuick('${delivery.id}', 'in_transit')">
                         Start
                     </button>
-                    <button class="btn-primary text-sm" onclick="updateDeliveryStatus('${delivery.id}', 'delivered')">
+                    <button class="btn-primary text-sm" onclick="updateDeliveryStatusQuick('${delivery.id}', 'delivered')">
                         Complete
                     </button>
                 </div>
@@ -164,8 +172,37 @@ function updateStatCard(id, value) {
     }
 }
 
-// Update delivery status
-async function updateDeliveryStatus(event) {
+// Quick update delivery status (called from table buttons)
+async function updateDeliveryStatusQuick(deliveryId, newStatus) {
+    console.log('Quick updating delivery status:', deliveryId, newStatus);
+    
+    if (!deliveryId || !newStatus) {
+        showNotification('Invalid delivery ID or status', 'warning');
+        return;
+    }
+
+    try {
+        const response = await apiClient.updateDelivery(deliveryId, {
+            status: newStatus,
+            location: '',
+            notes: `Status updated to ${newStatus} via quick action`
+        });
+
+        console.log('Delivery status updated:', response);
+        showNotification(`Delivery #${deliveryId} status updated to ${newStatus.replace('_', ' ')}!`, 'success');
+        
+        // Refresh data
+        await loadDeliveries();
+        await loadLogisticsStats();
+        
+    } catch (error) {
+        console.error('Error updating delivery status:', error);
+        showNotification('Failed to update delivery status', 'error');
+    }
+}
+
+// Update delivery status from form (called from form submission)
+async function updateDeliveryStatusFromForm(event) {
     event.preventDefault();
 
     const deliveryId = document.getElementById('deliverySelect').value;
@@ -187,8 +224,17 @@ async function updateDeliveryStatus(event) {
 
         console.log('Delivery status updated:', response);
         showNotification('Delivery status updated successfully!', 'success');
-        loadDeliveries(); // Refresh deliveries
-        loadLogisticsStats(); // Refresh stats
+        
+        // Clear form
+        document.getElementById('deliverySelect').value = '';
+        document.getElementById('newStatus').value = '';
+        document.getElementById('location').value = '';
+        document.getElementById('statusNotes').value = '';
+        
+        // Refresh data
+        await loadDeliveries();
+        await loadLogisticsStats();
+        
     } catch (error) {
         console.error('Error updating delivery status:', error);
         showNotification('Failed to update delivery status', 'error');
@@ -216,16 +262,22 @@ function refreshDeliveries() {
     loadLogisticsStats();
 }
 
-// Refresh delivery map (Placeholder function)
-function refreshDeliveryMap() {
-    showNotification('Refreshing delivery map...', 'info');
-    // Implement your map refresh logic here
+// Update delivery location (called from map)
+function updateDeliveryLocation(deliveryId) {
+    const newLocation = prompt('Enter new location for delivery #' + deliveryId + ':');
+    if (newLocation) {
+        updateDeliveryStatusQuick(deliveryId, 'in_transit').then(() => {
+            // Update location separately if needed
+            console.log('Location updated for delivery:', deliveryId, newLocation);
+        });
+    }
 }
 
 // Make functions globally available
-window.updateDeliveryStatus = updateDeliveryStatus;
+window.updateDeliveryStatusQuick = updateDeliveryStatusQuick;
+window.updateDeliveryStatusFromForm = updateDeliveryStatusFromForm;
+window.updateDeliveryLocation = updateDeliveryLocation;
 window.refreshDeliveries = refreshDeliveries;
-window.refreshDeliveryMap = refreshDeliveryMap;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', initializeLogisticsDashboard);

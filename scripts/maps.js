@@ -1,24 +1,22 @@
-
-// Google Maps Integration for Logistics Dashboard
 // Handles delivery location mapping and real-time tracking
-
+// Replaced Google Maps with MapLibre GL JS + OpenStreetMap + Photon API,google maps became unreliable
 let map = null;
 let markers = [];
 let deliveryData = [];
 
-// Initialize Google Maps
+// Initialize MapLibre Map
 function initializeMap() {
-    console.log('Initializing Google Maps...');
+    console.log('Initializing MapLibre...');
     
-    // Check if Google Maps API is loaded
-    if (typeof google === 'undefined' || !google.maps) {
-        console.error('Google Maps API not loaded. Please check your API key and script inclusion.');
-        showMapError('Google Maps API not available. Please check your configuration.');
+    // Check if MapLibre is loaded
+    if (typeof maplibregl === 'undefined') {
+        console.error('MapLibre GL JS not loaded. Please check your script inclusion.');
+        showMapError('MapLibre GL JS not available. Please check your configuration.');
         return;
     }
     
     // Default center (Nairobi, Kenya for AgriLink)
-    const defaultCenter = { lat: -1.286389, lng: 36.817223 };
+    const defaultCenter = [36.817223, -1.286389]; // [lng, lat] format for MapLibre
     
     // Create map
     const mapContainer = document.getElementById('deliveryMap');
@@ -27,21 +25,39 @@ function initializeMap() {
         return;
     }
     
-    map = new google.maps.Map(mapContainer, {
-        zoom: 11,
+    map = new maplibregl.Map({
+        container: mapContainer,
+        style: {
+            version: 8,
+            sources: {
+                'osm': {
+                    type: 'raster',
+                    tiles: [
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+                    ],
+                    tileSize: 256,
+                    attribution: '© agrilink logistics'
+                }
+            },
+            layers: [
+                {
+                    id: 'osm',
+                    type: 'raster',
+                    source: 'osm'
+                }
+            ]
+        },
         center: defaultCenter,
-        mapTypeId: google.maps.MapTypeId.ROADMAP,
-        styles: [
-            {
-                featureType: 'poi',
-                elementType: 'labels',
-                stylers: [{ visibility: 'off' }]
-            }
-        ]
+        zoom: 11
     });
     
-    console.log('Google Maps initialized successfully');
-    loadDeliveryLocations();
+    // Add navigation controls
+    map.addControl(new maplibregl.NavigationControl());
+    
+    map.on('load', () => {
+        console.log('MapLibre initialized successfully');
+        loadDeliveryLocations();
+    });
 }
 
 // Load delivery locations and plot on map
@@ -70,19 +86,26 @@ async function loadDeliveryLocations() {
             plotDeliveryMarker(delivery, index);
         });
         
-        // Adjust map bounds to show all markers
-        if (markers.length > 0) {
-            const bounds = new google.maps.LatLngBounds();
-            markers.forEach(marker => {
-                bounds.extend(marker.getPosition());
-            });
-            map.fitBounds(bounds);
-            
-            // Don't zoom too close if there's only one marker
-            if (markers.length === 1) {
-                map.setZoom(Math.min(map.getZoom(), 15));
+        // Adjust map bounds to show all markers after all are loaded
+        setTimeout(() => {
+            if (markers.length > 0) {
+                const bounds = new maplibregl.LngLatBounds();
+                markers.forEach(marker => {
+                    bounds.extend(marker.getLngLat());
+                });
+                
+                if (markers.length === 1) {
+                    // For single marker, center and set reasonable zoom
+                    map.flyTo({
+                        center: markers[0].getLngLat(),
+                        zoom: 15
+                    });
+                } else {
+                    // Fit all markers
+                    map.fitBounds(bounds, { padding: 50 });
+                }
             }
-        }
+        }, 1000); // Wait for geocoding to complete
         
     } catch (error) {
         console.error('Error loading delivery locations:', error);
@@ -97,10 +120,7 @@ function plotDeliveryMarker(delivery, index) {
     
     // Check if delivery has coordinates
     if (delivery.latitude && delivery.longitude) {
-        const position = {
-            lat: parseFloat(delivery.latitude),
-            lng: parseFloat(delivery.longitude)
-        };
+        const position = [parseFloat(delivery.longitude), parseFloat(delivery.latitude)]; // [lng, lat]
         createMarker(delivery, position, address);
     } else {
         // Use geocoding to get coordinates from address
@@ -108,32 +128,36 @@ function plotDeliveryMarker(delivery, index) {
     }
 }
 
-// Geocode address to get coordinates
-function geocodeAddress(delivery, address) {
-    if (!google.maps || !google.maps.Geocoder) {
-        console.error('Geocoding service not available');
-        return;
-    }
-    
-    const geocoder = new google.maps.Geocoder();
-    
-    // Add "Kenya" to the address for better geocoding results
-    const fullAddress = address.includes('Kenya') ? address : `${address}, Kenya`;
-    
-    geocoder.geocode({ address: fullAddress }, (results, status) => {
-        if (status === 'OK' && results[0]) {
-            const position = results[0].geometry.location;
-            createMarker(delivery, position, address);
+// Geocode address using Photon API
+async function geocodeAddress(delivery, address) {
+    try {
+        // Add "Kenya" to the address for better geocoding results
+        const fullAddress = address.includes('Kenya') ? address : `${address}, Kenya`;
+        
+        const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(fullAddress)}&limit=1`);
+        const data = await response.json();
+        
+        if (data.features && data.features.length > 0) {
+            const coordinates = data.features[0].geometry.coordinates; // [lng, lat]
+            createMarker(delivery, coordinates, address);
         } else {
-            console.warn(`Geocoding failed for delivery ${delivery.id}:`, status, address);
+            console.warn(`Geocoding failed for delivery ${delivery.id}:`, address);
             // Use default location with offset for ungeocodable addresses
-            const defaultPosition = {
-                lat: -1.286389 + (Math.random() - 0.5) * 0.1,
-                lng: 36.817223 + (Math.random() - 0.5) * 0.1
-            };
+            const defaultPosition = [
+                36.817223 + (Math.random() - 0.5) * 0.1,
+                -1.286389 + (Math.random() - 0.5) * 0.1
+            ];
             createMarker(delivery, defaultPosition, address + ' (Approximate)');
         }
-    });
+    } catch (error) {
+        console.error('Geocoding error:', error);
+        // Use default location with offset for failed requests
+        const defaultPosition = [
+            36.817223 + (Math.random() - 0.5) * 0.1,
+            -1.286389 + (Math.random() - 0.5) * 0.1
+        ];
+        createMarker(delivery, defaultPosition, address + ' (Approximate)');
+    }
 }
 
 // Create marker on map
@@ -155,25 +179,30 @@ function createMarker(delivery, position, address) {
         'urgent': '🔴'
     };
     
-    const marker = new google.maps.Marker({
-        position: position,
-        map: map,
-        title: `Delivery #${delivery.id} - ${delivery.status}`,
-        icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 10,
-            fillColor: statusColors[delivery.status] || '#9CA3AF',
-            fillOpacity: 0.8,
-            strokeColor: '#374151',
-            strokeWeight: 2
-        }
-    });
+    // Create custom marker element
+    const markerElement = document.createElement('div');
+    markerElement.style.width = '20px';
+    markerElement.style.height = '20px';
+    markerElement.style.borderRadius = '50%';
+    markerElement.style.backgroundColor = statusColors[delivery.status] || '#9CA3AF';
+    markerElement.style.border = '2px solid #374151';
+    markerElement.style.cursor = 'pointer';
+    markerElement.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+    markerElement.title = `Delivery #${delivery.id} - ${delivery.status}`;
     
-    // Create info window content
-    const order = orders.find(o => o.id === delivery.order_id);
-    const customerName = order?.user?.name || order?.customer_name || 'Unknown Customer';
+    // Create MapLibre marker
+    const marker = new maplibregl.Marker(markerElement)
+        .setLngLat(position)
+        .addTo(map);
     
-    const infoContent = `
+    // Create popup content
+    // Get customer name from delivery data directly
+    const customerName = delivery.customer_name || 
+                         delivery.order?.customer_name || 
+                         delivery.order?.user?.name || 
+                         'Unknown Customer';
+    
+    const popupContent = `
         <div class="p-3 max-w-sm">
             <h3 class="font-semibold text-gray-900 mb-2">
                 ${priorityIcons[delivery.priority] || '🟡'} Delivery #${delivery.id}
@@ -195,33 +224,37 @@ function createMarker(delivery, position, address) {
         </div>
     `;
     
-    const infoWindow = new google.maps.InfoWindow({
-        content: infoContent
-    });
+    // Create popup
+    const popup = new maplibregl.Popup({
+        offset: 25,
+        closeButton: true,
+        closeOnClick: false
+    }).setHTML(popupContent);
     
-    marker.addListener('click', () => {
-        // Close other info windows
+    // Add click listener to marker
+    markerElement.addEventListener('click', () => {
+        // Close other popups
         markers.forEach(m => {
-            if (m.infoWindow) {
-                m.infoWindow.close();
+            if (m.popup && m.popup.isOpen()) {
+                m.popup.remove();
             }
         });
         
-        infoWindow.open(map, marker);
+        popup.addTo(map).setLngLat(position);
     });
     
-    // Store info window reference
-    marker.infoWindow = infoWindow;
+    // Store popup reference
+    marker.popup = popup;
     markers.push(marker);
 }
 
 // Clear all markers from map
 function clearMarkers() {
     markers.forEach(marker => {
-        if (marker.infoWindow) {
-            marker.infoWindow.close();
+        if (marker.popup) {
+            marker.popup.remove();
         }
-        marker.setMap(null);
+        marker.remove();
     });
     markers = [];
 }
@@ -241,7 +274,7 @@ function showMapError(message) {
                 <div class="text-center">
                     <div class="text-red-500 text-2xl mb-2">⚠️</div>
                     <p class="text-gray-600 font-medium">${message}</p>
-                    <p class="text-gray-500 text-sm mt-1">Please check your Google Maps configuration</p>
+                    <p class="text-gray-500 text-sm mt-1">Please check your MapLibre configuration</p>
                 </div>
             </div>
         `;
@@ -254,13 +287,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('logistics-dashboard') || 
         document.getElementById('deliveryMap')) {
         
-        // Wait for Google Maps API to load
-        if (typeof google !== 'undefined' && google.maps) {
-            initializeMap();
-        } else {
-            // Wait for API to load
-            window.initMap = initializeMap;
-        }
+        // Initialize map directly (no API key needed)
+        initializeMap();
     }
 });
 
