@@ -31,10 +31,10 @@ class Payment extends Model
     const STATUS_FAILED = 'failed';
     const STATUS_REFUNDED = 'refunded';
 
-    // Payment methods
-    const METHOD_CASH = 'cash';
-    const METHOD_CARD = 'card';
+    // Payment methods - Updated to match validation rules
+    const METHOD_CASH_ON_DELIVERY = 'cash_on_delivery';
     const METHOD_MOBILE_MONEY = 'mobile_money';
+    const METHOD_CARD = 'card';
     const METHOD_BANK_TRANSFER = 'bank_transfer';
 
     public static function getStatuses()
@@ -51,9 +51,9 @@ class Payment extends Model
     public static function getMethods()
     {
         return [
-            self::METHOD_CASH,
-            self::METHOD_CARD,
+            self::METHOD_CASH_ON_DELIVERY,
             self::METHOD_MOBILE_MONEY,
+            self::METHOD_CARD,
             self::METHOD_BANK_TRANSFER,
         ];
     }
