@@ -26,12 +26,18 @@ class Product extends Model
         'quantity' => 'integer',
     ];
 
-    // Product categories
+    // Product categories   
+//     Seafood 
+// Poultry 
+// Livestock 
     const CATEGORY_VEGETABLES = 'vegetables';
     const CATEGORY_FRUITS = 'fruits';
     const CATEGORY_GRAINS = 'grains';
     const CATEGORY_DAIRY = 'dairy';
     const CATEGORY_SPICES = 'spices';
+    const CATEGORY_SEAFOOD = 'seafood';
+    const CATEGORY_POULTRY = 'poultry';
+    const CATEGORY_LIVESTOCK = 'livestock';
 
     public static function getCategories()
     {
@@ -41,6 +47,9 @@ class Product extends Model
             self::CATEGORY_GRAINS,
             self::CATEGORY_DAIRY,
             self::CATEGORY_SPICES,
+            self::CATEGORY_SEAFOOD,
+            self::CATEGORY_POULTRY,
+            self::CATEGORY_LIVESTOCK,
         ];
     }
 
