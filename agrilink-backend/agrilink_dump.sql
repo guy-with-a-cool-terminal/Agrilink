@@ -37,17 +37,6 @@ CREATE TABLE `cache` (
 
 LOCK TABLES `cache` WRITE;
 /*!40000 ALTER TABLE `cache` DISABLE KEYS */;
-INSERT INTO `cache` VALUES
-('agrilink-backend-cache-0a57cb53ba59c46fc4b692527a38a87c78d84028','i:1;',1752131461),
-('agrilink-backend-cache-0a57cb53ba59c46fc4b692527a38a87c78d84028:timer','i:1752131461;',1752131461),
-('agrilink-backend-cache-1b6453892473a467d07372d45eb05abc2031647a','i:1;',1752131563),
-('agrilink-backend-cache-1b6453892473a467d07372d45eb05abc2031647a:timer','i:1752131563;',1752131563),
-('agrilink-backend-cache-356a192b7913b04c54574d18c28d46e6395428ab','i:1;',1752076428),
-('agrilink-backend-cache-356a192b7913b04c54574d18c28d46e6395428ab:timer','i:1752076428;',1752076428),
-('agrilink-backend-cache-5c785c036466adea360111aa28563bfd556b5fba','i:1;',1752131561),
-('agrilink-backend-cache-5c785c036466adea360111aa28563bfd556b5fba:timer','i:1752131561;',1752131561),
-('agrilink-backend-cache-da4b9237bacccdf19c0760cab7aec4a8359010b0','i:1;',1752076899),
-('agrilink-backend-cache-da4b9237bacccdf19c0760cab7aec4a8359010b0:timer','i:1752076899;',1752076899);
 /*!40000 ALTER TABLE `cache` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -102,7 +91,7 @@ CREATE TABLE `deliveries` (
   KEY `deliveries_tracking_number_index` (`tracking_number`),
   CONSTRAINT `deliveries_assigned_to_foreign` FOREIGN KEY (`assigned_to`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `deliveries_order_id_foreign` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=59 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -112,29 +101,34 @@ CREATE TABLE `deliveries` (
 LOCK TABLES `deliveries` WRITE;
 /*!40000 ALTER TABLE `deliveries` DISABLE KEYS */;
 INSERT INTO `deliveries` VALUES
-(1,1,8,'Ukunda Town, Kwale County, Kenya','2025-07-11 07:41:27','2025-07-04 06:47:48','delivered','high','TRK-2025-F6837C28',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(2,2,7,'Msambweni Sub-County Hospital, Kwale','2025-07-15 13:26:32',NULL,'assigned','urgent','TRK-2025-F683B722',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(3,3,7,'Gazi Village, Kwale','2025-07-13 03:54:18',NULL,'in_transit','urgent','TRK-2025-F683E1C5',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(4,4,8,'Diani Beach Road, opposite Nakumatt','2025-07-13 19:32:07',NULL,'in_transit','low','TRK-2025-F6841C22',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(5,5,14,'Kinondo, Msambweni','2025-07-13 19:20:26',NULL,'in_transit','urgent','TRK-2025-F684671F',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
+(2,2,7,'Msambweni Sub-County Hospital, Kwale','2025-07-15 13:26:32','2025-07-26 15:44:55','delivered','urgent','TRK-2025-F683B722',NULL,'2025-07-08 20:53:12','2025-07-26 15:44:55'),
 (6,6,18,'Ukunda Town, Kwale County, Kenya','2025-07-10 18:09:23',NULL,'in_transit','high','TRK-2025-F6849D36',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(7,7,8,'Msambweni Sub-County Hospital, Kwale','2025-07-13 11:38:39',NULL,'assigned','low','TRK-2025-F685006A',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(8,8,8,'Gazi Village, Kwale','2025-07-11 05:08:44',NULL,'in_transit','urgent','TRK-2025-F685395E',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(9,9,22,'741 Elyssa Dale Apt. 916\nHymanside, RI 14838-8630','2025-07-15 12:02:50',NULL,'assigned','medium','TRK-2025-F6857A08',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(10,10,22,'97301 Langworth Fall\nMarianamouth, KY 78118','2025-07-13 23:51:52',NULL,'in_transit','medium','TRK-2025-F685C031',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(11,11,22,'16539 Balistreri Field\nEfrainborough, TX 47712-5116','2025-07-14 20:38:46',NULL,'assigned','medium','TRK-2025-F685FCE7',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(12,12,22,'91077 Stehr Heights Suite 861\nRyanhaven, MI 46216-4314','2025-07-14 19:18:03','2025-06-21 08:42:31','delivered','low','TRK-2025-F686595D',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(13,13,27,'910 Braun River Suite 980\nHudsonside, AL 63070-5664','2025-07-14 09:48:57',NULL,'assigned','urgent','TRK-2025-F686AF46',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(14,14,7,'9671 Carroll Junction\nNorth Mollie, NY 64573','2025-07-15 13:12:52',NULL,'in_transit','low','TRK-2025-F686E2C3',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(15,15,8,'4418 Beer Terrace Apt. 675\nLake Barrettstad, AK 89013-0718','2025-07-15 02:57:37',NULL,'assigned','medium','TRK-2025-F68715E0',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(16,16,14,'16532 Lowe Brook\nEast Margarette, WY 04910-6108','2025-07-10 03:09:43',NULL,'assigned','low','TRK-2025-F6874A09',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(17,17,8,'76528 Bradtke Garden Apt. 792\nLake Adell, HI 98437','2025-07-12 16:12:22',NULL,'assigned','urgent','TRK-2025-F68795F2',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(18,18,22,'19909 Lockman Underpass\nLake Alf, MD 66473-5703','2025-07-10 16:29:14',NULL,'in_transit','high','TRK-2025-F687E184',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(19,19,8,'796 DuBuque Junctions\nRodrigueztown, KY 73111','2025-07-13 06:45:59','2025-06-16 09:39:34','delivered','medium','TRK-2025-F688334E',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(20,20,18,'4981 Ondricka Canyon Apt. 055\nStarkland, ID 12338-1171','2025-07-14 14:14:16','2025-06-19 09:26:04','delivered','high','TRK-2025-F68865F9',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(21,21,NULL,'jjj',NULL,NULL,'assigned','medium','TRK-2025-FA2A2A7B',NULL,'2025-07-12 15:55:30','2025-07-12 15:55:30'),
+(7,7,NULL,'Msambweni Sub-County Hospital, Kwale','2025-07-13 11:38:39',NULL,'assigned','low','TRK-2025-F685006A',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
+(8,8,NULL,'Gazi Village, Kwale','2025-07-11 05:08:44',NULL,'in_transit','urgent','TRK-2025-F685395E',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
+(10,10,NULL,'97301 Langworth Fall\nMarianamouth, KY 78118','2025-07-13 23:51:52',NULL,'in_transit','medium','TRK-2025-F685C031',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
+(11,11,NULL,'16539 Balistreri Field\nEfrainborough, TX 47712-5116','2025-07-14 20:38:46',NULL,'assigned','medium','TRK-2025-F685FCE7',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
+(15,15,NULL,'4418 Beer Terrace Apt. 675\nLake Barrettstad, AK 89013-0718','2025-07-15 02:57:37',NULL,'assigned','medium','TRK-2025-F68715E0',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
+(17,17,NULL,'76528 Bradtke Garden Apt. 792\nLake Adell, HI 98437','2025-07-12 16:12:22',NULL,'assigned','urgent','TRK-2025-F68795F2',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
 (22,25,NULL,'Bulk delivery address will be provided','2025-07-17 21:00:00',NULL,'assigned','medium','TRK-2025-2C401B3B',NULL,'2025-07-12 16:08:52','2025-07-12 16:08:52'),
-(23,28,NULL,'jsjss',NULL,NULL,'assigned','medium','TRK-2025-8A125E75',NULL,'2025-07-12 16:33:53','2025-07-12 16:33:53');
+(26,34,NULL,'Bulk delivery - Budget: 10000-25000. Requirements: nope','2025-07-22 21:00:00',NULL,'assigned','medium','TRK-2025-4A82674C',NULL,'2025-07-21 15:19:20','2025-07-21 15:19:20'),
+(29,37,NULL,'Bulk delivery - Budget: 5000-10000. Requirements: owow','2025-07-23 21:00:00',NULL,'assigned','medium','TRK-2025-6A6BD3F2',NULL,'2025-07-21 15:27:50','2025-07-21 15:27:50'),
+(35,43,NULL,'Bulk delivery - Budget: 25000-50000. Requirements: fishy','2025-07-23 21:00:00',NULL,'assigned','medium','TRK-2025-88849C41','Bulk order for retail - fishy','2025-07-22 08:39:52','2025-07-22 08:39:52'),
+(36,44,NULL,'Bulk delivery - Budget: 5000-10000','2025-07-22 21:00:00',NULL,'assigned','medium','TRK-2025-8BD620A1','Bulk order for retail - Standard bulk order','2025-07-22 08:40:45','2025-07-22 08:40:45'),
+(40,48,NULL,'Bulk delivery - Budget: 5000-10000. Requirements: nana','2025-07-23 21:00:00',NULL,'assigned','medium','TRK-2025-8B683029','Bulk order for retail - nana','2025-07-23 10:50:46','2025-07-23 10:50:46'),
+(41,49,NULL,'Bulk delivery - Budget: 5000-10000. Requirements: nana','2025-07-23 21:00:00',NULL,'assigned','medium','TRK-2025-CFC3C754','Bulk order for retail - nana','2025-07-23 11:09:00','2025-07-23 11:09:00'),
+(42,50,NULL,'Bulk delivery - Budget: 5000-10000. Requirements: nope','2025-07-23 21:00:00',NULL,'assigned','medium','TRK-2025-0A3021B9','Bulk order for retail - nope','2025-07-23 11:24:35','2025-07-23 11:24:35'),
+(43,51,NULL,'Bulk delivery - Budget: 5000-10000. Requirements: should be fresh and cold','2025-07-30 21:00:00',NULL,'assigned','medium','TRK-2025-1AC8C4D5','Bulk order for retail - should be fresh and cold','2025-07-23 11:29:00','2025-07-23 11:29:00'),
+(44,53,NULL,'Bulk delivery - Budget: 5000-10000. Requirements: nope','2025-07-26 00:35:00',NULL,'assigned','medium','TRK17534253119186',NULL,'2025-07-25 03:35:11','2025-07-25 03:35:11'),
+(46,56,7,'Bulk delivery - Budget: 5000-10000. Requirements: asap as possible','2025-07-26 05:25:00','2025-07-26 15:46:04','delivered','medium','TRK17534427495162',NULL,'2025-07-25 08:25:49','2025-07-26 15:46:04'),
+(48,57,7,'Bulk delivery - Budget: 10000-25000. Requirements: no','2025-07-26 05:33:00','2025-07-26 15:52:58','delivered','medium','TRK17534432317547',NULL,'2025-07-25 08:33:51','2025-07-26 15:52:58'),
+(49,58,NULL,'Bulk delivery - Budget: 10000-25000. Requirements: HOT','2025-07-26 05:49:00',NULL,'assigned','low','TRK17534442015057',NULL,'2025-07-25 08:50:01','2025-07-25 08:50:01'),
+(50,59,7,'Bulk delivery - Budget: 10000-25000. Requirements: nope','2025-07-26 05:51:00','2025-07-26 15:53:00','delivered','medium','TRK17534442955242',NULL,'2025-07-25 08:51:35','2025-07-26 15:53:00'),
+(53,62,7,'kisumu','2025-07-27 01:05:00','2025-07-26 15:44:31','in_transit','medium','TRK17535135368664',NULL,'2025-07-26 04:05:36','2025-07-26 15:45:58'),
+(54,61,37,'testsdeliverylocation','2025-07-27 01:06:00',NULL,'assigned','low','TRK17535136044839',NULL,'2025-07-26 04:06:44','2025-07-26 04:06:44'),
+(55,63,7,'kiambu','2025-07-27 01:29:00','2025-07-26 15:45:49','delivered','high','TRK17535150064880',NULL,'2025-07-26 04:30:06','2025-07-26 15:45:49'),
+(56,66,7,'Turkana','2025-07-27 12:51:00','2025-07-26 15:53:09','delivered','medium','TRK17535559182939',NULL,'2025-07-26 15:51:58','2025-07-26 15:53:09'),
+(57,71,37,'nairobi','2025-07-30 07:52:00',NULL,'assigned','medium','TRK17537971387909',NULL,'2025-07-29 10:52:18','2025-07-29 10:52:18'),
+(58,70,37,'kitale','2025-07-30 07:52:00',NULL,'assigned','medium','TRK17537971642916',NULL,'2025-07-29 10:52:44','2025-07-29 10:52:44');
 /*!40000 ALTER TABLE `deliveries` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -159,7 +153,7 @@ CREATE TABLE `delivery_status_updates` (
   KEY `delivery_status_updates_delivery_id_created_at_index` (`delivery_id`,`created_at`),
   CONSTRAINT `delivery_status_updates_delivery_id_foreign` FOREIGN KEY (`delivery_id`) REFERENCES `deliveries` (`id`) ON DELETE CASCADE,
   CONSTRAINT `delivery_status_updates_updated_by_foreign` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -168,6 +162,35 @@ CREATE TABLE `delivery_status_updates` (
 
 LOCK TABLES `delivery_status_updates` WRITE;
 /*!40000 ALTER TABLE `delivery_status_updates` DISABLE KEYS */;
+INSERT INTO `delivery_status_updates` VALUES
+(3,2,'in_transit',NULL,'Delivery updated',7,'2025-07-24 11:15:18','2025-07-24 11:15:18'),
+(4,2,'in_transit',NULL,'Delivery updated',7,'2025-07-24 11:15:18','2025-07-24 11:15:18'),
+(5,44,'assigned',NULL,'Delivery created',1,'2025-07-25 03:35:11','2025-07-25 03:35:11'),
+(7,46,'assigned',NULL,'Delivery created',1,'2025-07-25 08:25:49','2025-07-25 08:25:49'),
+(9,48,'assigned',NULL,'Delivery created',1,'2025-07-25 08:33:51','2025-07-25 08:33:51'),
+(10,49,'assigned',NULL,'Delivery created',1,'2025-07-25 08:50:01','2025-07-25 08:50:01'),
+(11,50,'assigned',NULL,'Delivery created',1,'2025-07-25 08:51:35','2025-07-25 08:51:35'),
+(14,53,'assigned',NULL,'Delivery created',1,'2025-07-26 04:05:36','2025-07-26 04:05:36'),
+(15,54,'assigned',NULL,'Delivery created',1,'2025-07-26 04:06:44','2025-07-26 04:06:44'),
+(16,55,'assigned',NULL,'Delivery created',1,'2025-07-26 04:30:06','2025-07-26 04:30:06'),
+(17,2,'in_transit',NULL,'Delivery updated',7,'2025-07-26 15:41:57','2025-07-26 15:41:57'),
+(18,53,'delivered',NULL,'Delivery updated',7,'2025-07-26 15:42:07','2025-07-26 15:42:07'),
+(19,53,'in_transit',NULL,'Delivery updated',7,'2025-07-26 15:44:02','2025-07-26 15:44:02'),
+(20,55,'in_transit',NULL,'Delivery updated',7,'2025-07-26 15:44:17','2025-07-26 15:44:17'),
+(21,53,'delivered',NULL,'Delivery updated',7,'2025-07-26 15:44:31','2025-07-26 15:44:31'),
+(22,2,'delivered',NULL,'Delivery updated',7,'2025-07-26 15:44:55','2025-07-26 15:44:55'),
+(23,55,'delivered',NULL,'Delivery updated',7,'2025-07-26 15:45:49','2025-07-26 15:45:49'),
+(24,48,'in_transit',NULL,'Delivery updated',7,'2025-07-26 15:45:54','2025-07-26 15:45:54'),
+(25,50,'in_transit',NULL,'Delivery updated',7,'2025-07-26 15:45:57','2025-07-26 15:45:57'),
+(26,53,'in_transit',NULL,'Delivery updated',7,'2025-07-26 15:45:58','2025-07-26 15:45:58'),
+(27,46,'delivered',NULL,'Delivery updated',7,'2025-07-26 15:46:04','2025-07-26 15:46:04'),
+(28,56,'assigned',NULL,'Delivery created',1,'2025-07-26 15:51:58','2025-07-26 15:51:58'),
+(29,56,'in_transit',NULL,'Delivery updated',7,'2025-07-26 15:52:40','2025-07-26 15:52:40'),
+(30,48,'delivered',NULL,'Delivery updated',7,'2025-07-26 15:52:58','2025-07-26 15:52:58'),
+(31,50,'delivered',NULL,'Delivery updated',7,'2025-07-26 15:53:00','2025-07-26 15:53:00'),
+(32,56,'delivered',NULL,'Delivery updated',7,'2025-07-26 15:53:09','2025-07-26 15:53:09'),
+(33,57,'assigned',NULL,'Delivery created',1,'2025-07-29 10:52:18','2025-07-29 10:52:18'),
+(34,58,'assigned',NULL,'Delivery created',1,'2025-07-29 10:52:44','2025-07-29 10:52:44');
 /*!40000 ALTER TABLE `delivery_status_updates` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -272,7 +295,7 @@ CREATE TABLE `migrations` (
   `migration` varchar(255) NOT NULL,
   `batch` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -292,7 +315,8 @@ INSERT INTO `migrations` VALUES
 (8,'2024_01_01_000005_create_payments_table',1),
 (9,'2024_01_01_000006_create_deliveries_table',1),
 (10,'2024_01_01_000007_create_delivery_status_updates_table',1),
-(11,'2024_01_01_000008_create_promotions_table',1);
+(11,'2024_01_01_000008_create_promotions_table',1),
+(12,'2025_07_21_181721_alter_payment_method_column_in_payments_table',2);
 /*!40000 ALTER TABLE `migrations` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -317,7 +341,7 @@ CREATE TABLE `order_items` (
   KEY `order_items_order_id_product_id_index` (`order_id`,`product_id`),
   CONSTRAINT `order_items_order_id_foreign` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE,
   CONSTRAINT `order_items_product_id_foreign` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=60 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=102 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -327,65 +351,26 @@ CREATE TABLE `order_items` (
 LOCK TABLES `order_items` WRITE;
 /*!40000 ALTER TABLE `order_items` DISABLE KEYS */;
 INSERT INTO `order_items` VALUES
-(1,1,14,4,497.00,1988.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(2,2,6,9,90.00,810.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(3,2,9,7,150.00,1050.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(4,3,14,6,497.00,2982.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(5,4,5,6,120.00,720.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(6,4,6,7,90.00,630.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(7,5,24,1,210.00,210.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(8,5,22,7,62.00,434.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(9,5,51,9,140.00,1260.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(10,5,51,7,140.00,980.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(11,6,25,3,344.00,1032.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(12,7,20,5,233.00,1165.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(13,7,20,5,233.00,1165.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(14,7,56,3,489.00,1467.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
 (15,7,2,3,35.00,105.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(16,8,10,4,45.00,180.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(17,8,53,9,137.00,1233.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(18,8,20,5,233.00,1165.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(19,9,35,6,250.00,1500.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(20,9,56,6,489.00,2934.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(21,9,3,9,80.00,720.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
 (22,10,2,1,35.00,35.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(23,10,23,1,406.00,406.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(24,10,8,8,200.00,1600.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(25,11,10,8,45.00,360.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(26,11,6,5,90.00,450.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
 (27,11,2,7,35.00,245.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(28,12,51,6,140.00,840.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(29,12,7,9,60.00,540.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(30,12,3,3,80.00,240.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(31,12,6,4,90.00,360.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(32,13,23,2,406.00,812.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(33,13,53,9,137.00,1233.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(34,13,49,7,482.00,3374.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(35,13,8,8,200.00,1600.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(36,13,14,3,497.00,1491.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(37,14,14,2,497.00,994.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(38,15,5,6,120.00,720.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(39,16,4,5,25.00,125.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(40,16,9,7,150.00,1050.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(41,17,8,6,200.00,1200.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(42,17,10,5,45.00,225.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(43,17,56,9,489.00,4401.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(44,17,20,7,233.00,1631.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(45,18,7,6,60.00,360.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(46,18,1,4,40.00,160.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(47,18,3,1,80.00,80.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(48,18,24,7,210.00,1470.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(49,18,8,2,200.00,400.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(50,19,1,8,40.00,320.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(51,19,14,1,497.00,497.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(52,19,21,3,489.00,1467.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(53,19,14,4,497.00,1988.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(54,19,5,4,120.00,480.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(55,20,24,3,210.00,630.00,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(56,21,65,1,100.02,100.02,'2025-07-12 15:55:30','2025-07-12 15:55:30'),
-(57,25,8,11,200.00,2200.00,'2025-07-12 16:08:52','2025-07-12 16:08:52'),
-(58,28,1,1,40.00,40.00,'2025-07-12 16:33:53','2025-07-12 16:33:53'),
-(59,28,2,1,35.00,35.00,'2025-07-12 16:33:53','2025-07-12 16:33:53');
+(66,37,2,200,35.00,7000.00,'2025-07-21 15:27:50','2025-07-21 15:27:50'),
+(77,48,74,10,60.00,600.00,'2025-07-23 10:50:46','2025-07-23 10:50:46'),
+(78,49,74,10,60.00,600.00,'2025-07-23 11:09:00','2025-07-23 11:09:00'),
+(80,51,74,50,60.00,3000.00,'2025-07-23 11:29:00','2025-07-23 11:29:00'),
+(85,56,77,30,200.00,6000.00,'2025-07-25 08:24:43','2025-07-25 08:24:43'),
+(90,61,78,1,50.00,50.00,'2025-07-26 04:03:27','2025-07-26 04:03:27'),
+(91,62,78,100,50.00,5000.00,'2025-07-26 04:04:46','2025-07-26 04:04:46'),
+(92,63,78,80,50.00,4000.00,'2025-07-26 04:25:59','2025-07-26 04:25:59'),
+(93,64,80,10,700.00,7000.00,'2025-07-26 14:35:45','2025-07-26 14:35:45'),
+(94,64,79,10,1000.00,10000.00,'2025-07-26 14:35:45','2025-07-26 14:35:45'),
+(95,65,79,20,1000.00,20000.00,'2025-07-26 14:48:15','2025-07-26 14:48:15'),
+(96,66,79,50,1000.00,50000.00,'2025-07-26 14:52:28','2025-07-26 14:52:28'),
+(97,67,78,10,50.00,500.00,'2025-07-29 09:57:28','2025-07-29 09:57:28'),
+(98,68,80,50,700.00,35000.00,'2025-07-29 10:24:19','2025-07-29 10:24:19'),
+(99,69,80,1,700.00,700.00,'2025-07-29 10:42:10','2025-07-29 10:42:10'),
+(100,70,79,1,1000.00,1000.00,'2025-07-29 10:49:50','2025-07-29 10:49:50'),
+(101,71,80,20,700.00,14000.00,'2025-07-29 10:50:54','2025-07-29 10:50:54');
 /*!40000 ALTER TABLE `order_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -412,7 +397,7 @@ CREATE TABLE `orders` (
   KEY `orders_user_id_status_index` (`user_id`,`status`),
   KEY `orders_order_number_index` (`order_number`),
   CONSTRAINT `orders_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=72 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -422,29 +407,39 @@ CREATE TABLE `orders` (
 LOCK TABLES `orders` WRITE;
 /*!40000 ALTER TABLE `orders` DISABLE KEYS */;
 INSERT INTO `orders` VALUES
-(1,21,'ORD-2025-000001',1988.00,'delivered','Ukunda Town, Kwale County, Kenya','2025-07-11 07:41:27','Please call before delivery, access via back gate','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(2,6,'ORD-2025-000002',1860.00,'pending','Msambweni Sub-County Hospital, Kwale','2025-07-15 13:26:32','Urgent delivery before noon','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(3,11,'ORD-2025-000003',2982.00,'shipped','Gazi Village, Kwale','2025-07-13 03:54:18','Leave at gate, customer will collect','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(4,5,'ORD-2025-000004',1350.00,'processing','Diani Beach Road, opposite Nakumatt','2025-07-13 19:32:07','Avoid lunchtime traffic if possible','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(5,5,'ORD-2025-000005',2884.00,'processing','Kinondo, Msambweni','2025-07-13 19:20:26','Handle with care, fragile items','2025-07-08 20:53:12','2025-07-08 20:53:12'),
+(2,6,'ORD-2025-000002',1860.00,'delivered','Msambweni Sub-County Hospital, Kwale','2025-07-15 13:26:32','Urgent delivery before noon','2025-07-08 20:53:12','2025-07-26 15:44:55'),
 (6,26,'ORD-2025-000006',1032.00,'processing','Ukunda Town, Kwale County, Kenya','2025-07-10 18:09:23','Standard delivery instructions','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(7,6,'ORD-2025-000007',3902.00,'pending','Ukunda Town, Kwale County, Kenya','2025-07-13 11:38:39','Standard delivery instructions','2025-07-08 20:53:12','2025-07-08 20:53:12'),
+(7,6,'ORD-2025-000007',3902.00,'cancelled','Ukunda Town, Kwale County, Kenya','2025-07-13 11:38:39','Standard delivery instructions','2025-07-08 20:53:12','2025-07-23 11:08:22'),
 (8,6,'ORD-2025-000008',2578.00,'processing','Ukunda Town, Kwale County, Kenya','2025-07-11 05:08:44','Standard delivery instructions','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(9,16,'ORD-2025-000009',5154.00,'pending','Ukunda Town, Kwale County, Kenya','2025-07-15 12:02:50','Standard delivery instructions','2025-07-08 20:53:12','2025-07-08 20:53:12'),
 (10,12,'ORD-2025-000010',2041.00,'processing','Ukunda Town, Kwale County, Kenya','2025-07-13 23:51:52','Standard delivery instructions','2025-07-08 20:53:12','2025-07-08 20:53:12'),
 (11,12,'ORD-2025-000011',1055.00,'confirmed','Ukunda Town, Kwale County, Kenya','2025-07-14 20:38:46','Standard delivery instructions','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(12,13,'ORD-2025-000012',1980.00,'delivered','Ukunda Town, Kwale County, Kenya','2025-07-14 19:18:03','Standard delivery instructions','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(13,13,'ORD-2025-000013',8510.00,'confirmed','Ukunda Town, Kwale County, Kenya','2025-07-14 09:48:57','Standard delivery instructions','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(14,16,'ORD-2025-000014',994.00,'shipped','9671 Carroll Junction\nNorth Mollie, NY 64573','2025-07-15 13:12:52','Standard delivery instructions','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(15,6,'ORD-2025-000015',720.00,'pending','4418 Beer Terrace Apt. 675\nLake Barrettstad, AK 89013-0718','2025-07-15 02:57:37','Standard delivery instructions','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(16,13,'ORD-2025-000016',1175.00,'confirmed','16532 Lowe Brook\nEast Margarette, WY 04910-6108','2025-07-10 03:09:43','Standard delivery instructions','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(17,6,'ORD-2025-000017',7457.00,'pending','76528 Bradtke Garden Apt. 792\nLake Adell, HI 98437','2025-07-12 16:12:22','Standard delivery instructions','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(18,21,'ORD-2025-000018',2470.00,'shipped','19909 Lockman Underpass\nLake Alf, MD 66473-5703','2025-07-10 16:29:14','Standard delivery instructions','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(19,16,'ORD-2025-000019',4752.00,'delivered','796 DuBuque Junctions\nRodrigueztown, KY 73111','2025-07-13 06:45:59','Standard delivery instructions','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(20,11,'ORD-2025-000020',630.00,'delivered','4981 Ondricka Canyon Apt. 055\nStarkland, ID 12338-1171','2025-07-14 14:14:16','Voluptas ab nesciunt quaerat et.','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(21,4,'ORD-2025-000021',100.02,'pending','jjj',NULL,'Standard delivery instructions','2025-07-12 15:55:30','2025-07-12 15:55:30'),
-(25,6,'ORD-2025-000022',2200.00,'pending','Bulk delivery address will be provided','2025-07-17 21:00:00','Standard delivery instructions','2025-07-12 16:08:51','2025-07-12 16:08:52'),
-(28,4,'ORD-2025-000023',75.00,'pending','jsjss',NULL,NULL,'2025-07-12 16:33:53','2025-07-12 16:33:53');
+(15,6,'ORD-2025-000015',720.00,'cancelled','4418 Beer Terrace Apt. 675\nLake Barrettstad, AK 89013-0718','2025-07-15 02:57:37','Standard delivery instructions','2025-07-08 20:53:12','2025-07-23 10:26:54'),
+(17,6,'ORD-2025-000017',7457.00,'cancelled','76528 Bradtke Garden Apt. 792\nLake Adell, HI 98437','2025-07-12 16:12:22','Standard delivery instructions','2025-07-08 20:53:12','2025-07-23 10:26:58'),
+(25,6,'ORD-2025-000022',2200.00,'cancelled','Bulk delivery address will be provided','2025-07-17 21:00:00','Standard delivery instructions','2025-07-12 16:08:51','2025-07-23 11:08:25'),
+(34,6,'ORD-2025-472951',12000.00,'cancelled','Bulk delivery - Budget: 10000-25000. Requirements: nope','2025-07-22 21:00:00','Bulk order for retail - nope','2025-07-21 15:19:20','2025-07-23 11:08:27'),
+(37,6,'ORD-2025-968230',7000.00,'cancelled','Bulk delivery - Budget: 5000-10000. Requirements: owow','2025-07-23 21:00:00','Bulk order for retail - owow','2025-07-21 15:27:50','2025-07-23 11:02:47'),
+(43,6,'ORD-2025-114947',40000.00,'confirmed','Bulk delivery - Budget: 25000-50000. Requirements: fishy','2025-07-23 21:00:00','Bulk order for retail - fishy','2025-07-22 08:39:52','2025-07-25 03:31:28'),
+(44,6,'ORD-2025-085149',4000.00,'confirmed','Bulk delivery - Budget: 5000-10000','2025-07-22 21:00:00','Bulk order for retail - Standard bulk order','2025-07-22 08:40:45','2025-07-25 02:59:50'),
+(48,6,'ORD-2025-075808',600.00,'confirmed','Bulk delivery - Budget: 5000-10000. Requirements: nana','2025-07-23 21:00:00','Bulk order for retail - nana','2025-07-23 10:50:46','2025-07-25 02:39:53'),
+(49,6,'ORD-2025-380744',600.00,'confirmed','Bulk delivery - Budget: 5000-10000. Requirements: nana','2025-07-23 21:00:00','Bulk order for retail - nana','2025-07-23 11:09:00','2025-07-25 02:11:45'),
+(50,6,'ORD-2025-953058',4000.00,'confirmed','Bulk delivery - Budget: 5000-10000. Requirements: nope','2025-07-23 21:00:00','Bulk order for retail - nope','2025-07-23 11:24:34','2025-07-25 02:01:05'),
+(51,6,'ORD-2025-629719',3000.00,'confirmed','Bulk delivery - Budget: 5000-10000. Requirements: should be fresh and cold','2025-07-30 21:00:00','Bulk order for retail - should be fresh and cold','2025-07-23 11:29:00','2025-07-23 12:28:26'),
+(53,6,'ORD-2025-802790',3000.00,'confirmed','Bulk delivery - Budget: 5000-10000. Requirements: nope','2025-07-25 21:00:00','Bulk order for retail - nope','2025-07-25 03:33:40','2025-07-25 03:34:30'),
+(56,6,'ORD-2025-445005',6000.00,'delivered','Bulk delivery - Budget: 5000-10000. Requirements: asap as possible','2025-07-25 21:00:00','Bulk order for retail - asap as possible','2025-07-25 08:24:43','2025-07-26 15:46:04'),
+(57,6,'ORD-2025-611641',12000.00,'delivered','Bulk delivery - Budget: 10000-25000. Requirements: no','2025-07-25 21:00:00','Bulk order for retail - no','2025-07-25 08:31:31','2025-07-26 15:52:58'),
+(58,6,'ORD-2025-163265',10000.00,'confirmed','Bulk delivery - Budget: 10000-25000. Requirements: HOT','2025-07-25 21:00:00','Bulk order for retail - HOT','2025-07-25 08:33:00','2025-07-25 08:34:14'),
+(59,6,'ORD-2025-617422',12000.00,'delivered','Bulk delivery - Budget: 10000-25000. Requirements: nope','2025-07-25 21:00:00','Bulk order for retail - nope','2025-07-25 08:51:10','2025-07-26 15:53:00'),
+(61,41,'ORD-2025-513002',50.00,'confirmed','testsdeliverylocation',NULL,NULL,'2025-07-26 04:03:27','2025-07-26 04:06:33'),
+(62,41,'ORD-2025-328079',5000.00,'delivered','kisumu',NULL,NULL,'2025-07-26 04:04:46','2025-07-26 15:42:07'),
+(63,6,'ORD-2025-991827',4000.00,'delivered','Bulk delivery - Budget: 5000-10000. Requirements: fresh green ones','2025-07-27 21:00:00','Bulk order for retail - fresh green ones','2025-07-26 04:25:59','2025-07-26 15:45:49'),
+(64,41,'ORD-2025-966451',17000.00,'confirmed','Msambweni market',NULL,NULL,'2025-07-26 14:35:45','2025-07-26 14:36:53'),
+(65,6,'ORD-2025-531095',20000.00,'confirmed','Bulk delivery - Budget: 25000-50000. Requirements: as fresh as possible','2025-07-26 21:00:00','Bulk order for retail - as fresh as possible','2025-07-26 14:48:15','2025-07-26 14:50:24'),
+(66,6,'ORD-2025-132692',50000.00,'delivered','Bulk delivery - Budget: 50000+. Requirements: today','2025-07-30 21:00:00','Bulk order for retail - today','2025-07-26 14:52:28','2025-07-26 15:53:09'),
+(67,6,'ORD-2025-767136',500.00,'pending','Bulk delivery - Budget: 5000-10000','2025-07-30 21:00:00','Bulk order for retail - Standard bulk order','2025-07-29 09:57:28','2025-07-29 09:57:28'),
+(68,6,'ORD-2025-762010',35000.00,'pending','Bulk delivery - Budget: 25000-50000. Requirements: no','2025-07-30 21:00:00','Bulk order for retail - no','2025-07-29 10:24:19','2025-07-29 10:24:19'),
+(69,41,'ORD-2025-330619',700.00,'pending','353627',NULL,NULL,'2025-07-29 10:42:10','2025-07-29 10:42:10'),
+(70,41,'ORD-2025-650700',1000.00,'confirmed','another tests',NULL,NULL,'2025-07-29 10:49:50','2025-07-29 10:52:30'),
+(71,6,'ORD-2025-276731',14000.00,'confirmed','Bulk delivery - Budget: 10000-25000','2025-07-29 21:00:00','Bulk order for retail - Standard bulk order','2025-07-29 10:50:54','2025-07-29 10:52:02');
 /*!40000 ALTER TABLE `orders` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -482,7 +477,7 @@ DROP TABLE IF EXISTS `payments`;
 CREATE TABLE `payments` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `order_id` bigint(20) unsigned NOT NULL,
-  `payment_method` enum('cash','card','mobile_money','bank_transfer') NOT NULL,
+  `payment_method` varchar(30) NOT NULL,
   `amount` decimal(12,2) NOT NULL,
   `status` enum('pending','processing','completed','failed','refunded') NOT NULL DEFAULT 'pending',
   `transaction_id` varchar(255) NOT NULL,
@@ -495,7 +490,7 @@ CREATE TABLE `payments` (
   KEY `payments_order_id_status_index` (`order_id`,`status`),
   KEY `payments_transaction_id_index` (`transaction_id`),
   CONSTRAINT `payments_order_id_foreign` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=63 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -505,28 +500,38 @@ CREATE TABLE `payments` (
 LOCK TABLES `payments` WRITE;
 /*!40000 ALTER TABLE `payments` DISABLE KEYS */;
 INSERT INTO `payments` VALUES
-(1,1,'bank_transfer',1988.00,'processing','TXN-20250708235312-836556','2025-07-08 08:29:52',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(2,2,'bank_transfer',1860.00,'completed','TXN-20250708235312-83A8E6',NULL,NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(3,3,'card',2982.00,'completed','TXN-20250708235312-83DB7D','2025-06-10 04:41:58',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(4,4,'mobile_money',1350.00,'completed','TXN-20250708235312-841557',NULL,NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(5,5,'bank_transfer',2884.00,'processing','TXN-20250708235312-845FF9',NULL,NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
+(2,2,'bank_transfer',1860.00,'refunded','TXN-20250708235312-83A8E6',NULL,NULL,'2025-07-08 20:53:12','2025-07-23 11:08:24'),
 (6,6,'mobile_money',1032.00,'failed','TXN-20250708235312-849645',NULL,NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(7,7,'cash',3902.00,'processing','TXN-20250708235312-84E06A',NULL,NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
+(7,7,'cash',3902.00,'refunded','TXN-20250708235312-84E06A',NULL,NULL,'2025-07-08 20:53:12','2025-07-23 11:08:22'),
 (8,8,'mobile_money',2578.00,'processing','TXN-20250708235312-852D2C',NULL,NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(9,9,'card',5154.00,'pending','TXN-20250708235312-856D9B',NULL,NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
 (10,10,'bank_transfer',2041.00,'failed','TXN-20250708235312-85B099',NULL,NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
 (11,11,'mobile_money',1055.00,'failed','TXN-20250708235312-85F0A4',NULL,NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(12,12,'mobile_money',1980.00,'completed','TXN-20250708235312-8650CE','2025-06-28 18:33:49',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(13,13,'bank_transfer',8510.00,'processing','TXN-20250708235312-86A8E7',NULL,NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(14,14,'cash',994.00,'failed','TXN-20250708235312-86DBBF','2025-06-15 21:20:46',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(15,15,'cash',720.00,'processing','TXN-20250708235312-870BF9',NULL,NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(16,16,'bank_transfer',1175.00,'completed','TXN-20250708235312-87388B',NULL,NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(17,17,'card',7457.00,'completed','TXN-20250708235312-878C82',NULL,NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(18,18,'bank_transfer',2470.00,'failed','TXN-20250708235312-87DB65','2025-07-03 03:21:55',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(19,19,'card',4752.00,'completed','TXN-20250708235312-882B20','2025-06-26 05:33:36',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(20,20,'bank_transfer',630.00,'completed','TXN-20250708235312-885F26','2025-07-05 18:14:40',NULL,'2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(21,21,'card',100.02,'pending','TXN-20250712185530-2A26C2',NULL,NULL,'2025-07-12 15:55:30','2025-07-12 15:55:30'),
-(22,28,'mobile_money',75.00,'pending','TXN-20250712193353-125B10',NULL,NULL,'2025-07-12 16:33:53','2025-07-12 16:33:53');
+(15,15,'cash',720.00,'refunded','TXN-20250708235312-870BF9',NULL,NULL,'2025-07-08 20:53:12','2025-07-23 10:26:54'),
+(17,17,'card',7457.00,'refunded','TXN-20250708235312-878C82',NULL,NULL,'2025-07-08 20:53:12','2025-07-23 10:26:58'),
+(25,34,'cash_on_delivery',12000.00,'refunded','TXN-20250721181920-826173',NULL,NULL,'2025-07-21 15:19:20','2025-07-23 11:08:27'),
+(28,37,'mobile_money',7000.00,'refunded','TXN-20250721182750-6BCA71',NULL,NULL,'2025-07-21 15:27:50','2025-07-23 11:02:47'),
+(34,43,'mobile_money',40000.00,'refunded','TXN-20250722113952-849665',NULL,NULL,'2025-07-22 08:39:52','2025-07-23 11:02:43'),
+(35,44,'cash_on_delivery',4000.00,'refunded','TXN-20250722114045-D61C5F',NULL,NULL,'2025-07-22 08:40:45','2025-07-23 11:00:39'),
+(39,48,'mobile_money',600.00,'refunded','TXN-20250723135046-682226',NULL,NULL,'2025-07-23 10:50:46','2025-07-23 10:59:48'),
+(40,49,'cash_on_delivery',600.00,'pending','TXN-20250723140900-C3C0F1',NULL,NULL,'2025-07-23 11:09:00','2025-07-23 11:09:00'),
+(41,50,'cash_on_delivery',4000.00,'pending','TXN-20250723142435-3015CB',NULL,NULL,'2025-07-23 11:24:35','2025-07-23 11:24:35'),
+(42,51,'mobile_money',3000.00,'pending','TXN-20250723142900-C8BEE0',NULL,NULL,'2025-07-23 11:29:00','2025-07-23 11:29:00'),
+(44,53,'cash_on_delivery',3000.00,'pending','TXN-20250725063340-45B00A',NULL,NULL,'2025-07-25 03:33:40','2025-07-25 03:33:40'),
+(47,56,'cash_on_delivery',6000.00,'pending','TXN-20250725112443-B17A7E',NULL,NULL,'2025-07-25 08:24:43','2025-07-25 08:24:43'),
+(48,57,'cash_on_delivery',12000.00,'refunded','TXN-20250725113131-38964A',NULL,NULL,'2025-07-25 08:31:31','2025-07-25 08:32:14'),
+(49,58,'cash_on_delivery',10000.00,'pending','TXN-20250725113300-C74795',NULL,NULL,'2025-07-25 08:33:00','2025-07-25 08:33:00'),
+(50,59,'cash_on_delivery',12000.00,'pending','TXN-20250725115110-E83150',NULL,NULL,'2025-07-25 08:51:10','2025-07-25 08:51:10'),
+(52,61,'cash_on_delivery',50.00,'pending','TXN-20250726070327-F98E22',NULL,NULL,'2025-07-26 04:03:27','2025-07-26 04:03:27'),
+(53,62,'mobile_money',5000.00,'pending','TXN-20250726070446-E6FB41',NULL,NULL,'2025-07-26 04:04:46','2025-07-26 04:04:46'),
+(54,63,'cash_on_delivery',4000.00,'pending','TXN-20250726072559-7B9ACB',NULL,NULL,'2025-07-26 04:25:59','2025-07-26 04:25:59'),
+(55,64,'cash_on_delivery',17000.00,'pending','TXN-20250726173545-14E510',NULL,NULL,'2025-07-26 14:35:45','2025-07-26 14:35:45'),
+(56,65,'cash_on_delivery',20000.00,'refunded','TXN-20250726174815-FB17C5',NULL,NULL,'2025-07-26 14:48:15','2025-07-26 14:49:08'),
+(57,66,'cash_on_delivery',50000.00,'pending','TXN-20250726175228-CBBA58',NULL,NULL,'2025-07-26 14:52:28','2025-07-26 14:52:28'),
+(58,67,'cash_on_delivery',500.00,'pending','TXN-20250729125728-84C2D6',NULL,NULL,'2025-07-29 09:57:28','2025-07-29 09:57:28'),
+(59,68,'cash_on_delivery',35000.00,'pending','TXN-20250729132419-3F0BF1',NULL,NULL,'2025-07-29 10:24:19','2025-07-29 10:24:19'),
+(60,69,'cash_on_delivery',700.00,'pending','TXN-20250729134210-2B5974',NULL,NULL,'2025-07-29 10:42:10','2025-07-29 10:42:10'),
+(61,70,'cash_on_delivery',1000.00,'pending','TXN-20250729134950-E2BE9A',NULL,NULL,'2025-07-29 10:49:50','2025-07-29 10:49:50'),
+(62,71,'cash_on_delivery',14000.00,'pending','TXN-20250729135054-E546A2',NULL,NULL,'2025-07-29 10:50:54','2025-07-29 10:50:54');
 /*!40000 ALTER TABLE `payments` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -551,7 +556,7 @@ CREATE TABLE `personal_access_tokens` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `personal_access_tokens_token_unique` (`token`),
   KEY `personal_access_tokens_tokenable_type_tokenable_id_index` (`tokenable_type`,`tokenable_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=67 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=254 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -622,7 +627,146 @@ INSERT INTO `personal_access_tokens` VALUES
 (63,'App\\Models\\User',6,'auth_token','96bacccbda79547d78fef7743072cec73a4bf2dfed40c9133ec90ce488e87edb','[\"*\"]','2025-07-12 16:53:03',NULL,'2025-07-12 16:34:14','2025-07-12 16:53:03'),
 (64,'App\\Models\\User',7,'auth_token','3937bd844a52d76185ab5f15d221add944ba08c81e603146f8e4ca6a13f98a9c','[\"*\"]','2025-07-12 16:53:25',NULL,'2025-07-12 16:53:23','2025-07-12 16:53:25'),
 (65,'App\\Models\\User',28,'auth_token','80be4c2c25ed241abb0059805bb05ffe0ac08e346e0a443c80827e5c652f001b','[\"*\"]','2025-07-14 04:28:02',NULL,'2025-07-14 04:27:59','2025-07-14 04:28:02'),
-(66,'App\\Models\\User',1,'auth_token','5db96bf8bdb706db9a471ed3de902050371d7db53b63cb653c4abe792ed46f57','[\"*\"]','2025-07-14 04:41:37',NULL,'2025-07-14 04:31:19','2025-07-14 04:41:37');
+(66,'App\\Models\\User',1,'auth_token','5db96bf8bdb706db9a471ed3de902050371d7db53b63cb653c4abe792ed46f57','[\"*\"]','2025-07-14 04:46:26',NULL,'2025-07-14 04:31:19','2025-07-14 04:46:26'),
+(67,'App\\Models\\User',1,'auth_token','0f7e74608847740c3ab0d289abe09fc94713c8a6d2186deec8a100f67ff5c68a','[\"*\"]','2025-07-14 05:18:38',NULL,'2025-07-14 05:17:27','2025-07-14 05:18:38'),
+(68,'App\\Models\\User',2,'auth_token','b16380c45aff9c0c67f5d23144909edd10b9174bdea7b4481ae23cb4978f4c19','[\"*\"]','2025-07-14 06:55:26',NULL,'2025-07-14 06:55:24','2025-07-14 06:55:26'),
+(69,'App\\Models\\User',32,'auth_token','7bb2252eec655b12e914d33553766fbc8f12d3f0d6df70121d841e863a50afb3','[\"*\"]','2025-07-18 02:06:28',NULL,'2025-07-18 00:58:54','2025-07-18 02:06:28'),
+(70,'App\\Models\\User',4,'auth_token','71b97fbceab45b603e3ed36500d0ac8e2bdce19bba7835395cc3c9f70ce5195c','[\"*\"]','2025-07-18 02:13:22',NULL,'2025-07-18 02:09:14','2025-07-18 02:13:22'),
+(71,'App\\Models\\User',32,'auth_token','fd7db4d27acf52107cd78587f327b9e34938f90b1bdd85190ae75924766a7d23','[\"*\"]','2025-07-18 02:13:38',NULL,'2025-07-18 02:13:36','2025-07-18 02:13:38'),
+(72,'App\\Models\\User',4,'auth_token','deeb585fcadbef7acaf20c4618d47995251365ab08116254d673c6cc2a6d3b4a','[\"*\"]','2025-07-18 02:16:03',NULL,'2025-07-18 02:14:29','2025-07-18 02:16:03'),
+(73,'App\\Models\\User',32,'auth_token','7602863e2559a9fb9b2bd2e85d09d3070213ff08405b68182ebfbc5b649c2a05','[\"*\"]','2025-07-18 02:16:21',NULL,'2025-07-18 02:16:18','2025-07-18 02:16:21'),
+(74,'App\\Models\\User',4,'auth_token','c892ac2f8484ca14dad02b1b09ef142d505bf4bbd71089712d43f6a82f47c42f','[\"*\"]','2025-07-18 02:20:53',NULL,'2025-07-18 02:20:50','2025-07-18 02:20:53'),
+(75,'App\\Models\\User',6,'auth_token','0e2793c60195db7d84a6114d63c6235728e4bab6d2d21839afcea2448c38c345','[\"*\"]','2025-07-18 02:29:58',NULL,'2025-07-18 02:23:17','2025-07-18 02:29:58'),
+(76,'App\\Models\\User',7,'auth_token','d9605a91efe6b9a0f1453153314c498256f66ecb97dc17bc2dc234f3607439ca','[\"*\"]','2025-07-18 02:37:18',NULL,'2025-07-18 02:37:16','2025-07-18 02:37:18'),
+(77,'App\\Models\\User',1,'auth_token','db852852cb589ac5257eec6487d335f9c71257d46b143b4737606e6dd1700589','[\"*\"]','2025-07-18 02:46:30',NULL,'2025-07-18 02:39:15','2025-07-18 02:46:30'),
+(78,'App\\Models\\User',1,'auth_token','f333e3e59b067b8aa7ccd247021a4083e1ed7422a94c60505490069c1eeaa2d1','[\"*\"]','2025-07-18 03:45:01',NULL,'2025-07-18 03:44:59','2025-07-18 03:45:01'),
+(79,'App\\Models\\User',1,'auth_token','fec830adc3e2e880c5a1375a80ecc9571c8c9fc10ae133ac46381dc4f725be7d','[\"*\"]','2025-07-18 13:29:21',NULL,'2025-07-18 03:59:08','2025-07-18 13:29:21'),
+(80,'App\\Models\\User',1,'auth_token','c10ee7e4ebea91dbaf21199666ce5db759b7e19bf97ab0bee92efeabb167ac44','[\"*\"]','2025-07-18 11:53:16',NULL,'2025-07-18 11:42:43','2025-07-18 11:53:16'),
+(81,'App\\Models\\User',1,'auth_token','18f061b363914ee796450c4a032cbc4a08c15f10a8814eeda50404704d28f09a','[\"*\"]','2025-07-18 12:48:47',NULL,'2025-07-18 12:34:20','2025-07-18 12:48:47'),
+(82,'App\\Models\\User',4,'auth_token','cc92aaceed679125309fb00cf221207f551f9c7232217478c92c0cae074895ad','[\"*\"]','2025-07-18 12:47:20',NULL,'2025-07-18 12:42:13','2025-07-18 12:47:20'),
+(83,'App\\Models\\User',1,'auth_token','4342f480c2d4e5cd1ad59e14e72a27888d30d99fb03984dc1813252cd81aff9f','[\"*\"]',NULL,NULL,'2025-07-18 12:49:04','2025-07-18 12:49:04'),
+(84,'App\\Models\\User',2,'auth_token','33002da14e93d4b1be8c5452f0dff37c9b3788a768b6b7e89c64f616e999af0b','[\"*\"]',NULL,NULL,'2025-07-18 12:49:19','2025-07-18 12:49:19'),
+(85,'App\\Models\\User',2,'auth_token','975060a837073b5e204536384de2fd93ddb808e74bf7984a92701d610f17c2b9','[\"*\"]','2025-07-18 13:41:17',NULL,'2025-07-18 13:32:41','2025-07-18 13:41:17'),
+(86,'App\\Models\\User',4,'auth_token','3a21c4791a10100e0dc552509a0b166a43dc3d67b91257025753a15a36ceef18','[\"*\"]','2025-07-18 13:36:04',NULL,'2025-07-18 13:33:48','2025-07-18 13:36:04'),
+(87,'App\\Models\\User',6,'auth_token','ea3398804f0df4add2dbc3af2febf2a211685a85f918de20fa1cb16f9c2ea1c4','[\"*\"]','2025-07-18 13:43:47',NULL,'2025-07-18 13:41:48','2025-07-18 13:43:47'),
+(88,'App\\Models\\User',7,'auth_token','a235fd62591e697ba23e5d714caf17bb99fda6a4836e4c00a10795ab6ead33ff','[\"*\"]','2025-07-18 13:45:36',NULL,'2025-07-18 13:45:33','2025-07-18 13:45:36'),
+(89,'App\\Models\\User',1,'auth_token','b0767b69fd5c09a43ae4c1b34c79c026c02a52aea77c6d8bf82e9ab5ff5d6bc1','[\"*\"]',NULL,NULL,'2025-07-18 14:51:50','2025-07-18 14:51:50'),
+(90,'App\\Models\\User',1,'auth_token','b02701b4d85116781d5f13e741ccb799d1ade864f11b0b257b7edd5429573cab','[\"*\"]','2025-07-18 14:59:20',NULL,'2025-07-18 14:57:25','2025-07-18 14:59:20'),
+(91,'App\\Models\\User',28,'auth_token','913c9f200e79b810345d67c803583ffe4f0a31fb2053694b0c5aaf2b10a0cd23','[\"*\"]','2025-07-18 14:59:31',NULL,'2025-07-18 14:59:30','2025-07-18 14:59:31'),
+(92,'App\\Models\\User',1,'auth_token','d6781e8c7c4feb2fc712aa4164be2a4a4bc4b6a5f1580c27ec6d6d632d040b20','[\"*\"]','2025-07-18 15:19:08',NULL,'2025-07-18 15:08:07','2025-07-18 15:19:08'),
+(93,'App\\Models\\User',1,'auth_token','8ca4b2b6f5848b0c1eeaff2e2db2c2ad09c4e3b25497313d3d4e46cd39b0b0ec','[\"*\"]','2025-07-18 15:20:25',NULL,'2025-07-18 15:19:20','2025-07-18 15:20:25'),
+(95,'App\\Models\\User',4,'auth_token','1780e7fbc848f3553cad441dbd64156335c5cbc5da3471b9eb5f25b3c330efa2','[\"*\"]','2025-07-18 15:24:22',NULL,'2025-07-18 15:23:19','2025-07-18 15:24:22'),
+(96,'App\\Models\\User',4,'auth_token','3a3f5ac2bc3eff151ade6cc451489ba1047db51b9e6b3c0a280f8d3942272231','[\"*\"]','2025-07-18 15:25:51',NULL,'2025-07-18 15:25:49','2025-07-18 15:25:51'),
+(97,'App\\Models\\User',1,'auth_token','848e9cb90f057a9723a4b5a863229bf82c689b05a89ad70857c8048fd5211864','[\"*\"]','2025-07-18 15:26:27',NULL,'2025-07-18 15:26:05','2025-07-18 15:26:27'),
+(98,'App\\Models\\User',7,'auth_token','6124c78825d9688ca4d2d6f48e30410e66c9028321e80bc83acda95de5efb757','[\"*\"]','2025-07-18 15:26:43',NULL,'2025-07-18 15:26:41','2025-07-18 15:26:43'),
+(99,'App\\Models\\User',6,'auth_token','b0ff76e7b27dcf2343be50ce4a67c8c001d0d667d56ad9ce4bf053d9942328c0','[\"*\"]','2025-07-18 15:27:44',NULL,'2025-07-18 15:27:06','2025-07-18 15:27:44'),
+(100,'App\\Models\\User',33,'auth_token','c0cb32186e63d35c678d1dfd343841dc70261bd2c9be5626a974b9e334d21531','[\"*\"]','2025-07-18 15:28:40',NULL,'2025-07-18 15:28:38','2025-07-18 15:28:40'),
+(101,'App\\Models\\User',1,'auth_token','45025620902bfd83e9a736cc067724d2777a3e9d10e6ca5fb8c3073c6968062e','[\"*\"]','2025-07-21 12:15:37',NULL,'2025-07-21 12:15:15','2025-07-21 12:15:37'),
+(104,'App\\Models\\User',1,'auth_token','b184aa96583784ec8dcf3d4d3e20f4a768a8e168ee56102d9700eaa9946d0de1','[\"*\"]','2025-07-21 14:34:53',NULL,'2025-07-21 12:32:06','2025-07-21 14:34:53'),
+(105,'App\\Models\\User',4,'auth_token','bd36cacee31acb96e4f2d154e20e4b6c00061c69579e2d92e50bd8b2fa851f5b','[\"*\"]','2025-07-21 14:41:24',NULL,'2025-07-21 14:37:28','2025-07-21 14:41:24'),
+(106,'App\\Models\\User',6,'auth_token','3d49f0110a498e7d1e9490aebf53eb962639e116b4d724c9206c27d23b6eb273','[\"*\"]','2025-07-21 14:43:54',NULL,'2025-07-21 14:41:51','2025-07-21 14:43:54'),
+(107,'App\\Models\\User',6,'auth_token','a6b9ee4ca8a3eb83ca9dbb3ea18b494d24d551c4dc15ced34644a7bfb7401f53','[\"*\"]','2025-07-21 15:19:56',NULL,'2025-07-21 14:51:40','2025-07-21 15:19:56'),
+(108,'App\\Models\\User',7,'auth_token','bad91299714026d38ccca1f02731b3a80f502144e3b00592dfe8fdd8ea395857','[\"*\"]','2025-07-21 15:20:22',NULL,'2025-07-21 15:20:20','2025-07-21 15:20:22'),
+(110,'App\\Models\\User',4,'auth_token','38056c7e703e5d85a86816e3a19c53c8de3da7f57d9345243637839b4d1b4eb3','[\"*\"]','2025-07-21 15:21:55',NULL,'2025-07-21 15:21:35','2025-07-21 15:21:55'),
+(111,'App\\Models\\User',4,'auth_token','875964176d74e5e48c421d92f3348e3692e5f5f3c96895bbbdf25d5232e06990','[\"*\"]','2025-07-21 15:22:45',NULL,'2025-07-21 15:22:18','2025-07-21 15:22:45'),
+(112,'App\\Models\\User',1,'auth_token','50ebff8bfc80d0729e4590f89835cfd11b0de8943a7d901ec2b14e80aec0bdcf','[\"*\"]','2025-07-21 15:23:15',NULL,'2025-07-21 15:23:12','2025-07-21 15:23:15'),
+(113,'App\\Models\\User',6,'auth_token','a45f9e5482919db50a779e21be33aad62fb6d63643c52e935cce39c4c90eaa71','[\"*\"]','2025-07-21 15:28:00',NULL,'2025-07-21 15:23:44','2025-07-21 15:28:00'),
+(114,'App\\Models\\User',7,'auth_token','d583136b6d1dd2b878c2e2a241bec3f139d061f084c5b94f20e67686790e40e2','[\"*\"]','2025-07-21 15:29:39',NULL,'2025-07-21 15:29:37','2025-07-21 15:29:39'),
+(115,'App\\Models\\User',1,'auth_token','8e690b7a4931f70562ab7c35556b82600b3716e22c9a18d121e0c9b7642035da','[\"*\"]','2025-07-21 15:31:23',NULL,'2025-07-21 15:31:21','2025-07-21 15:31:23'),
+(117,'App\\Models\\User',4,'auth_token','d8fbf90d19d68d1796f65feec0198fea2812270b8365d90f53a2cb4400de65f0','[\"*\"]','2025-07-21 15:45:56',NULL,'2025-07-21 15:45:09','2025-07-21 15:45:56'),
+(119,'App\\Models\\User',4,'auth_token','9fbea10c8cb76b662248df00f51a716b1645b3509a26bd8a2beb5f4262f9ebf1','[\"*\"]','2025-07-21 16:01:18',NULL,'2025-07-21 15:47:36','2025-07-21 16:01:18'),
+(120,'App\\Models\\User',1,'auth_token','6c3602c636ecc240eafd53068c5f8918e8b2f09a0f2c8809307fa429ac200b6c','[\"*\"]','2025-07-21 16:12:53',NULL,'2025-07-21 16:09:59','2025-07-21 16:12:53'),
+(121,'App\\Models\\User',4,'auth_token','c6f097b302e6d2ee4b3a32bf173da9a1410c062ce1312e43106516c41e5eb97e','[\"*\"]','2025-07-22 07:33:12',NULL,'2025-07-22 07:30:02','2025-07-22 07:33:12'),
+(122,'App\\Models\\User',7,'auth_token','06cad1ba4756798f7529b8fc7a9f3a86694278fbecf6d6096324f56c795b126e','[\"*\"]','2025-07-22 07:33:48',NULL,'2025-07-22 07:33:26','2025-07-22 07:33:48'),
+(123,'App\\Models\\User',6,'auth_token','00501d12be6687d1019d06fc36df9273318b7bc0e127888c4a0e1229afd4e184','[\"*\"]','2025-07-22 07:48:26',NULL,'2025-07-22 07:48:00','2025-07-22 07:48:26'),
+(124,'App\\Models\\User',4,'auth_token','371ef28453ecc198d28771369af5980e74017dc84cc44eead8cd4568910997c1','[\"*\"]','2025-07-22 08:32:11',NULL,'2025-07-22 07:50:22','2025-07-22 08:32:11'),
+(125,'App\\Models\\User',1,'auth_token','37cd1a19b2fc922701ff47604484f5df2c4fa9f6b387acc0eb81ef8604f8c368','[\"*\"]','2025-07-22 08:05:17',NULL,'2025-07-22 08:03:07','2025-07-22 08:05:17'),
+(126,'App\\Models\\User',7,'auth_token','a0e51e93dbeeaa066980e72e27b8ffda9ddad78974c484ad8d931c1c7a49d5a4','[\"*\"]','2025-07-22 08:24:21',NULL,'2025-07-22 08:10:21','2025-07-22 08:24:21'),
+(127,'App\\Models\\User',1,'auth_token','10d3f780da15c9911a421d2181129547f7ca87b2e9a8df64398c8115024c345a','[\"*\"]','2025-07-22 08:34:00',NULL,'2025-07-22 08:11:50','2025-07-22 08:34:00'),
+(128,'App\\Models\\User',7,'auth_token','eabbc4c57ecbd809351f7336e938515e85845dfb2d04b5df412502a41a8c63bf','[\"*\"]','2025-07-22 08:25:58',NULL,'2025-07-22 08:25:06','2025-07-22 08:25:58'),
+(129,'App\\Models\\User',36,'auth_token','3a03b11ba2107d0dc6fea863157ee00775bd8893d76199a0d5ae04e880a4583e','[\"*\"]','2025-07-22 08:27:49',NULL,'2025-07-22 08:27:31','2025-07-22 08:27:49'),
+(130,'App\\Models\\User',7,'auth_token','7c2a54a6621063bcefcde8611577321329a6868c3730a7521a5fba2f7db2db85','[\"*\"]','2025-07-22 08:29:05',NULL,'2025-07-22 08:28:49','2025-07-22 08:29:05'),
+(131,'App\\Models\\User',4,'auth_token','088a583227ae5d8d778a58ce240b77b1f81705b3f6c375f5d5c8d7ea09daff94','[\"*\"]','2025-07-22 08:35:24',NULL,'2025-07-22 08:35:21','2025-07-22 08:35:24'),
+(133,'App\\Models\\User',4,'auth_token','e56cf3ee61018ad5349fd070bf97d956ac8826d3942fc5af2e3b37da5d0dc744','[\"*\"]','2025-07-22 08:36:54',NULL,'2025-07-22 08:36:21','2025-07-22 08:36:54'),
+(135,'App\\Models\\User',7,'auth_token','aaf839abf2f4e6cefe50a38610fbabd8f0e227840b90a30985676b5b00890bea','[\"*\"]','2025-07-22 08:38:35',NULL,'2025-07-22 08:37:39','2025-07-22 08:38:35'),
+(136,'App\\Models\\User',6,'auth_token','53376e9fe44afff9b3918641f6046f00fea26a89b6e656b961e0990a2da5e641','[\"*\"]','2025-07-22 08:40:59',NULL,'2025-07-22 08:39:03','2025-07-22 08:40:59'),
+(137,'App\\Models\\User',7,'auth_token','b63999ed38dd0ffed00b544efee5aeb851906dfc1c76ad8e8bf818608a71c663','[\"*\"]','2025-07-22 08:41:31',NULL,'2025-07-22 08:41:29','2025-07-22 08:41:31'),
+(138,'App\\Models\\User',1,'auth_token','1684653aaf5e64d8d2f93cd7b4afae7c4a7c77841b63755124718fd312da6a0e','[\"*\"]','2025-07-22 08:45:34',NULL,'2025-07-22 08:41:56','2025-07-22 08:45:34'),
+(139,'App\\Models\\User',7,'auth_token','1a8bf979cbe6eb4710d5ae65324a8e5b73524af0e4174efacd8363e1e9744baf','[\"*\"]','2025-07-22 08:47:13',NULL,'2025-07-22 08:47:11','2025-07-22 08:47:13'),
+(140,'App\\Models\\User',4,'auth_token','fe41ec39d16b844681af6ffbf99bc97f958d8953f5e534129727fa60d3ce24cd','[\"*\"]','2025-07-22 08:49:04',NULL,'2025-07-22 08:49:02','2025-07-22 08:49:04'),
+(145,'App\\Models\\User',1,'auth_token','a63e421a40e0c258691934aedea34a59d6308d902abd780300c9dff9852322f8','[\"*\"]','2025-07-22 09:04:37',NULL,'2025-07-22 09:04:35','2025-07-22 09:04:37'),
+(147,'App\\Models\\User',1,'auth_token','04cd531127dbed932d430f096504bd3ad7f852c05e343041319696bf17893de5','[\"*\"]',NULL,NULL,'2025-07-22 09:39:30','2025-07-22 09:39:30'),
+(148,'App\\Models\\User',1,'auth_token','f292f5dc6d08fdee2446d26e74338ac57108d11eb200e09733b1bee705a9704d','[\"*\"]','2025-07-22 10:21:55',NULL,'2025-07-22 09:50:33','2025-07-22 10:21:55'),
+(150,'App\\Models\\User',4,'auth_token','748eb4d73a551db9eb3ceda228ba1e9acb55a87f60f76d598f1c0483968038c1','[\"*\"]','2025-07-22 10:34:55',NULL,'2025-07-22 10:26:41','2025-07-22 10:34:55'),
+(151,'App\\Models\\User',1,'auth_token','6f42e4c02427a6c8921c0c0e7c5a3e87d711bfe9919362e42840e30fbf470e57','[\"*\"]','2025-07-22 10:43:22',NULL,'2025-07-22 10:36:13','2025-07-22 10:43:22'),
+(152,'App\\Models\\User',4,'auth_token','1bb9981cacfb9b7e82c4f4211bedf6832562fed2b83f2a3ed1312e196b6c24d8','[\"*\"]','2025-07-22 10:47:06',NULL,'2025-07-22 10:47:04','2025-07-22 10:47:06'),
+(154,'App\\Models\\User',4,'auth_token','24f84589634cb5cc5ab3476f616c79decfbd2af1c192eb71c97448bca578fb41','[\"*\"]','2025-07-23 10:20:00',NULL,'2025-07-23 10:14:46','2025-07-23 10:20:00'),
+(156,'App\\Models\\User',4,'auth_token','6a2704bfcfb76651562796687dad065898efa3d82281198f410d35f294a21406','[\"*\"]','2025-07-23 10:24:08',NULL,'2025-07-23 10:23:24','2025-07-23 10:24:08'),
+(158,'App\\Models\\User',6,'auth_token','961f554ae261563ba6322db4a974c1327661a0b0597fb4470534e1d7e137631e','[\"*\"]','2025-07-23 11:29:19',NULL,'2025-07-23 10:26:37','2025-07-23 11:29:19'),
+(161,'App\\Models\\User',1,'auth_token','c57720cc910b99a588e72c885343bfdd66597c63ea382a31e1c3d11614ae54f2','[\"*\"]','2025-07-23 11:41:02',NULL,'2025-07-23 11:41:00','2025-07-23 11:41:02'),
+(162,'App\\Models\\User',1,'auth_token','5e5c2f473899baf57bddc006b12a19b4088f0ce031a1665573babd526fa98290','[\"*\"]','2025-07-23 12:29:16',NULL,'2025-07-23 12:08:48','2025-07-23 12:29:16'),
+(164,'App\\Models\\User',1,'auth_token','4ff7105cab590cf21c0e6125114e4d243d7cc093a18683cf2e9f6e55617cf4e6','[\"*\"]','2025-07-23 12:32:02',NULL,'2025-07-23 12:31:12','2025-07-23 12:32:02'),
+(167,'App\\Models\\User',1,'auth_token','1cff90422032fceb07d32241ec8f3d91cdd84758481818ad2b34f9d8d98aacee','[\"*\"]','2025-07-23 12:41:41',NULL,'2025-07-23 12:41:39','2025-07-23 12:41:41'),
+(168,'App\\Models\\User',1,'auth_token','f3c05f46a28b66b0313580656fafd21088d781acb38215661916e1a6523b8592','[\"*\"]','2025-07-24 01:08:43',NULL,'2025-07-24 00:20:18','2025-07-24 01:08:43'),
+(169,'App\\Models\\User',1,'auth_token','a9c480f64d98657b665c73caf9d4629c9d7c4a5d0b0ba79a97cc74ece86dc8a0','[\"*\"]','2025-07-24 01:14:30',NULL,'2025-07-24 00:25:05','2025-07-24 01:14:30'),
+(170,'App\\Models\\User',1,'auth_token','1ffb46eaddd2fbe1c48576699406e0c14cde3cde61a625d578ac64b30e743db7','[\"*\"]','2025-07-24 05:42:36',NULL,'2025-07-24 05:42:07','2025-07-24 05:42:36'),
+(171,'App\\Models\\User',1,'auth_token','8e5137dc19147ac0ced6a336d3543ff3942b2a6a6dc76b8192edb9b62c2fa96c','[\"*\"]','2025-07-24 06:47:06',NULL,'2025-07-24 06:47:04','2025-07-24 06:47:06'),
+(172,'App\\Models\\User',38,'auth_token','eb610780c94477884c94a0e50302ddf5780209a26877ae1e3e0ca148807706ef','[\"*\"]','2025-07-24 06:52:27',NULL,'2025-07-24 06:47:40','2025-07-24 06:52:27'),
+(173,'App\\Models\\User',1,'auth_token','86d9f4c2258a7aca79a077a83e6b63d25213c70bb5c6c2aa65b3ffc214d3162f','[\"*\"]','2025-07-24 07:55:53',NULL,'2025-07-24 07:48:21','2025-07-24 07:55:53'),
+(175,'App\\Models\\User',1,'auth_token','9097be743f1dd251f3d4fb6b9f491ce9884719e960f7cb63197d2e87f1022be8','[\"*\"]','2025-07-24 08:28:57',NULL,'2025-07-24 08:18:50','2025-07-24 08:28:57'),
+(176,'App\\Models\\User',1,'auth_token','c542775b604fb3374cdb10e6b2a4cb91f27ab881af28301d44f6f086514d9c12','[\"*\"]','2025-07-24 11:13:02',NULL,'2025-07-24 10:09:53','2025-07-24 11:13:02'),
+(179,'App\\Models\\User',4,'auth_token','fed80be24df5c2385f4afdd443e79576dafc9a68bc7608a6ef0788686dd97a55','[\"*\"]','2025-07-25 02:49:07',NULL,'2025-07-25 02:48:19','2025-07-25 02:49:07'),
+(182,'App\\Models\\User',1,'auth_token','2d7379632001e0313c19e01de5ae01a670e19082f5a975abe1e39f6e50aff0f6','[\"*\"]',NULL,NULL,'2025-07-25 03:05:26','2025-07-25 03:05:26'),
+(185,'App\\Models\\User',7,'auth_token','45fbdddcb420f1ea61adbca51bd5ef09ae3c7f3751579b382f84f6a5c02f6cda','[\"*\"]','2025-07-25 03:25:44',NULL,'2025-07-25 03:19:22','2025-07-25 03:25:44'),
+(186,'App\\Models\\User',1,'auth_token','a97cfe16d72915d719e4241780d7473877ca7f7057ee578f190ba557d2240bf4','[\"*\"]','2025-07-25 03:22:00',NULL,'2025-07-25 03:21:26','2025-07-25 03:22:00'),
+(189,'App\\Models\\User',1,'auth_token','53ed9696a27d62aac2c8386642eacaaa4e47b0d8c309e5fc5067b2b9012d0061','[\"*\"]','2025-07-25 04:04:17',NULL,'2025-07-25 03:31:10','2025-07-25 04:04:17'),
+(190,'App\\Models\\User',6,'auth_token','c21fd934dce6b82cdb4d21cf6c582dc2ee49efda4b3128abcb2847cae2fe8e74','[\"*\"]','2025-07-25 03:35:13',NULL,'2025-07-25 03:33:15','2025-07-25 03:35:13'),
+(192,'App\\Models\\User',4,'auth_token','c1c07337e1eb3fbfaf2c3b130a46d8962c798184ff3a7267d52f9c18e9cd5082','[\"*\"]','2025-07-25 03:39:22',NULL,'2025-07-25 03:36:54','2025-07-25 03:39:22'),
+(196,'App\\Models\\User',1,'auth_token','0443091d32b3af5f731c2e4b1011d187b5b88e82a146e21165c39b67d3127e01','[\"*\"]','2025-07-25 04:04:17',NULL,'2025-07-25 03:44:27','2025-07-25 04:04:17'),
+(197,'App\\Models\\User',1,'auth_token','4450be557501950b04849d7a83091fcdfee7cc24f3e6e0dd8c81c933a4c1db8d','[\"*\"]','2025-07-25 04:25:40',NULL,'2025-07-25 04:09:56','2025-07-25 04:25:40'),
+(198,'App\\Models\\User',1,'auth_token','5bdf89659784031dfc12aad288d50f2567cff072414dc7e3304ac65f11ba5329','[\"*\"]','2025-07-25 04:36:29',NULL,'2025-07-25 04:32:43','2025-07-25 04:36:29'),
+(199,'App\\Models\\User',36,'auth_token','706e682af55e764abbe3fefc6779720276d51676a51e6fbe746ae850f53de19c','[\"*\"]','2025-07-25 04:36:29',NULL,'2025-07-25 04:33:27','2025-07-25 04:36:29'),
+(200,'App\\Models\\User',1,'auth_token','b9d2080ada488edb8018f4baa279e54c9a5c1189ff3ce3345fe8d2ab331025b0','[\"*\"]','2025-07-25 08:12:32',NULL,'2025-07-25 08:12:04','2025-07-25 08:12:32'),
+(201,'App\\Models\\User',4,'auth_token','5e791ed3e114e3dc1eb405d3d85d53db97e346f6d2f62d521961fcdd812a137e','[\"*\"]','2025-07-25 08:13:00',NULL,'2025-07-25 08:12:47','2025-07-25 08:13:00'),
+(202,'App\\Models\\User',1,'auth_token','448478b50eaf0949fb7863af9a4ab199827ad880dc3a471c2370b97a386382e2','[\"*\"]','2025-07-25 08:14:57',NULL,'2025-07-25 08:13:12','2025-07-25 08:14:57'),
+(204,'App\\Models\\User',4,'auth_token','77e4edc6bcf30ff8c84b99f4e154944994dad092b593c6442bbcb079573c7cde','[\"*\"]','2025-07-25 08:22:37',NULL,'2025-07-25 08:16:38','2025-07-25 08:22:37'),
+(205,'App\\Models\\User',1,'auth_token','44d03f66b986e049fc9b5a8f9935bc1753a146cea1011b8973c00846be305232','[\"*\"]','2025-07-25 08:23:15',NULL,'2025-07-25 08:22:58','2025-07-25 08:23:15'),
+(206,'App\\Models\\User',4,'auth_token','015e26b161543948756ab2fba1356b5f0d369fc3e0f9fa6d351b094582b0ce9c','[\"*\"]','2025-07-25 08:23:29',NULL,'2025-07-25 08:23:27','2025-07-25 08:23:29'),
+(207,'App\\Models\\User',6,'auth_token','aa4c72fd647749d930f6f6a5b264955932fd335745718a8daa850a8c8f3a2f6e','[\"*\"]','2025-07-25 08:25:02',NULL,'2025-07-25 08:24:14','2025-07-25 08:25:02'),
+(208,'App\\Models\\User',1,'auth_token','fc06960eb1f3cfef5528735034e16f5b62549b62d62acbcc644ccd7e8f52e727','[\"*\"]','2025-07-25 08:27:12',NULL,'2025-07-25 08:25:28','2025-07-25 08:27:12'),
+(210,'App\\Models\\User',1,'auth_token','b1b31e3264606e8bffd3b49455f3b524ce8f1ef6df2e7aa1b1bc2b75f8a4a20b','[\"*\"]','2025-07-25 08:30:48',NULL,'2025-07-25 08:28:24','2025-07-25 08:30:48'),
+(211,'App\\Models\\User',6,'auth_token','52831856a798209717465879db5064ff790ae39ddbd9a77ec62fa6002efed6d9','[\"*\"]','2025-07-25 08:31:31',NULL,'2025-07-25 08:31:09','2025-07-25 08:31:31'),
+(212,'App\\Models\\User',6,'auth_token','4f41dfe946fea434209b9e4874361a2c08c8370f9cee25759204ed84ec1a303d','[\"*\"]','2025-07-25 08:33:08',NULL,'2025-07-25 08:31:47','2025-07-25 08:33:08'),
+(213,'App\\Models\\User',1,'auth_token','704e70ea0b7eed9dd7feae62e22098c6f4fe753b575ffffc0878ff72847359d4','[\"*\"]','2025-07-25 08:34:34',NULL,'2025-07-25 08:33:27','2025-07-25 08:34:34'),
+(215,'App\\Models\\User',1,'auth_token','8745a6cd5d44d39c39919ec2352a38ebc3e0249514bc895e251d2e7eda408c6f','[\"*\"]','2025-07-25 08:57:37',NULL,'2025-07-25 08:49:30','2025-07-25 08:57:37'),
+(216,'App\\Models\\User',6,'auth_token','b6090db04cb107e21e828a232906e620461b522694d77fecfd9e68146272a31d','[\"*\"]','2025-07-25 08:51:36',NULL,'2025-07-25 08:50:49','2025-07-25 08:51:36'),
+(218,'App\\Models\\User',4,'auth_token','88f220bf6d50f2303ca375b7025561a938ab4834f755378512a7f24384267bbe','[\"*\"]','2025-07-25 08:57:36',NULL,'2025-07-25 08:56:42','2025-07-25 08:57:36'),
+(220,'App\\Models\\User',1,'auth_token','e240f41789ec2ec88b9f417225b2c7adb0d3f3acc4778c8ef75003b0af60596c','[\"*\"]','2025-07-25 09:09:09',NULL,'2025-07-25 09:01:51','2025-07-25 09:09:09'),
+(221,'App\\Models\\User',7,'auth_token','50d63ba2e3aa8c5d82c20f83d2a0dfb9cd674347f78ff8238855127d95c3e79e','[\"*\"]','2025-07-25 11:39:12',NULL,'2025-07-25 11:30:00','2025-07-25 11:39:12'),
+(222,'App\\Models\\User',1,'auth_token','51f3e07c7859555d3f2ab15779a7befae28fca614734c84805e54d294ab948dc','[\"*\"]','2025-07-26 03:37:50',NULL,'2025-07-26 03:05:36','2025-07-26 03:37:50'),
+(223,'App\\Models\\User',40,'auth_token','defa3d91095bd9297452e8141d429438464dfad1890a1f7a2fa9d7d19b53c877','[\"*\"]','2025-07-26 03:33:47',NULL,'2025-07-26 03:30:18','2025-07-26 03:33:47'),
+(224,'App\\Models\\User',36,'auth_token','953c165ed38f7d33a788c203fd92c87f2f0cd2c9ebc2042f7f40601fdfb3dfe3','[\"*\"]','2025-07-26 03:54:25',NULL,'2025-07-26 03:40:18','2025-07-26 03:54:25'),
+(226,'App\\Models\\User',1,'auth_token','99144495a278e6b097bf6d563ea3c877d1ce18f2aa2f00f260015d730689fd5a','[\"*\"]','2025-07-26 04:02:26',NULL,'2025-07-26 04:01:57','2025-07-26 04:02:26'),
+(227,'App\\Models\\User',41,'auth_token','dea9a9f9a0395fc3db2a6ce5fde654e3c81730d258e26e082c9f3a1648745ebc','[\"*\"]','2025-07-26 04:04:46',NULL,'2025-07-26 04:03:00','2025-07-26 04:04:46'),
+(228,'App\\Models\\User',1,'auth_token','32477b440846cf2eaffc0794b984cf70437460e956a215b605280f813d4c4a5e','[\"*\"]','2025-07-26 04:06:46',NULL,'2025-07-26 04:04:58','2025-07-26 04:06:46'),
+(229,'App\\Models\\User',41,'auth_token','13588bc0dac37963ba731a3bb271c808138bc7e3eb0f6f077224ce12e8678687','[\"*\"]','2025-07-26 04:07:20',NULL,'2025-07-26 04:07:19','2025-07-26 04:07:20'),
+(231,'App\\Models\\User',6,'auth_token','8c1916ae461a62823cbdb0c08763033340b6e6803562c240e785ae1367b96b1e','[\"*\"]','2025-07-26 04:26:49',NULL,'2025-07-26 04:25:30','2025-07-26 04:26:49'),
+(233,'App\\Models\\User',1,'auth_token','7f0948a43624ff63cbe3c48d9368467ac68b497ec01eecbcca6612fbd8fbfa6a','[\"*\"]','2025-07-26 04:41:13',NULL,'2025-07-26 04:29:03','2025-07-26 04:41:13'),
+(235,'App\\Models\\User',41,'auth_token','63df49d6633b7dba21a6320ef7507da2fdb3b039dd81a7141bc467377bf4e121','[\"*\"]','2025-07-26 14:36:32',NULL,'2025-07-26 14:34:58','2025-07-26 14:36:32'),
+(236,'App\\Models\\User',1,'auth_token','3a4623d83203308756ec07ca9d733036aa3ec158acc97b632328f630c4dfd77c','[\"*\"]','2025-07-26 14:46:50',NULL,'2025-07-26 14:36:44','2025-07-26 14:46:50'),
+(237,'App\\Models\\User',6,'auth_token','dc25e185895d9eb0c941eb87d4be119a149a4e8410db529c6d21f89e7257e2d7','[\"*\"]','2025-07-26 14:49:08',NULL,'2025-07-26 14:47:20','2025-07-26 14:49:08'),
+(238,'App\\Models\\User',1,'auth_token','2f469418a4e348d4b69e722866f11d1bf87dda8d5d67d14c89cf378f5e55bdf3','[\"*\"]','2025-07-26 14:51:03',NULL,'2025-07-26 14:49:39','2025-07-26 14:51:03'),
+(239,'App\\Models\\User',6,'auth_token','216a1f2e966dace2842d72fdb52e832b669a7fd8e8fde1f05ba4965933c083a8','[\"*\"]','2025-07-26 14:52:58',NULL,'2025-07-26 14:51:17','2025-07-26 14:52:58'),
+(240,'App\\Models\\User',1,'auth_token','fe1bbaa83ad16cc7960e3466c17ce3594a5219eefc5e05a33db2a24e40bbdef8','[\"*\"]','2025-07-26 14:55:46',NULL,'2025-07-26 14:53:15','2025-07-26 14:55:46'),
+(241,'App\\Models\\User',6,'auth_token','9b21cbada75ca9b82933c02591efd211e4f1c6a1835a9e8b7b087e2eec659eeb','[\"*\"]','2025-07-26 14:55:59',NULL,'2025-07-26 14:55:57','2025-07-26 14:55:59'),
+(243,'App\\Models\\User',1,'auth_token','1b1b1763e83488f0331e3da31a944125dab6f15df63259919e3a39817987b7f4','[\"*\"]','2025-07-26 15:51:59',NULL,'2025-07-26 15:51:08','2025-07-26 15:51:59'),
+(245,'App\\Models\\User',1,'auth_token','33af14142b360a306e8fcf3ecf9e10c3f1ec836dc7f249022af2ff569c4aa5bf','[\"*\"]','2025-07-26 15:53:27',NULL,'2025-07-26 15:53:24','2025-07-26 15:53:27'),
+(247,'App\\Models\\User',7,'auth_token','1e29bf993c8a6023c8fd182ea06d6e9245a456ef0cdc8fdf245e185e9b240c07','[\"*\"]','2025-07-26 16:19:23',NULL,'2025-07-26 16:19:20','2025-07-26 16:19:23'),
+(248,'App\\Models\\User',41,'auth_token','6cc97aec265b729382173bcf05138c89e74a76d118e3e2126f86b3557b717ac3','[\"*\"]','2025-07-29 09:55:34',NULL,'2025-07-29 09:51:49','2025-07-29 09:55:34'),
+(249,'App\\Models\\User',6,'auth_token','17ca42ce8696e9ebb06f7fee971c03ee6aa88b6af4eca32883689c1f2c4dd329','[\"*\"]','2025-07-29 10:24:20',NULL,'2025-07-29 09:56:53','2025-07-29 10:24:20'),
+(250,'App\\Models\\User',41,'auth_token','b4d49549e6deb7397ce173fafee772af698ea49ea61f4f38c099a1a0b3e2ed4a','[\"*\"]','2025-07-29 10:49:58',NULL,'2025-07-29 10:41:51','2025-07-29 10:49:58'),
+(251,'App\\Models\\User',6,'auth_token','54ceaa95475638f5d270824b76397f095cfcb728e26fb266e2e763c289373164','[\"*\"]','2025-07-29 10:51:19',NULL,'2025-07-29 10:50:14','2025-07-29 10:51:19'),
+(252,'App\\Models\\User',1,'auth_token','183efed56bf3ca94dfb795518d1393500e3bfd9425dfe3f1cffdcf668671f0ba','[\"*\"]','2025-07-29 10:52:44',NULL,'2025-07-29 10:51:34','2025-07-29 10:52:44');
 /*!40000 ALTER TABLE `personal_access_tokens` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -650,7 +794,7 @@ CREATE TABLE `products` (
   KEY `products_farmer_id_status_index` (`farmer_id`,`status`),
   KEY `products_category_index` (`category`),
   CONSTRAINT `products_farmer_id_foreign` FOREIGN KEY (`farmer_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=66 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=81 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -660,68 +804,19 @@ CREATE TABLE `products` (
 LOCK TABLES `products` WRITE;
 /*!40000 ALTER TABLE `products` DISABLE KEYS */;
 INSERT INTO `products` VALUES
-(1,17,'Coconuts','fruits','Fresh coastal coconuts from Kwale region',40.00,499,'kg',NULL,'active','2025-07-08 20:53:12','2025-07-12 16:33:53'),
-(2,3,'Sweet Corn','vegetables','Sweet and tender corn, locally grown',35.00,299,'kg',NULL,'active','2025-07-08 20:53:12','2025-07-12 16:33:53'),
-(3,24,'Pawpaw (Papaya)','fruits','Sweet ripe pawpaw from Msambweni farmers',80.00,200,'kg',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
+(2,3,'Sweet Corn','vegetables','Sweet and tender corn, locally grown',35.00,302,'kg',NULL,'active','2025-07-08 20:53:12','2025-07-23 11:08:22'),
 (4,3,'Amaranth (Mchicha)','vegetables','Locally grown leafy greens rich in nutrients',25.00,400,'kg',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(5,9,'White Rice','grains','Premium quality white rice',120.00,1000,'kg',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(6,20,'Wheat Flour','grains','Fine wheat flour for baking',90.00,800,'kg',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(7,2,'Fresh Milk','dairy','Fresh cow milk from grass-fed cows',60.00,100,'liter',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(8,17,'Black Pepper','spices','Aromatic black pepper spice',200.00,39,'kg',NULL,'active','2025-07-08 20:53:12','2025-07-12 16:08:52'),
-(9,17,'Coriander Seeds','spices','Fresh coriander seeds for cooking',150.00,30,'kg',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(10,24,'Green Beans','vegetables','Fresh green beans, great for stir-fry',45.00,250,'kg',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(11,15,'Cabbage','vegetables','Molestiae qui et numquam quibusdam nihil quisquam quidem earum in.',419.00,616,'kg',NULL,'inactive','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(12,2,'Butter','dairy','Locally sourced produce from Kwale',341.00,891,'bag',NULL,'inactive','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(13,15,'Cumin','spices','Locally sourced produce from Kwale',464.00,906,'piece',NULL,'inactive','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(14,20,'Cucumbers','vegetables','Locally grown nutritious vegetables from Msambweni',497.00,33,'bag',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(15,17,'Kale','vegetables','Locally sourced produce from Kwale',309.00,581,'liter',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(16,10,'Kale','vegetables','Locally sourced produce from Kwale',98.00,759,'gram',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(17,15,'Black Pepper','spices','Locally sourced produce from Kwale',335.00,207,'gram',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(18,2,'Chili Powder','spices','Locally sourced produce from Kwale',489.00,727,'bag',NULL,'inactive','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(19,10,'Ginger','spices','Locally sourced produce from Kwale',64.00,712,'kg',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(20,9,'Cream','dairy','Rich cream made from locally sourced milk, ideal for baking and cooking.',233.00,271,'gram',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(21,15,'Quinoa','grains','Excepturi impedit nihil illo quis sit distinctio minima.',489.00,595,'bag',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(22,3,'Black Pepper','spices','Locally sourced produce from Kwale',62.00,128,'liter',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(23,10,'Quinoa','grains','Sed repudiandae magnam nostrum temporibus aperiam rerum velit ab modi quae nostrum.',406.00,691,'gram',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(24,24,'Mangoes','fruits','Reprehenderit praesentium sunt quod velit rem enim suscipit.',210.00,86,'liter',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(25,9,'Cream','dairy','Commodi aliquam adipisci ea libero unde quis quas natus tenetur nihil sed qui ad.',344.00,884,'kg',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(26,10,'Rice','grains','Organically farmed wheat suitable for export',236.00,925,'liter',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(27,24,'Yogurt','dairy','Popular fermented milk product from Msambweni dairies',185.00,600,'kg',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(28,17,'Sorghum','grains','High-quality sorghum from the coastal region',230.00,772,'gram',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(29,15,'Spinach','vegetables','Locally sourced produce from Kwale',81.00,509,'kg',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(30,15,'Cumin','spices','Locally sourced produce from Kwale',298.00,825,'gram',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(31,17,'Rice','grains','Premium grade rice harvested from Kenyan highlands',240.00,776,'kg',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(32,10,'Mangoes','fruits','Locally sourced produce from Kwale',307.00,776,'kg',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(33,9,'Cucumbers','vegetables','Cum maiores ad iste ut quos dignissimos assumenda quisquam inventore.',390.00,888,'bag',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(34,2,'Cumin','spices','Locally grown cumin spice, ideal for coastal dishes',59.00,620,'gram',NULL,'inactive','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(35,9,'Oranges','fruits','Locally sourced produce from Kwale',250.00,634,'gram',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(36,24,'Watermelons','fruits','Juicy watermelons from the Kenyan coast, perfect for hot days.',51.00,119,'kg',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(37,24,'Ginger','spices','Locally sourced produce from Kwale',483.00,169,'kg',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(38,17,'Potatoes','vegetables','Locally sourced produce from Kwale',203.00,223,'liter',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(39,2,'Oats','grains','Locally sourced produce from Kwale',472.00,467,'kg',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
+(22,3,'Black Pepper','spices','Locally sourced produce from Kwale',62.00,127,'liter',NULL,'active','2025-07-08 20:53:12','2025-07-25 03:37:36'),
 (40,3,'Cinnamon','spices','Locally sourced produce from Kwale',121.00,194,'bag',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(41,20,'Oranges','fruits','Locally sourced produce from Kwale',246.00,946,'gram',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(42,15,'Cardamom','spices','Et iure provident eligendi et sed quo quo incidunt incidunt debitis eum.',183.00,663,'piece',NULL,'inactive','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(43,2,'Cucumbers','vegetables','Fresh cucumbers grown near Msambweni, great for salads and hydration.',207.00,345,'kg',NULL,'inactive','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(44,20,'Cucumbers','vegetables','Fresh cucumbers grown using sustainable practices',233.00,444,'kg',NULL,'inactive','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(45,20,'Paprika','spices','Locally sourced produce from Kwale',172.00,435,'kg',NULL,'inactive','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(46,2,'Oranges','fruits','Sweet oranges cultivated near Msambweni',329.00,454,'gram',NULL,'inactive','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(47,10,'Cloves','spices','Rich and aromatic cloves used in Swahili cuisine',61.00,33,'piece',NULL,'inactive','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(48,2,'Oranges','fruits','Locally sourced produce from Kwale',359.00,691,'bag',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(49,20,'Turmeric','spices','Naturally grown turmeric roots from Msambweni farms',482.00,791,'bag',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(50,15,'Sour Cream','dairy','Sour cream made fresh from local dairy cooperatives',105.00,395,'piece',NULL,'inactive','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(51,15,'Pineapples','fruits','Pineapples sourced from Msambweni plantations',140.00,324,'liter',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(52,2,'Pineapples','fruits','Pineapples sourced from Msambweni plantations',256.00,253,'gram',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(53,17,'Turmeric','spices','Alias molestiae quae aliquid sit sed culpa laborum minima.',137.00,439,'kg',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(54,24,'Rice','grains','Locally sourced produce from Kwale',286.00,432,'liter',NULL,'inactive','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(55,24,'Cottage Cheese','dairy','Locally sourced produce from Kwale',379.00,344,'gram',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(56,10,'Pineapples','fruits','Locally sourced produce from Kwale',489.00,615,'piece',NULL,'active','2025-07-08 20:53:12','2025-07-08 20:53:12'),
 (57,3,'Buckwheat','grains','Organic buckwheat from Kenyan farms',429.00,610,'gram',NULL,'inactive','2025-07-08 20:53:12','2025-07-08 20:53:12'),
 (58,3,'Quinoa','grains','Asperiores rerum blanditiis ea sed esse autem.',121.00,367,'gram',NULL,'out_of_stock','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(59,17,'Green Beans','vegetables','Locally sourced produce from Kwale',115.00,419,'kg',NULL,'inactive','2025-07-08 20:53:12','2025-07-08 20:53:12'),
 (60,3,'Bananas','fruits','Ripe bananas from Kwale, sweet and ready to eat or cook.',173.00,628,'bag',NULL,'inactive','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(61,2,'potatata','vegetables','potatoes',70.00,3,'kg',NULL,'active','2025-07-11 01:04:03','2025-07-11 01:04:03'),
-(65,28,'Tomato','fruits','hahaah',100.02,2,'kg',NULL,'active','2025-07-12 14:18:37','2025-07-12 15:55:30');
+(74,36,'Fresh Milk','dairy','fresh milk from msambweni!',60.00,0,'kg',NULL,'out_of_stock','2025-07-23 10:09:53','2025-07-23 11:29:00'),
+(75,36,'testproduct','spices','product',30.00,0,'kg',NULL,'out_of_stock','2025-07-23 10:23:07','2025-07-23 10:24:04'),
+(77,36,'cashew nuts','fruits','fresh nuts',200.00,0,'kg',NULL,'out_of_stock','2025-07-25 08:16:07','2025-07-25 08:24:43'),
+(78,36,'Cabbage','vegetables','fresh weekend cabbages',50.00,9,'kg',NULL,'active','2025-07-26 04:00:37','2025-07-29 09:57:28'),
+(79,36,'Tilapia','dairy','weekend fresh',1000.00,239,'kg',NULL,'active','2025-07-26 14:14:43','2025-07-29 10:49:50'),
+(80,36,'Maize','grains','soft',700.00,519,'kg',NULL,'active','2025-07-26 14:34:13','2025-07-29 10:50:54');
 /*!40000 ALTER TABLE `products` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -816,7 +911,7 @@ CREATE TABLE `users` (
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `users_email_unique` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=42 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -827,36 +922,16 @@ LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
 INSERT INTO `users` VALUES
 (1,'Admin User','admin@agrilink.com','+254700000001',NULL,'$2y$12$t3VGwEuIz0lBPO4n8JaHMOHNET2m8HuiA.nKSr3m5G/dvA0dQro.u','admin','active',NULL,'2025-07-08 20:53:09','2025-07-08 20:53:09'),
-(2,'John Farmer','farmer@agrilink.com','+254700000002',NULL,'$2y$12$GwHmzRHx4j4Lr6hJkE4mR.TL5ODKq1K3XIgopMBUoIY5zDumTDQNO','farmer','active',NULL,'2025-07-08 20:53:10','2025-07-08 20:53:10'),
-(3,'Mary Wanjiku','mary.farmer@agrilink.com','+254700000003',NULL,'$2y$12$h8WH20slgn8YL6gynGgrtumbOE3zS5kzxMH0CJbr2ZzEp3jyHTL1e','farmer','active',NULL,'2025-07-08 20:53:10','2025-07-08 20:53:10'),
-(4,'Jane Consumer','consumer@agrilink.com','+254700000004',NULL,'$2y$12$i89ifpFvv41FOBrSw56bJeUlK.GVjtMOXcMCswgyDIxwuXSbPOgUa','consumer','active',NULL,'2025-07-08 20:53:10','2025-07-08 20:53:10'),
-(5,'Peter Kimani','peter.consumer@agrilink.com','+254700000005',NULL,'$2y$12$lPSvGpMhU6JFepWJ0JICw.7jH9x8GLFhxuqthLWlgXWAAZwB1uCXe','consumer','active',NULL,'2025-07-08 20:53:11','2025-07-08 20:53:11'),
-(6,'Sarah Retailer','retailer@agrilink.com','+254700000006',NULL,'$2y$12$DdD.AJkonCw6zX8Pc5GMtezyjf4ZJJa10jBsfIjYAAt6wJjWTDsbO','retailer','active',NULL,'2025-07-08 20:53:11','2025-07-08 20:53:11'),
-(7,'David Logistics','logistics@agrilink.com','+254700000007',NULL,'$2y$12$awdNRhYc4g.1YL0yBFW7Sehj2v3i7lDFBeNcqvtiog2NJt.O.Gn.O','logistics','active',NULL,'2025-07-08 20:53:11','2025-07-08 20:53:11'),
-(8,'Mr. David Weissnat','altenwerth.haylee@example.com','+254773524125','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','logistics','inactive','EhwfNKBW6d','2025-07-08 20:53:11','2025-07-08 20:53:11'),
-(9,'Rosalee McCullough','hintz.christina@example.com','+254730511183','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','farmer','inactive','wFOeL3G8do','2025-07-08 20:53:11','2025-07-08 20:53:11'),
-(10,'Braeden Bins','daniella.kozey@example.net','+254705578990','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','farmer','inactive','JENh60fW9L','2025-07-08 20:53:11','2025-07-08 20:53:11'),
-(11,'Moses Schulist III','von.morgan@example.com','+254783607397','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','consumer','active','GI0Dx3BNXn','2025-07-08 20:53:11','2025-07-08 20:53:11'),
-(12,'Markus Bins','carley39@example.net','+254784960177','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','retailer','active','T3YrlYNFK0','2025-07-08 20:53:11','2025-07-08 20:53:11'),
-(13,'Koby Jacobson','bledner@example.net','+254761747129','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','retailer','active','FjGtqiFKrr','2025-07-08 20:53:11','2025-07-08 20:53:11'),
-(14,'Elbert Schoen I','hailee31@example.com','+254774224269','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','logistics','inactive','e18xi7W00H','2025-07-08 20:53:11','2025-07-08 20:53:11'),
-(15,'Lavinia Romaguera','umills@example.org','+254725640068','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','farmer','inactive','Wt5r4Dmieq','2025-07-08 20:53:11','2025-07-08 20:53:11'),
-(16,'Reba O\'Conner','franecki.eldora@example.org','+254743108408','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','retailer','active','9p2RwhenV0','2025-07-08 20:53:11','2025-07-08 20:53:11'),
-(17,'Giuseppe Kuhic','joshuah.lind@example.org','+254727289578','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','farmer','active','OHCm714BdQ','2025-07-08 20:53:11','2025-07-08 20:53:11'),
+(3,'Mary Wanjiku','mary.farmer@agrilink.com','+254700000003',NULL,'$2y$12$h8WH20slgn8YL6gynGgrtumbOE3zS5kzxMH0CJbr2ZzEp3jyHTL1e','farmer','suspended',NULL,'2025-07-08 20:53:10','2025-07-21 14:18:22'),
+(6,'Sarah Retailer','retailer@agrilink.com','+254700000006',NULL,'$2y$12$DdD.AJkonCw6zX8Pc5GMtezyjf4ZJJa10jBsfIjYAAt6wJjWTDsbO','retailer','active',NULL,'2025-07-08 20:53:11','2025-07-21 14:19:08'),
+(7,'David Logistics','logistics@agrilink.com','+254700000007',NULL,'$2y$12$awdNRhYc4g.1YL0yBFW7Sehj2v3i7lDFBeNcqvtiog2NJt.O.Gn.O','logistics','active',NULL,'2025-07-08 20:53:11','2025-07-26 03:36:58'),
+(12,'Markus Bins','carley39@example.net','+254784960177','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','retailer','suspended','T3YrlYNFK0','2025-07-08 20:53:11','2025-07-18 15:20:22'),
 (18,'Leopold Deckow','amorar@example.com','+254736097520','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','logistics','inactive','Dp1N31NzBs','2025-07-08 20:53:11','2025-07-08 20:53:11'),
-(19,'Ivory Paucek','zaria.batz@example.com','+254763621366','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','consumer','active','jyN7Coe7gp','2025-07-08 20:53:11','2025-07-08 20:53:11'),
-(20,'Vada Streich','asha68@example.org','+254716818485','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','farmer','active','dCu7dFhsxc','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(21,'Prof. Vena Spinka I','ymayer@example.com','+254790510635','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','retailer','active','YzxVi9Kuvm','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(22,'Collin Prohaska IV','johnny.friesen@example.com','+254754197105','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','logistics','inactive','VWJ6AByyWz','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(23,'Dorian Morissette','rtremblay@example.com','+254784541234','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','consumer','inactive','K5fih1Aj3e','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(24,'Abigale Schinner','dean26@example.com','+254748780500','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','farmer','active','U4dxT9ugqY','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(25,'Prof. Alexander McKenzie','maegan55@example.net','+254742039199','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','retailer','active','UElBtnStTg','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(26,'Prudence Treutel','ygislason@example.com','+254772521822','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','retailer','inactive','XjKZBJkVbc','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(27,'Cicero Wisozk','langosh.maya@example.net','+254704033966','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','logistics','active','EIEOU8ldcO','2025-07-08 20:53:12','2025-07-08 20:53:12'),
-(28,'Brian Njuguna','brian@mail.com','0112358234',NULL,'$2y$12$.TYaKBZxdrNdSwWSiK3aD.vMexnCWZLaCYw4lk1hb5dieE8JCJnTG','farmer','active',NULL,'2025-07-10 03:14:54','2025-07-10 03:14:54'),
-(29,'Brian Consumer','brianconsumer@mail.com','012345678',NULL,'$2y$12$deJRS1.dAqgxzyEvytlYT.hgTpomU1tKQwcu1B8WhwghvTbpKTtiu','consumer','active',NULL,'2025-07-10 16:36:04','2025-07-10 16:36:04'),
-(30,'Brian Retailer','brianretailer@mail.com','012345678',NULL,'$2y$12$9Z5Bx37h21D6vOBk9PX8F.EfUzx9b2yF9JA3STIhY/RE9SNuSRAHO','retailer','active',NULL,'2025-07-10 16:39:33','2025-07-10 16:39:33'),
-(31,'Brian Logistics','brianlogistics@mail.com','01',NULL,'$2y$12$0cqodLmILsYAQjDz2xJPzuBHdjTMB.9O9LXcrVqpfSImsqwIEtxrq','logistics','active',NULL,'2025-07-10 16:43:55','2025-07-10 16:43:55');
+(19,'Ivory Paucek','zaria.batz@example.com','+254763621366','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','consumer','suspended','jyN7Coe7gp','2025-07-08 20:53:11','2025-07-21 14:18:20'),
+(26,'Prudence Treutel','ygislason@example.com','+254772521822','2025-07-08 20:53:11','$2y$12$LdcYVbc54gE.U.r.w0fcOuBNr0H9t.t1OGbiyZNflWdBUIekTo4Vu','retailer','suspended','XjKZBJkVbc','2025-07-08 20:53:12','2025-07-18 15:20:08'),
+(36,'Bri Farmer','farmer@agrilink.com','0123456',NULL,'$2y$12$HSpT1Us8lcBJCm3z6TjsZO8kQSLjhE7j9ZqWQP7lPnyP3aGYwFEbG','farmer','active',NULL,'2025-07-21 15:21:14','2025-07-21 15:21:14'),
+(37,'Brian Logistics','brian@logistics.com','01712345678',NULL,'$2y$12$fZYROxtiOHMwtedNxu4aE.Sw166.v33i6z4h.c5Ce0Ttr3fSr0S8.','logistics','active',NULL,'2025-07-23 11:39:52','2025-07-23 11:39:52'),
+(41,'consumer agrilink','consumer@agrilink.com','0712345678',NULL,'$2y$12$HJiKv.P7uZsAoETyhXkj3O6JaP1m4.zpRUI/e4g3nN/PmUS0v.69K','consumer','active',NULL,'2025-07-26 04:03:00','2025-07-26 04:03:00');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -869,4 +944,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-07-14 10:41:40
+-- Dump completed on 2025-07-29 22:47:33
