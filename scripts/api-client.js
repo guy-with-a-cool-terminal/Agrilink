@@ -1,6 +1,7 @@
 class ApiClient {
     constructor() {
-        this.baseURL = 'http://127.0.0.1:8000/api';
+        // this.baseURL = 'http://127.0.0.1:8000/api';
+        this.baseURL = 'https://agrilink-production.up.railway.app/api';
         this.endpoints = {
             // Authentication
             LOGIN: '/login',
