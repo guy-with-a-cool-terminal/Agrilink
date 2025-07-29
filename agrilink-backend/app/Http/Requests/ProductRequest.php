@@ -15,7 +15,7 @@ class ProductRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'category' => 'required|in:vegetables,fruits,grains,dairy,spices',
+            'category' => 'required|in:vegetables,fruits,grains,dairy,spices','seafood','poultry','livestock',
             'description' => 'nullable|string|max:1000',
             'price' => 'required|numeric|min:0',
             'quantity' => 'required|integer|min:0',
