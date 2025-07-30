@@ -271,15 +271,10 @@ function displayOrderHistory() {
             // Direct product info on order
             productName = order.product_name;
             totalQuantity = parseInt(order.quantity) || 0;
-        } else {
-            // Debug: log one order to see the order_items structure
-            if (order.id === 49) {
-                console.log('Sample order_items structure:', {
-                    order_items: order.order_items,
-                    first_item: order.order_items?.[0]
-                });
-            }
         }
+        
+        // FIXED: Only show cancel button for pending orders
+        const canCancel = order.status.toLowerCase() === 'pending';
         
         return `
             <tr>
@@ -293,9 +288,9 @@ function displayOrderHistory() {
                     <button class="btn-secondary text-sm" onclick="viewOrderDetails(${order.id})">
                         View Details
                     </button>
-                    ${['pending', 'confirmed'].includes(order.status) ?
+                    ${canCancel ?
                         `<button class="btn-danger text-sm ml-2" onclick="cancelOrder(${order.id})">Cancel</button>` :
-                        ''
+                        '<span class="text-gray-400 text-sm ml-2">Cannot cancel</span>'
                     }
                 </td>
             </tr>
@@ -315,19 +310,57 @@ function getStatusClass(status) {
     return statusClasses[status] || 'bg-gray-100 text-gray-800';
 }
 // Add order cancellation function
-function cancelOrder(orderId) {
-    if (!confirm('Are you sure you want to cancel this bulk order?')) return;
-    
-    apiClient.cancelOrder(orderId)
-        .then(() => {
-            showNotification('Order cancelled successfully', 'success');
-            loadOrderHistory();
-            loadRetailerStats();
-        })
-        .catch(error => {
-            console.error('Error cancelling order:', error);
-            showNotification('Failed to cancel order', 'error');
-        });
+async function cancelOrder(orderId) {
+    try {
+        // First, find the order to validate cancellation eligibility
+        const order = orders.find(o => o.id == orderId);
+        
+        if (!order) {
+            showNotification('Order not found', 'error');
+            return;
+        }
+        
+        // Check if this order belongs to the current user
+        if (order.user_id != currentUser.id && order.customer_email !== currentUser.email) {
+            showNotification('You can only cancel your own orders', 'error');
+            return;
+        }
+        
+        // BUSINESS RULE: Only allow cancellation for pending orders
+        const cancellableStatuses = ['pending'];
+        if (!cancellableStatuses.includes(order.status.toLowerCase())) {
+            showNotification(`Cannot cancel order with status "${order.status}". Only pending orders can be cancelled.`, 'error');
+            return;
+        }
+        
+        if (!confirm('Are you sure you want to cancel this bulk order? This action cannot be undone.')) {
+            return;
+        }
+        
+        // Call API to cancel order
+        const response = await apiClient.cancelOrder(orderId);
+        console.log('Order cancelled:', response);
+        
+        showNotification('Order cancelled successfully', 'success');
+        
+        await loadOrders();        
+        await loadRetailerStats(); 
+        displayOrderHistory(); 
+        
+    } catch (error) {
+        console.error('Error cancelling order:', error);
+        let errorMessage = 'Failed to cancel order';
+        
+        if (error.message.includes('not found')) {
+            errorMessage = 'Order not found or already cancelled';
+        } else if (error.message.includes('cannot be cancelled')) {
+            errorMessage = 'This order cannot be cancelled at this time';
+        } else if (error.message.includes('unauthorized')) {
+            errorMessage = 'You do not have permission to cancel this order';
+        }
+        
+        showNotification(errorMessage, 'error');
+    }
 }
 
 // Populate order select for delivery scheduling

@@ -1,5 +1,117 @@
 // Consumer Dashboard JavaScript - Enhanced with Real-time Data and Complete Checkout
 
+// ============= ORDER UTILITIES - SHARED UTILITIES =============
+class OrderDisplayUtils {
+    /**
+     * Safely extract product information from order items
+     * Handles different API response structures and deployment inconsistencies
+     */
+    static getOrderProductInfo(order) {
+        if (!order) {
+            return {
+                productName: 'No items',
+                totalQuantity: 0,
+                items: []
+            };
+        }
+
+        // Try different possible field names for order items
+        const itemsArray = order.order_items || order.items || order.products || [];
+        
+        if (!Array.isArray(itemsArray) || itemsArray.length === 0) {
+            // Fallback: check if product info is directly on the order object
+            if (order.product_name || order.name) {
+                return {
+                    productName: order.product_name || order.name,
+                    totalQuantity: parseInt(order.quantity) || 1,
+                    items: [{
+                        name: order.product_name || order.name,
+                        quantity: parseInt(order.quantity) || 1,
+                        unit_price: parseFloat(order.unit_price || order.price || 0)
+                    }]
+                };
+            }
+            
+            return {
+                productName: 'No items',
+                totalQuantity: 0,
+                items: []
+            };
+        }
+
+        // Calculate total quantity across all items
+        const totalQuantity = itemsArray.reduce((sum, item) => {
+            return sum + (parseInt(item.quantity) || 0);
+        }, 0);
+
+        let productName;
+        const items = itemsArray.map(item => ({
+            name: this.extractProductName(item),
+            quantity: parseInt(item.quantity) || 0,
+            unit_price: parseFloat(item.unit_price || item.price || 0)
+        }));
+
+        // Generate display name based on number of items
+        if (itemsArray.length === 1) {
+            productName = this.extractProductName(itemsArray[0]);
+        } else if (itemsArray.length > 1) {
+            const firstName = this.extractProductName(itemsArray[0]);
+            productName = `${firstName} + ${itemsArray.length - 1} more`;
+        } else {
+            productName = 'No items';
+        }
+
+        return {
+            productName,
+            totalQuantity,
+            items
+        };
+    }
+
+    /**
+     * Extract product name from a single item with multiple fallbacks
+     */
+    static extractProductName(item) {
+        if (!item) return 'Unknown Product';
+        
+        // Try different possible field names for product name
+        return item.product?.name || 
+               item.name || 
+               item.product_name || 
+               item.title ||
+               (item.product && typeof item.product === 'string' ? item.product : null) ||
+               'Unknown Product';
+    }
+
+    /**
+     * Check if order can be cancelled based on status
+     */
+    static canCancelOrder(order) {
+        if (!order || !order.status) return false;
+        
+        // Only allow cancellation for pending orders
+        const cancellableStatuses = ['pending'];
+        return cancellableStatuses.includes(order.status.toLowerCase());
+    }
+
+    /**
+     * Get appropriate status styling class
+     */
+    static getStatusClass(status) {
+        const statusClasses = {
+            'pending': 'bg-yellow-100 text-yellow-800',
+            'confirmed': 'bg-blue-100 text-blue-800',
+            'processing': 'bg-blue-100 text-blue-800',
+            'shipped': 'bg-green-100 text-green-800',
+            'in_transit': 'bg-green-100 text-green-800',
+            'delivered': 'bg-green-100 text-green-800',
+            'cancelled': 'bg-red-100 text-red-800',
+            'completed': 'bg-green-100 text-green-800'
+        };
+        return statusClasses[status] || 'bg-gray-100 text-gray-800';
+    }
+}
+
 let currentUser = null;
 let products = [];
 let cart = [];
@@ -105,7 +217,7 @@ async function loadProducts() {
     }
 }
 
-// Display products in grid
+// Display products in grid with enhanced stock visibility
 function displayProducts(productsToShow) {
     const productGrid = document.getElementById('productGrid');
     if (!productGrid) return;
@@ -120,25 +232,38 @@ function displayProducts(productsToShow) {
         return;
     }
     
-    productGrid.innerHTML = productsToShow.map(product => `
+    // Filter out products with zero stock
+    const availableProducts = productsToShow.filter(product => (product.quantity || 0) > 0);
+    
+    if (availableProducts.length === 0) {
+        productGrid.innerHTML = `
+            <div class="col-span-full text-center py-12">
+                <div class="text-gray-400 text-4xl mb-4">📦</div>
+                <p class="text-gray-600">All products are currently out of stock. Please check back later.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    productGrid.innerHTML = availableProducts.map(product => `
         <div class="product-card bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <div class="product-image text-center text-4xl mb-3">🥬</div>
             <h3 class="font-semibold text-lg mb-2">${product.name || 'Unnamed Product'}</h3>
             <p class="text-gray-600 text-sm mb-3">${product.description || 'No description available'}</p>
             <div class="flex justify-between items-center mb-3">
                 <span class="font-bold text-lg text-green-600">Ksh${parseFloat(product.price || 0).toFixed(2)}</span>
-                <span class="text-sm ${product.quantity > 0 ? 'text-gray-500' : 'text-red-500'}">
+                <span class="text-sm ${product.quantity > 5 ? 'text-gray-500' : 'text-orange-500'}">
                     Stock: ${product.quantity || 0}
                 </span>
             </div>
             <div class="flex justify-between items-center">
                 <span class="text-xs text-gray-500 capitalize">${product.category || 'Uncategorized'}</span>
-                <button class="btn-primary text-sm ${product.quantity <= 0 ? 'opacity-50 cursor-not-allowed' : ''}" 
-                        onclick="addToCart(${product.id})" 
-                        ${product.quantity <= 0 ? 'disabled' : ''}>
-                    ${product.quantity <= 0 ? 'Out of Stock' : 'Add to Cart'}
+                <button class="btn-primary text-sm" onclick="addToCart(${product.id})">
+                    Add to Cart
                 </button>
             </div>
+            ${product.quantity <= 5 && product.quantity > 0 ? 
+                `<div class="mt-2 text-xs text-orange-600 bg-orange-50 p-2 rounded">⚠️ Only ${product.quantity} left!</div>` : ''}
         </div>
     `).join('');
 }
@@ -164,11 +289,10 @@ async function loadConsumerStats() {
         // Calculate favorite products based on order history
         const productCount = {};
         userOrders.forEach(order => {
-            if (order.items) {
-                order.items.forEach(item => {
-                    productCount[item.product_id] = (productCount[item.product_id] || 0) + 1;
-                });
-            }
+            const orderInfo = OrderDisplayUtils.getOrderProductInfo(order);
+            orderInfo.items.forEach(item => {
+                productCount[item.name] = (productCount[item.name] || 0) + 1;
+            });
         });
         const favoriteProducts = Object.keys(productCount).length;
         
@@ -510,6 +634,167 @@ async function placeOrder(event) {
     }
 }
 
+// Load order history for consumer - UPDATED WITH FIXES
+async function loadOrderHistory() {
+    try {
+        const response = await apiClient.getOrders();
+        const ordersList = apiClient.extractArrayData(response) || [];
+        
+        // Filter orders for current user
+        const userOrders = ordersList.filter(order => 
+            order.user_id == currentUser.id || 
+            order.customer_email === currentUser.email
+        );
+        
+        displayOrderHistory(userOrders);
+        
+    } catch (error) {
+        console.error('Error loading order history:', error);
+        displayOrderHistory([]);
+    }
+}
+
+// Display order history - UPDATED WITH FIXES
+function displayOrderHistory(userOrders) {
+    const orderHistoryTable = document.getElementById('orderHistoryTable');
+    if (!orderHistoryTable) return;
+    
+    if (!Array.isArray(userOrders) || userOrders.length === 0) {
+        orderHistoryTable.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-8">
+                    <p class="text-gray-500">No orders found</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    orderHistoryTable.innerHTML = userOrders.map(order => {
+        const orderInfo = OrderDisplayUtils.getOrderProductInfo(order);
+        const orderDate = new Date(order.created_at).toLocaleDateString();
+        const canCancel = OrderDisplayUtils.canCancelOrder(order);
+        
+        return `
+            <tr>
+                <td class="font-mono">#${order.id}</td>
+                <td>
+                    ${orderInfo.items.length > 0 ? orderInfo.items.map(item => `
+                        <div class="text-sm mb-1">
+                            <div class="font-medium">${item.name}</div>
+                            <div class="text-gray-600">Qty: ${item.quantity} @ Ksh${item.unit_price.toFixed(2)}</div>
+                        </div>
+                    `).join('') : `
+                        <div class="text-sm text-gray-500">
+                            ${orderInfo.productName}
+                        </div>
+                    `}
+                </td>
+                <td class="font-medium">Ksh${parseFloat(order.total_amount || 0).toFixed(2)}</td>
+                <td>
+                    <span class="px-2 py-1 rounded-full text-xs font-medium ${OrderDisplayUtils.getStatusClass(order.status)}">
+                        ${(order.status || 'pending').replace('_', ' ')}
+                    </span>
+                </td>
+                <td class="text-sm text-gray-600">${orderDate}</td>
+                <td>
+                    ${canCancel ? 
+                        `<button class="btn-danger text-sm" onclick="cancelOrder(${order.id})">Cancel</button>` :
+                        '<span class="text-gray-400 text-sm">No actions</span>'
+                    }
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+async function cancelOrder(orderId) {
+    try {
+        // First, reload orders to ensure we have the latest data
+        await loadOrders();
+        
+        // Find the order in the loaded orders array
+        const order = orders.find(o => o.id == orderId);
+        
+        if (!order) {
+            // If not found in orders array, try to get it directly from API
+            try {
+                const orderResponse = await apiClient.getOrder(orderId);
+                if (!orderResponse || !orderResponse.id) {
+                    showNotification('Order not found', 'error');
+                    return;
+                }
+                // Use the order from API response
+                const fetchedOrder = orderResponse;
+                
+                // Check if this order belongs to the current user
+                if (fetchedOrder.user_id != currentUser.id && fetchedOrder.customer_email !== currentUser.email) {
+                    showNotification('You can only cancel your own orders', 'error');
+                    return;
+                }
+                
+                // Check if order can be cancelled
+                if (!OrderDisplayUtils.canCancelOrder(fetchedOrder)) {
+                    showNotification(`Cannot cancel order with status "${fetchedOrder.status}". Only pending orders can be cancelled.`, 'error');
+                    return;
+                }
+            } catch (apiError) {
+                console.error('Error fetching order from API:', apiError);
+                showNotification('Order not found or unable to verify order details', 'error');
+                return;
+            }
+        } else {
+            // Check if this order belongs to the current user
+            if (order.user_id != currentUser.id && order.customer_email !== currentUser.email) {
+                showNotification('You can only cancel your own orders', 'error');
+                return;
+            }
+            
+            // Check if order can be cancelled
+            if (!OrderDisplayUtils.canCancelOrder(order)) {
+                showNotification(`Cannot cancel order with status "${order.status}". Only pending orders can be cancelled.`, 'error');
+                return;
+            }
+        }
+        
+        if (!confirm('Are you sure you want to cancel this order? This action cannot be undone.')) {
+            return;
+        }
+        
+        // Call API to cancel order
+        const response = await apiClient.cancelOrder(orderId);
+        console.log('Order cancelled:', response);
+        
+        showNotification('Order cancelled successfully', 'success');
+        
+        // Refresh the orders list and stats
+        await loadOrders();
+        await loadConsumerStats();
+        await loadOrderHistory();
+        
+    } catch (error) {
+        console.error('Error cancelling order:', error);
+        let errorMessage = 'Failed to cancel order';
+        
+        if (error.message.includes('not found')) {
+            errorMessage = 'Order not found or already cancelled';
+        } else if (error.message.includes('cannot be cancelled')) {
+            errorMessage = 'This order cannot be cancelled at this time';
+        } else if (error.message.includes('unauthorized')) {
+            errorMessage = 'You do not have permission to cancel this order';
+        } else if (error.message.includes('Order not found')) {
+            errorMessage = 'Order not found in the system';
+        }
+        
+        showNotification(errorMessage, 'error');
+    }
+}
+
+function refreshOrders() {
+    loadOrderHistory();
+    loadConsumerStats();
+}
+
 // Close modal
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
@@ -541,138 +826,37 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-// Display products in grid with enhanced stock visibility
-function displayProducts(productsToShow) {
-    const productGrid = document.getElementById('productGrid');
-    if (!productGrid) return;
-    
-    if (!Array.isArray(productsToShow) || productsToShow.length === 0) {
-        productGrid.innerHTML = `
-            <div class="col-span-full text-center py-12">
-                <div class="text-gray-400 text-4xl mb-4">🛒</div>
-                <p class="text-gray-600">No products available at the moment.</p>
-            </div>
-        `;
+// Debug helper function
+function debugOrderStructure(orderId) {
+    const order = orders.find(o => o.id == orderId);
+    if (!order) {
+        console.log('Order not found');
         return;
     }
     
-    // Filter out products with zero stock
-    const availableProducts = productsToShow.filter(product => (product.quantity || 0) > 0);
+    console.log('=== ORDER DEBUG INFO ===');
+    console.log('Order ID:', order.id);
+    console.log('Order object:', order);
+    console.log('Available item fields:');
     
-    if (availableProducts.length === 0) {
-        productGrid.innerHTML = `
-            <div class="col-span-full text-center py-12">
-                <div class="text-gray-400 text-4xl mb-4">📦</div>
-                <p class="text-gray-600">All products are currently out of stock. Please check back later.</p>
-            </div>
-        `;
-        return;
-    }
+    const possibleItemFields = ['order_items', 'items', 'products'];
+    possibleItemFields.forEach(field => {
+        if (order[field]) {
+            console.log(`${field}:`, order[field]);
+            if (Array.isArray(order[field]) && order[field].length > 0) {
+                console.log(`First item in ${field}:`, order[field][0]);
+                console.log('Available keys in first item:', Object.keys(order[field][0]));
+            }
+        }
+    });
     
-    productGrid.innerHTML = availableProducts.map(product => `
-        <div class="product-card bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <div class="product-image text-center text-4xl mb-3">🥬</div>
-            <h3 class="font-semibold text-lg mb-2">${product.name || 'Unnamed Product'}</h3>
-            <p class="text-gray-600 text-sm mb-3">${product.description || 'No description available'}</p>
-            <div class="flex justify-between items-center mb-3">
-                <span class="font-bold text-lg text-green-600">Ksh${parseFloat(product.price || 0).toFixed(2)}</span>
-                <span class="text-sm ${product.quantity > 5 ? 'text-gray-500' : 'text-orange-500'}">
-                    Stock: ${product.quantity || 0}
-                </span>
-            </div>
-            <div class="flex justify-between items-center">
-                <span class="text-xs text-gray-500 capitalize">${product.category || 'Uncategorized'}</span>
-                <button class="btn-primary text-sm" onclick="addToCart(${product.id})">
-                    Add to Cart
-                </button>
-            </div>
-            ${product.quantity <= 5 && product.quantity > 0 ? 
-                `<div class="mt-2 text-xs text-orange-600 bg-orange-50 p-2 rounded">⚠️ Only ${product.quantity} left!</div>` : ''}
-        </div>
-    `).join('');
-}
-
-// Load order history for consumer
-async function loadOrderHistory() {
-    try {
-        const response = await apiClient.getOrders();
-        const ordersList = apiClient.extractArrayData(response) || [];
-        
-        // Filter orders for current user
-        const userOrders = ordersList.filter(order => 
-            order.user_id == currentUser.id || 
-            order.customer_email === currentUser.email
-        );
-        
-        displayOrderHistory(userOrders);
-        
-    } catch (error) {
-        console.error('Error loading order history:', error);
-        displayOrderHistory([]);
-    }
-}
-
-function displayOrderHistory(userOrders) {
-    const orderHistoryTable = document.getElementById('orderHistoryTable');
-    if (!orderHistoryTable) return;
-    
-    if (!Array.isArray(userOrders) || userOrders.length === 0) {
-        orderHistoryTable.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center py-8">
-                    <p class="text-gray-500">No orders found</p>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    orderHistoryTable.innerHTML = userOrders.map(order => `
-        <tr>
-            <td class="font-mono">#${order.id}</td>
-            <td>
-                ${order.items ? order.items.map(item => `
-                    <div class="text-sm">
-                        <div class="font-medium">${item.name}</div>
-                        <div class="text-gray-600">Qty: ${item.quantity} @ Ksh${parseFloat(item.unit_price || 0).toFixed(2)}</div>
-                    </div>
-                `).join('') : 'No items'}
-            </td>
-            <td class="font-medium">Ksh${parseFloat(order.total_amount || 0).toFixed(2)}</td>
-            <td>
-                <span class="status-${order.status || 'pending'}">${(order.status || 'pending').replace('_', ' ')}</span>
-            </td>
-            <td class="text-sm text-gray-600">${new Date(order.created_at).toLocaleDateString()}</td>
-            <td>
-                ${['pending', 'confirmed'].includes(order.status) ? 
-                    `<button class="btn-danger text-sm" onclick="cancelOrder(${order.id})">Cancel</button>` :
-                    '<span class="text-gray-400 text-sm">No actions</span>'
-                }
-            </td>
-        </tr>
-    `).join('');
-}
-
-function refreshOrders() {
-    loadOrderHistory();
-    loadConsumerStats();
-}
-
-function cancelOrder(orderId) {
-    if (!confirm('Are you sure you want to cancel this order?')) return;
-    
-    apiClient.cancelOrder(orderId)
-        .then(() => {
-            showNotification('Order cancelled successfully', 'success');
-            refreshOrders();
-        })
-        .catch(error => {
-            console.error('Error cancelling order:', error);
-            showNotification('Failed to cancel order', 'error');
-        });
+    console.log('Extracted info:', OrderDisplayUtils.getOrderProductInfo(order));
+    console.log('========================');
 }
 
 // Make functions globally available
+window.OrderDisplayUtils = OrderDisplayUtils;
+window.debugOrderStructure = debugOrderStructure;
 window.searchProducts = searchProducts;
 window.addToCart = addToCart;
 window.showCart = showCart;
