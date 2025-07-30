@@ -3,7 +3,17 @@
 nixPkgs = ['php82', 'php82Packages.composer']
 
 [phases.build]
-cmds = ['composer install --no-dev --ignore-platform-reqs --no-scripts --prefer-dist', 'php artisan config:clear', 'php artisan cache:clear']
+# Override Railway's default composer command
+cmds = [
+  'echo "Using custom build commands"',
+  'composer install --no-dev --ignore-platform-reqs --no-scripts --prefer-dist',
+  'php artisan config:clear',
+  'php artisan cache:clear'
+]
 
 [phases.start]
 cmd = 'php artisan serve --host=0.0.0.0 --port=$PORT'
+
+# Force nixpacks to use this config
+[variables]
+NIXPACKS_NO_DEFAULT_CACHE_DIRECTORIES = 'true'
