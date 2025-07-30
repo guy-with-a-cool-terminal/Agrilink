@@ -396,8 +396,17 @@ async function placeBulkOrder(event) {
     const specialRequirements = document.getElementById('specialRequirements').value;
     const bulkPaymentMethod = document.getElementById('bulkPaymentMethod').value;
     
+    // ADD: Get delivery address field (you need to add this to your HTML form)
+    const deliveryAddress = document.getElementById('bulkDeliveryAddress')?.value;
+    
     if (!productId || !quantity || !deliveryDate || !budgetRange || !bulkPaymentMethod) {
         showNotification('Please fill in all required fields including payment method', 'error');
+        return;
+    }
+    
+    // VALIDATION: Check if delivery address is provided
+    if (!deliveryAddress || deliveryAddress.trim() === '') {
+        showNotification('Please enter a valid delivery address', 'error');
         return;
     }
     
@@ -435,6 +444,7 @@ async function placeBulkOrder(event) {
             productId,
             quantity,
             deliveryDate,
+            deliveryAddress, 
             budgetRange,
             specialRequirements,
             selectedProduct
@@ -444,6 +454,7 @@ async function placeBulkOrder(event) {
             productId,
             quantity,
             deliveryDate,
+            deliveryAddress, 
             budgetRange,
             specialRequirements,
             selectedProduct
@@ -454,6 +465,7 @@ async function placeBulkOrder(event) {
             productId,
             quantity,
             deliveryDate,
+            deliveryAddress, 
             budgetRange,
             specialRequirements,
             selectedProduct,
@@ -471,6 +483,9 @@ function showMpesaPaymentModal(amount, orderData) {
                 <h3 class="text-lg font-semibold mb-4">M-Pesa Payment</h3>
                 <div class="mb-4">
                     <p class="text-gray-600 mb-2">Amount: <span class="font-semibold">Ksh${amount.toLocaleString()}</span></p>
+                    <p class="text-gray-600 mb-2">Product: <span class="font-semibold">${orderData.selectedProduct.name}</span></p>
+                    <p class="text-gray-600 mb-2">Quantity: <span class="font-semibold">${orderData.quantity} units</span></p>
+                    <p class="text-gray-600 mb-4">Delivery: <span class="font-semibold">${orderData.deliveryAddress}</span></p>
                     <p class="text-sm text-gray-500 mb-4">You will receive an STK push on your phone to complete the payment.</p>
                 </div>
                 <form id="mpesaPaymentForm">
@@ -519,6 +534,9 @@ function showCardPaymentModal(amount, orderData) {
                 <h3 class="text-lg font-semibold mb-4">Card Payment</h3>
                 <div class="mb-4">
                     <p class="text-gray-600 mb-2">Amount: <span class="font-semibold">Ksh${amount.toLocaleString()}</span></p>
+                    <p class="text-gray-600 mb-2">Product: <span class="font-semibold">${orderData.selectedProduct.name}</span></p>
+                    <p class="text-gray-600 mb-2">Quantity: <span class="font-semibold">${orderData.quantity} units</span></p>
+                    <p class="text-gray-600 mb-4">Delivery: <span class="font-semibold">${orderData.deliveryAddress}</span></p>
                 </div>
                 <form id="cardPaymentForm">
                     <div class="form-group mb-4">
@@ -631,20 +649,34 @@ async function processBulkOrder(orderDetails) {
     try {
         const orderData = {
             items: [{
-                product_id: orderDetails.selectedProduct.id,
+                product_id: parseInt(orderDetails.selectedProduct.id),
+                product_name: orderDetails.selectedProduct.name,
                 name: orderDetails.selectedProduct.name,
-                quantity: orderDetails.quantity,
-                unit_price: orderDetails.selectedProduct.price
+                quantity: parseInt(orderDetails.quantity),
+                unit_price: parseFloat(orderDetails.selectedProduct.price),
+                total_price: parseInt(orderDetails.quantity) * parseFloat(orderDetails.selectedProduct.price)
             }],
-            delivery_address: `Bulk delivery - Budget: ${orderDetails.budgetRange}${orderDetails.specialRequirements ? '. Requirements: ' + orderDetails.specialRequirements : ''}`,
-            delivery_date: orderDetails.deliveryDate,
+            
+            delivery_address: orderDetails.deliveryAddress.trim(),
+            
+            // Additional order details
+            customer_name: currentUser.name || 'Retailer Customer',
+            customer_email: currentUser.email,
             phone: orderDetails.mpesaPhone || currentUser.phone || '254700000000',
+            
+            delivery_date: orderDetails.deliveryDate,
             payment_method: orderDetails.paymentMethod,
             total_amount: orderDetails.totalAmount,
-            notes: `Bulk order for retail - ${orderDetails.specialRequirements || 'Standard bulk order'}`
+            
+            // Put budget and requirements in notes
+            notes: `Bulk order for retail - Budget Range: ${orderDetails.budgetRange}${orderDetails.specialRequirements ? '. Special Requirements: ' + orderDetails.specialRequirements : ''}`,
+            
+            // Order metadata
+            order_type: 'bulk_order',
+            status: 'pending'
         };
         
-        console.log('Submitting bulk order:', orderData);
+        console.log('Submitting bulk order with proper structure:', orderData);
         
         const response = await apiClient.createOrder(orderData);
         console.log('Bulk order created:', response);
