@@ -2,15 +2,7 @@
 nixPkgs = ['php82', 'php82Packages.composer']
 
 [phases.build]
-cmds = [
-  'COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --ignore-platform-reqs --no-scripts --prefer-dist'
-]
+cmds = ['composer install --no-dev --ignore-platform-reqs --no-scripts --prefer-dist', 'php artisan config:clear', 'php artisan cache:clear']
 
 [phases.start]
-cmd = '''
-cp .env.example .env && \
-php artisan config:clear && \
-php artisan cache:clear && \
-php artisan package:discover && \
-php artisan serve --host=0.0.0.0 --port=$PORT
-'''
+cmd = 'php artisan serve --host=0.0.0.0 --port=$PORT'
