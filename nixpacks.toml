@@ -1,3 +1,5 @@
 [phases.setup]
 nixPkgs = ['php82', 'php82Packages.composer']
 
+[phases.build]
+cmds = ['composer install --no-dev --ignore-platform-reqs --no-scripts --prefer-dist', 'php artisan config:clear', 'php artisan cache:clear']
