@@ -1,0 +1,1 @@
+Config path: /home/batman/Desktop/Quinter/Agrilink/agrilink-backend/config
