@@ -88,3 +88,4 @@ Make sure all files are served from a web server (not file:// protocol) to avoid
 ## License
 
 This project is licensed under the MIT License.
+# Dashboard refresh
