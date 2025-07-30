@@ -49,9 +49,11 @@ async function loadRetailerData() {
         await Promise.all([
             loadProducts(),
             loadOrders(),
-            loadRetailerStats()
         ]);
+        // calculate stats after orders are loaded
+        await loadRetailerStats()
         populateOrderSelect();
+
         console.log('Retailer data loaded successfully');
     } catch (error) {
         console.error('Error loading retailer data:', error);
@@ -174,38 +176,80 @@ async function loadOrders() {
 // Load retailer-specific statistics
 async function loadRetailerStats() {
     try {
-        // Calculate stats from user's orders
-        const userOrders = orders.filter(order => 
-            order.user_id == currentUser.id || 
-            order.customer_email === currentUser.email
-        );
+        console.log('Calculating stats from orders:', orders.length, 'total orders');
+        
+        // Filter orders for current user with better matching
+        const userOrders = orders.filter(order => {
+            const matchesUserId = order.user_id == currentUser.id;
+            const matchesEmail = order.customer_email === currentUser.email;
+            const matchesName = order.customer_name === currentUser.name;
+            
+            return matchesUserId || matchesEmail || matchesName;
+        });
+        
+        console.log('User orders found:', userOrders.length);
         
         const totalOrders = userOrders.length;
-        const totalSpent = userOrders.reduce((sum, order) => 
-            sum + (parseFloat(order.total_amount) || 0), 0
-        );
         
-        // Count active suppliers (unique farmer IDs from ordered products)
+        // Calculate total spent - handle different response structures
+        const totalSpent = userOrders.reduce((sum, order) => {
+            const amount = parseFloat(order.total_amount || order.amount || 0);
+            console.log(`Order #${order.id}: Ksh${amount}`);
+            return sum + amount;
+        }, 0);
+        
+        // Count active suppliers from order items
         const supplierIds = new Set();
         userOrders.forEach(order => {
-            if (order.items) {
-                order.items.forEach(item => {
-                    if (item.product && item.product.farmer_id) {
-                        supplierIds.add(item.product.farmer_id);
-                    }
-                });
+            // Check different possible item structures
+            const items = order.items || order.order_items || [];
+            
+            items.forEach(item => {
+                // Try different ways the farmer/supplier ID might be stored
+                const supplierId = item.farmer_id || 
+                                 item.supplier_id || 
+                                 item.product?.farmer_id || 
+                                 item.product?.supplier_id ||
+                                 item.product?.user_id;
+                
+                if (supplierId) {
+                    supplierIds.add(supplierId);
+                }
+            });
+            
+            // Fallback: if no items, try to get supplier from order level
+            if (items.length === 0 && order.farmer_id) {
+                supplierIds.add(order.farmer_id);
             }
         });
         
+        // Count pending deliveries - orders that haven't been delivered yet
+        const pendingStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'in_transit', 'scheduled'];
         const pendingDeliveries = userOrders.filter(order => 
-            ['pending', 'confirmed', 'shipped', 'in_transit'].includes(order.status)
+            pendingStatuses.includes(order.status?.toLowerCase())
         ).length;
         
-        // Update stats display
-        document.getElementById('totalOrders').textContent = totalOrders;
-        document.getElementById('totalSpent').textContent = `Ksh${totalSpent.toLocaleString()}`;
-        document.getElementById('activeSuppliers').textContent = supplierIds.size;
-        document.getElementById('pendingDeliveries').textContent = pendingDeliveries;
+        console.log('Stats calculated:', {
+            totalOrders,
+            totalSpent,
+            activeSuppliers: supplierIds.size,
+            pendingDeliveries
+        });
+        
+        // Update stats display with error handling
+        const updateStat = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            } else {
+                console.warn(`Element with id '${id}' not found`);
+            }
+        };
+        
+        updateStat('totalOrders', totalOrders);
+        updateStat('totalSpent', `Ksh${totalSpent.toLocaleString()}`);
+        updateStat('activeSuppliers', supplierIds.size);
+        updateStat('pendingDeliveries', pendingDeliveries);
         
     } catch (error) {
         console.error('Error loading retailer stats:', error);

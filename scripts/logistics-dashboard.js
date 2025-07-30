@@ -9,9 +9,6 @@ function calculateDistance(destinationAddress) {
     // Msambweni coordinates (approximate)
     const msambweniLat = -4.4667;
     const msambweniLng = 39.4833;
-    
-    // Simple distance estimation based on address keywords
-    // In a real application, you'd use Google Maps Distance Matrix API
     const distanceMap = {
         'mombasa': 85,
         'diani': 15,
@@ -19,7 +16,7 @@ function calculateDistance(destinationAddress) {
         'kwale': 35,
         'kinango': 45,
         'lunga lunga': 60,
-        'hospital': 5, // Assume local hospital
+        'hospital': 5, 
         'msambweni': 0,
         'shimoni': 25,
         'ramisi': 40
