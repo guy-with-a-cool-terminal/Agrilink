@@ -1,7 +1,6 @@
 class ApiClient {
     constructor() {
-        // this.baseURL = 'http://127.0.0.1:8000/api';
-        this.baseURL = 'https://agrilink-1ozz.onrender.com';
+        this.baseURL = 'http://127.0.0.1:8000/api';
         this.endpoints = {
             // Authentication
             LOGIN: '/login',
