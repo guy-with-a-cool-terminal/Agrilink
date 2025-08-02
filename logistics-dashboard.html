@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,6 +6,8 @@
     <title>Logistics Dashboard - AgriLink</title>
     <link rel="stylesheet" href="styles/tailwind-output.css">
     <link rel="stylesheet" href="styles/main.css">
+    <!-- MapLibre GL JS CSS -->
+    <link href='https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css' rel='stylesheet' />
 </head>
 <body class="bg-gray-50">
     <div class="dashboard active">
@@ -55,7 +56,7 @@
                         <div class="text-center">
                             <div class="text-gray-400 text-2xl mb-2">🗺️</div>
                             <p class="text-gray-600">Loading delivery map...</p>
-                            <p class="text-gray-500 text-sm mt-1">Google Maps integration</p>
+                            <p class="text-gray-500 text-sm mt-1">MapLibre with OpenStreetMap</p>
                         </div>
                     </div>
                 </div>
@@ -126,8 +127,8 @@
         </div>
     </div>
 
-    <!-- Google Maps API - Replace YOUR_API_KEY with your actual Google Maps API key -->
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap&libraries=geometry"></script>
+    <!-- MapLibre GL JS JavaScript -->
+    <script src='https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js'></script>
     
     <script src="scripts/api-client.js"></script>
     <script src="scripts/auth.js"></script>

@@ -49,9 +49,11 @@ async function loadRetailerData() {
         await Promise.all([
             loadProducts(),
             loadOrders(),
-            loadRetailerStats()
         ]);
+        // calculate stats after orders are loaded
+        await loadRetailerStats()
         populateOrderSelect();
+
         console.log('Retailer data loaded successfully');
     } catch (error) {
         console.error('Error loading retailer data:', error);
@@ -174,38 +176,80 @@ async function loadOrders() {
 // Load retailer-specific statistics
 async function loadRetailerStats() {
     try {
-        // Calculate stats from user's orders
-        const userOrders = orders.filter(order => 
-            order.user_id == currentUser.id || 
-            order.customer_email === currentUser.email
-        );
+        console.log('Calculating stats from orders:', orders.length, 'total orders');
+        
+        // Filter orders for current user with better matching
+        const userOrders = orders.filter(order => {
+            const matchesUserId = order.user_id == currentUser.id;
+            const matchesEmail = order.customer_email === currentUser.email;
+            const matchesName = order.customer_name === currentUser.name;
+            
+            return matchesUserId || matchesEmail || matchesName;
+        });
+        
+        console.log('User orders found:', userOrders.length);
         
         const totalOrders = userOrders.length;
-        const totalSpent = userOrders.reduce((sum, order) => 
-            sum + (parseFloat(order.total_amount) || 0), 0
-        );
         
-        // Count active suppliers (unique farmer IDs from ordered products)
+        // Calculate total spent - handle different response structures
+        const totalSpent = userOrders.reduce((sum, order) => {
+            const amount = parseFloat(order.total_amount || order.amount || 0);
+            console.log(`Order #${order.id}: Ksh${amount}`);
+            return sum + amount;
+        }, 0);
+        
+        // Count active suppliers from order items
         const supplierIds = new Set();
         userOrders.forEach(order => {
-            if (order.items) {
-                order.items.forEach(item => {
-                    if (item.product && item.product.farmer_id) {
-                        supplierIds.add(item.product.farmer_id);
-                    }
-                });
+            // Check different possible item structures
+            const items = order.items || order.order_items || [];
+            
+            items.forEach(item => {
+                // Try different ways the farmer/supplier ID might be stored
+                const supplierId = item.farmer_id || 
+                                 item.supplier_id || 
+                                 item.product?.farmer_id || 
+                                 item.product?.supplier_id ||
+                                 item.product?.user_id;
+                
+                if (supplierId) {
+                    supplierIds.add(supplierId);
+                }
+            });
+            
+            // Fallback: if no items, try to get supplier from order level
+            if (items.length === 0 && order.farmer_id) {
+                supplierIds.add(order.farmer_id);
             }
         });
         
+        // Count pending deliveries - orders that haven't been delivered yet
+        const pendingStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'in_transit', 'scheduled'];
         const pendingDeliveries = userOrders.filter(order => 
-            ['pending', 'confirmed', 'shipped', 'in_transit'].includes(order.status)
+            pendingStatuses.includes(order.status?.toLowerCase())
         ).length;
         
-        // Update stats display
-        document.getElementById('totalOrders').textContent = totalOrders;
-        document.getElementById('totalSpent').textContent = `Ksh${totalSpent.toLocaleString()}`;
-        document.getElementById('activeSuppliers').textContent = supplierIds.size;
-        document.getElementById('pendingDeliveries').textContent = pendingDeliveries;
+        console.log('Stats calculated:', {
+            totalOrders,
+            totalSpent,
+            activeSuppliers: supplierIds.size,
+            pendingDeliveries
+        });
+        
+        // Update stats display with error handling
+        const updateStat = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            } else {
+                console.warn(`Element with id '${id}' not found`);
+            }
+        };
+        
+        updateStat('totalOrders', totalOrders);
+        updateStat('totalSpent', `Ksh${totalSpent.toLocaleString()}`);
+        updateStat('activeSuppliers', supplierIds.size);
+        updateStat('pendingDeliveries', pendingDeliveries);
         
     } catch (error) {
         console.error('Error loading retailer stats:', error);
@@ -271,15 +315,10 @@ function displayOrderHistory() {
             // Direct product info on order
             productName = order.product_name;
             totalQuantity = parseInt(order.quantity) || 0;
-        } else {
-            // Debug: log one order to see the order_items structure
-            if (order.id === 49) {
-                console.log('Sample order_items structure:', {
-                    order_items: order.order_items,
-                    first_item: order.order_items?.[0]
-                });
-            }
         }
+        
+        // FIXED: Only show cancel button for pending orders
+        const canCancel = order.status.toLowerCase() === 'pending';
         
         return `
             <tr>
@@ -293,9 +332,9 @@ function displayOrderHistory() {
                     <button class="btn-secondary text-sm" onclick="viewOrderDetails(${order.id})">
                         View Details
                     </button>
-                    ${['pending', 'confirmed'].includes(order.status) ?
+                    ${canCancel ?
                         `<button class="btn-danger text-sm ml-2" onclick="cancelOrder(${order.id})">Cancel</button>` :
-                        ''
+                        '<span class="text-gray-400 text-sm ml-2">Cannot cancel</span>'
                     }
                 </td>
             </tr>
@@ -315,19 +354,57 @@ function getStatusClass(status) {
     return statusClasses[status] || 'bg-gray-100 text-gray-800';
 }
 // Add order cancellation function
-function cancelOrder(orderId) {
-    if (!confirm('Are you sure you want to cancel this bulk order?')) return;
-    
-    apiClient.cancelOrder(orderId)
-        .then(() => {
-            showNotification('Order cancelled successfully', 'success');
-            loadOrderHistory();
-            loadRetailerStats();
-        })
-        .catch(error => {
-            console.error('Error cancelling order:', error);
-            showNotification('Failed to cancel order', 'error');
-        });
+async function cancelOrder(orderId) {
+    try {
+        // First, find the order to validate cancellation eligibility
+        const order = orders.find(o => o.id == orderId);
+        
+        if (!order) {
+            showNotification('Order not found', 'error');
+            return;
+        }
+        
+        // Check if this order belongs to the current user
+        if (order.user_id != currentUser.id && order.customer_email !== currentUser.email) {
+            showNotification('You can only cancel your own orders', 'error');
+            return;
+        }
+        
+        // BUSINESS RULE: Only allow cancellation for pending orders
+        const cancellableStatuses = ['pending'];
+        if (!cancellableStatuses.includes(order.status.toLowerCase())) {
+            showNotification(`Cannot cancel order with status "${order.status}". Only pending orders can be cancelled.`, 'error');
+            return;
+        }
+        
+        if (!confirm('Are you sure you want to cancel this bulk order? This action cannot be undone.')) {
+            return;
+        }
+        
+        // Call API to cancel order
+        const response = await apiClient.cancelOrder(orderId);
+        console.log('Order cancelled:', response);
+        
+        showNotification('Order cancelled successfully', 'success');
+        
+        await loadOrders();        
+        await loadRetailerStats(); 
+        displayOrderHistory(); 
+        
+    } catch (error) {
+        console.error('Error cancelling order:', error);
+        let errorMessage = 'Failed to cancel order';
+        
+        if (error.message.includes('not found')) {
+            errorMessage = 'Order not found or already cancelled';
+        } else if (error.message.includes('cannot be cancelled')) {
+            errorMessage = 'This order cannot be cancelled at this time';
+        } else if (error.message.includes('unauthorized')) {
+            errorMessage = 'You do not have permission to cancel this order';
+        }
+        
+        showNotification(errorMessage, 'error');
+    }
 }
 
 // Populate order select for delivery scheduling
@@ -363,8 +440,17 @@ async function placeBulkOrder(event) {
     const specialRequirements = document.getElementById('specialRequirements').value;
     const bulkPaymentMethod = document.getElementById('bulkPaymentMethod').value;
     
+    // ADD: Get delivery address field (you need to add this to your HTML form)
+    const deliveryAddress = document.getElementById('bulkDeliveryAddress')?.value;
+    
     if (!productId || !quantity || !deliveryDate || !budgetRange || !bulkPaymentMethod) {
         showNotification('Please fill in all required fields including payment method', 'error');
+        return;
+    }
+    
+    // VALIDATION: Check if delivery address is provided
+    if (!deliveryAddress || deliveryAddress.trim() === '') {
+        showNotification('Please enter a valid delivery address', 'error');
         return;
     }
     
@@ -402,6 +488,7 @@ async function placeBulkOrder(event) {
             productId,
             quantity,
             deliveryDate,
+            deliveryAddress, 
             budgetRange,
             specialRequirements,
             selectedProduct
@@ -411,6 +498,7 @@ async function placeBulkOrder(event) {
             productId,
             quantity,
             deliveryDate,
+            deliveryAddress, 
             budgetRange,
             specialRequirements,
             selectedProduct
@@ -421,6 +509,7 @@ async function placeBulkOrder(event) {
             productId,
             quantity,
             deliveryDate,
+            deliveryAddress, 
             budgetRange,
             specialRequirements,
             selectedProduct,
@@ -438,6 +527,9 @@ function showMpesaPaymentModal(amount, orderData) {
                 <h3 class="text-lg font-semibold mb-4">M-Pesa Payment</h3>
                 <div class="mb-4">
                     <p class="text-gray-600 mb-2">Amount: <span class="font-semibold">Ksh${amount.toLocaleString()}</span></p>
+                    <p class="text-gray-600 mb-2">Product: <span class="font-semibold">${orderData.selectedProduct.name}</span></p>
+                    <p class="text-gray-600 mb-2">Quantity: <span class="font-semibold">${orderData.quantity} units</span></p>
+                    <p class="text-gray-600 mb-4">Delivery: <span class="font-semibold">${orderData.deliveryAddress}</span></p>
                     <p class="text-sm text-gray-500 mb-4">You will receive an STK push on your phone to complete the payment.</p>
                 </div>
                 <form id="mpesaPaymentForm">
@@ -486,6 +578,9 @@ function showCardPaymentModal(amount, orderData) {
                 <h3 class="text-lg font-semibold mb-4">Card Payment</h3>
                 <div class="mb-4">
                     <p class="text-gray-600 mb-2">Amount: <span class="font-semibold">Ksh${amount.toLocaleString()}</span></p>
+                    <p class="text-gray-600 mb-2">Product: <span class="font-semibold">${orderData.selectedProduct.name}</span></p>
+                    <p class="text-gray-600 mb-2">Quantity: <span class="font-semibold">${orderData.quantity} units</span></p>
+                    <p class="text-gray-600 mb-4">Delivery: <span class="font-semibold">${orderData.deliveryAddress}</span></p>
                 </div>
                 <form id="cardPaymentForm">
                     <div class="form-group mb-4">
@@ -598,20 +693,34 @@ async function processBulkOrder(orderDetails) {
     try {
         const orderData = {
             items: [{
-                product_id: orderDetails.selectedProduct.id,
+                product_id: parseInt(orderDetails.selectedProduct.id),
+                product_name: orderDetails.selectedProduct.name,
                 name: orderDetails.selectedProduct.name,
-                quantity: orderDetails.quantity,
-                unit_price: orderDetails.selectedProduct.price
+                quantity: parseInt(orderDetails.quantity),
+                unit_price: parseFloat(orderDetails.selectedProduct.price),
+                total_price: parseInt(orderDetails.quantity) * parseFloat(orderDetails.selectedProduct.price)
             }],
-            delivery_address: `Bulk delivery - Budget: ${orderDetails.budgetRange}${orderDetails.specialRequirements ? '. Requirements: ' + orderDetails.specialRequirements : ''}`,
-            delivery_date: orderDetails.deliveryDate,
+            
+            delivery_address: orderDetails.deliveryAddress.trim(),
+            
+            // Additional order details
+            customer_name: currentUser.name || 'Retailer Customer',
+            customer_email: currentUser.email,
             phone: orderDetails.mpesaPhone || currentUser.phone || '254700000000',
+            
+            delivery_date: orderDetails.deliveryDate,
             payment_method: orderDetails.paymentMethod,
             total_amount: orderDetails.totalAmount,
-            notes: `Bulk order for retail - ${orderDetails.specialRequirements || 'Standard bulk order'}`
+            
+            // Put budget and requirements in notes
+            notes: `Bulk order for retail - Budget Range: ${orderDetails.budgetRange}${orderDetails.specialRequirements ? '. Special Requirements: ' + orderDetails.specialRequirements : ''}`,
+            
+            // Order metadata
+            order_type: 'bulk_order',
+            status: 'pending'
         };
         
-        console.log('Submitting bulk order:', orderData);
+        console.log('Submitting bulk order with proper structure:', orderData);
         
         const response = await apiClient.createOrder(orderData);
         console.log('Bulk order created:', response);

@@ -630,85 +630,170 @@ Notes: ${delivery.delivery_notes || 'None'}`);
         };
     }
 
-    // Keep existing methods for user management, order viewing, etc.
     async showUserModal(user = null) {
-        const isEdit = !!user;
-        const title = isEdit ? 'Edit User' : 'Create New User';
-        
-        const modal = this.createModal('userModal', title, `
-            <form id="userForm">
-                <div class="form-group mb-4">
-                    <label>Name</label>
-                    <input type="text" id="userName" required class="w-full p-2 border rounded" 
-                           value="${user?.name || ''}">
-                </div>
-                <div class="form-group mb-4">
-                    <label>Email</label>
-                    <input type="email" id="userEmail" required class="w-full p-2 border rounded" 
-                           value="${user?.email || ''}">
-                </div>
-                <div class="form-group mb-4">
-                    <label>Role</label>
-                    <select id="userRole" required class="w-full p-2 border rounded">
-                        ${this.getRoleOptions(user?.role)}
-                    </select>
-                </div>
-                <div class="form-group mb-4">
-                    <label>Phone</label>
-                    <input type="tel" id="userPhone" class="w-full p-2 border rounded" 
-                           value="${user?.phone || ''}">
-                </div>
-                ${isEdit ? `
-                <div class="form-group mb-4">
-                    <label>Status</label>
-                    <select id="userStatus" class="w-full p-2 border rounded">
-                        ${this.getStatusOptions(user?.status)}
-                    </select>
-                </div>` : ''}
-                <div class="flex space-x-2">
-                    <button type="submit" class="btn-primary flex-1">${isEdit ? 'Update' : 'Create'} User</button>
-                    <button type="button" onclick="dashboard.closeModal('userModal')" class="btn-secondary flex-1">Cancel</button>
-                </div>
-            </form>
-        `);
+    const isEdit = !!user;
+    const title = isEdit ? 'Edit User' : 'Create New User';
+    
+    const modal = this.createModal('userModal', title, `
+        <form id="userForm">
+            <div class="form-group mb-4">
+                <label class="block text-sm font-medium mb-1">Name</label>
+                <input type="text" id="userName" name="name" required class="w-full p-2 border rounded" 
+                       value="${user?.name || ''}" placeholder="Enter full name">
+            </div>
+            <div class="form-group mb-4">
+                <label class="block text-sm font-medium mb-1">Email</label>
+                <input type="email" id="userEmail" name="email" required class="w-full p-2 border rounded" 
+                       value="${user?.email || ''}" placeholder="Enter email address">
+            </div>
+            <div class="form-group mb-4">
+                <label class="block text-sm font-medium mb-1">Role</label>
+                <select id="userRole" name="role" required class="w-full p-2 border rounded">
+                    <option value="">Select a role</option>
+                    ${this.getRoleOptions(user?.role)}
+                </select>
+            </div>
+            <div class="form-group mb-4">
+                <label class="block text-sm font-medium mb-1">Phone</label>
+                <input type="tel" id="userPhone" name="phone" class="w-full p-2 border rounded" 
+                       value="${user?.phone || ''}" placeholder="Enter phone number">
+            </div>
+            ${isEdit ? `
+            <div class="form-group mb-4">
+                <label class="block text-sm font-medium mb-1">Status</label>
+                <select id="userStatus" name="status" class="w-full p-2 border rounded">
+                    ${this.getStatusOptions(user?.status)}
+                </select>
+            </div>` : ''}
+            <div class="flex space-x-2">
+                <button type="submit" class="btn-primary flex-1" id="submitBtn">
+                    ${isEdit ? 'Update' : 'Create'} User
+                </button>
+                <button type="button" onclick="dashboard.closeModal('userModal')" class="btn-secondary flex-1">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    `);
 
-        document.getElementById('userForm').onsubmit = (e) => this.handleUserSubmit(e, user);
-    }
+    // Wait for modal to be fully rendered in DOM before attaching event handler
+    setTimeout(() => {
+        const form = document.getElementById('userForm');
+        if (form) {
+            form.onsubmit = (e) => this.handleUserSubmit(e, user);
+        }
+    }, 100);
+}
 
     async handleUserSubmit(e, user) {
-        e.preventDefault();
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.textContent;
+    
+    try {
+        // Disable submit button to prevent multiple submissions
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Processing...';
         
+        // Use FormData to reliably capture form values
+        const form = e.target;
+        const formData = new FormData(form);
+        
+        // Extract values from FormData
         const userData = {
-            name: document.getElementById('userName').value,
-            email: document.getElementById('userEmail').value,
-            role: document.getElementById('userRole').value,
-            phone: document.getElementById('userPhone').value
+            name: formData.get('name')?.trim() || '',
+            email: formData.get('email')?.trim() || '',
+            role: formData.get('role') || '',
+            phone: formData.get('phone')?.trim() || ''
         };
 
+        // Alternative method: Direct DOM element access with null checks
+        const nameField = document.getElementById('userName');
+        const emailField = document.getElementById('userEmail');
+        const roleField = document.getElementById('userRole');
+        const phoneField = document.getElementById('userPhone');
+        
+        // Fallback to direct DOM access if FormData is empty
+        if (!userData.name && nameField) {
+            userData.name = nameField.value?.trim() || '';
+        }
+        if (!userData.email && emailField) {
+            userData.email = emailField.value?.trim() || '';
+        }
+        if (!userData.role && roleField) {
+            userData.role = roleField.value || '';
+        }
+        if (!userData.phone && phoneField) {
+            userData.phone = phoneField.value?.trim() || '';
+        }
+
+        console.log('Form data captured:', userData); // Debug log
+
+        // Validate required fields
+        const validationErrors = [];
+        
+        if (!userData.name) {
+            validationErrors.push('Name is required');
+        }
+        
+        if (!userData.email) {
+            validationErrors.push('Email is required');
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
+            validationErrors.push('Please enter a valid email address');
+        }
+        
+        if (!userData.role) {
+            validationErrors.push('Role is required');
+        }
+
+        if (validationErrors.length > 0) {
+            this.showNotification(validationErrors.join(', '), 'error');
+            return;
+        }
+
+        // Add additional fields for user creation/update
         if (user) {
-            userData.status = document.getElementById('userStatus').value;
+            // Editing existing user
+            const statusField = document.getElementById('userStatus');
+            userData.status = statusField ? statusField.value : 'active';
         } else {
+            // Creating new user
             userData.password = 'DefaultPassword123!';
             userData.password_confirmation = 'DefaultPassword123!';
             userData.status = 'active';
         }
 
-        try {
-            if (user) {
-                await apiClient.updateUser(user.id, userData);
-                this.showNotification('User updated successfully!', 'success');
-            } else {
-                await apiClient.createUser(userData);
-                this.showNotification('User created successfully!', 'success');
-            }
-            
-            this.closeModal('userModal');
-            await this.loadAllData();
-        } catch (error) {
-            console.error('Error saving user:', error);
-            this.showNotification('Failed to save user: ' + error.message, 'error');
+        console.log('Submitting user data to API:', userData); // Debug log
+
+        // Submit to API
+        if (user) {
+            await apiClient.updateUser(user.id, userData);
+            this.showNotification('User updated successfully!', 'success');
+        } else {
+            await apiClient.createUser(userData);
+            this.showNotification('User created successfully!', 'success');
         }
+        
+        this.closeModal('userModal');
+        await this.loadAllData();
+        
+    } catch (error) {
+        console.error('Error saving user:', error);
+        
+        // Extract meaningful error message
+        let errorMessage = 'Failed to save user';
+        if (error.message) {
+            errorMessage += ': ' + error.message;
+        }
+        
+        this.showNotification(errorMessage, 'error');
+    } finally {
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
     }
+}
 
     async toggleUserStatus(userId, isCurrentlyActive) {
         const action = isCurrentlyActive ? 'suspend' : 'activate';
@@ -893,18 +978,22 @@ Has Delivery: ${hasDelivery ? 'Yes' : 'No'}`);
     }
 
     getRoleOptions(selectedRole = '') {
-        const roles = ['farmer', 'consumer', 'retailer', 'logistics', 'admin'];
-        return roles.map(role => 
-            `<option value="${role}" ${role === selectedRole ? 'selected' : ''}>${role.charAt(0).toUpperCase() + role.slice(1)}</option>`
-        ).join('');
-    }
+    const roles = ['farmer', 'consumer', 'retailer', 'logistics', 'admin'];
+    return roles.map(role => {
+        const isSelected = role === selectedRole ? 'selected' : '';
+        const capitalizedRole = role.charAt(0).toUpperCase() + role.slice(1);
+        return `<option value="${role}" ${isSelected}>${capitalizedRole}</option>`;
+    }).join('');
+}
 
     getStatusOptions(selectedStatus = 'active') {
-        const statuses = ['active', 'inactive', 'suspended'];
-        return statuses.map(status => 
-            `<option value="${status}" ${status === selectedStatus ? 'selected' : ''}>${status.charAt(0).toUpperCase() + status.slice(1)}</option>`
-        ).join('');
-    }
+    const statuses = ['active', 'inactive', 'suspended'];
+    return statuses.map(status => {
+        const isSelected = status === selectedStatus ? 'selected' : '';
+        const capitalizedStatus = status.charAt(0).toUpperCase() + status.slice(1);
+        return `<option value="${status}" ${isSelected}>${capitalizedStatus}</option>`;
+    }).join('');
+}
 
     showNotification(message, type = 'info') {
         const notification = document.createElement('div');
@@ -988,5 +1077,12 @@ window.refreshData = function() {
 window.logout = function() {
     if (window.dashboard) {
         window.dashboard.logout();
+    }
+};
+
+// Add the missing showCreateUserModal function
+window.showCreateUserModal = function() {
+    if (window.dashboard) {
+        window.dashboard.showUserModal();
     }
 };
