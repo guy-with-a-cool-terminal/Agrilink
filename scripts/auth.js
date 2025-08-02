@@ -367,12 +367,6 @@ function createFarmerOnboarding() {
                         <button type="submit" class="btn-primary w-full">Send Message & Complete Registration</button>
                     </form>
                 </div>
-                
-                <div class="mt-6 pt-4 border-t border-gray-200">
-                    <button id="skipOnboardingBtn" class="text-gray-500 hover:text-gray-700 text-sm">
-                        Skip for now - I'll add products later
-                    </button>
-                </div>
             </div>
         </div>
     `;
@@ -448,12 +442,6 @@ function createRetailerOnboarding() {
                     
                     <button type="submit" class="btn-primary w-full">Save Preferences & Complete Registration</button>
                 </form>
-                
-                <div class="mt-6 pt-4 border-t border-gray-200">
-                    <button id="skipOnboardingBtn" class="text-gray-500 hover:text-gray-700 text-sm">
-                        Skip - I'll configure this later
-                    </button>
-                </div>
             </div>
         </div>
     `;
@@ -517,12 +505,6 @@ function createLogisticsOnboarding() {
                     
                     <button type="submit" class="btn-primary w-full">Submit Information & Complete Registration</button>
                 </form>
-                
-                <div class="mt-6 pt-4 border-t border-gray-200">
-                    <button id="skipOnboardingBtn" class="text-gray-500 hover:text-gray-700 text-sm">
-                        Complete basic registration - I'll add details later
-                    </button>
-                </div>
             </div>
         </div>
     `;
@@ -530,14 +512,6 @@ function createLogisticsOnboarding() {
 
 // Setup event listeners for onboarding forms
 function setupOnboardingEventListeners(role) {
-    const skipBtn = document.getElementById('skipOnboardingBtn');
-    if (skipBtn) {
-        skipBtn.addEventListener('click', () => {
-            console.log('Skipping onboarding');
-            completeRegistration();
-        });
-    }
-
     switch (role) {
         case 'farmer':
             setupFarmerOnboardingListeners();
