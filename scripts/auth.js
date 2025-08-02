@@ -178,7 +178,10 @@ async function handleLogin(event) {
     }
 }
 
-// Handle Registration
+// Store registration data temporarily during onboarding
+let tempRegistrationData = null;
+
+// Handle Registration - Modified to show onboarding
 async function handleRegister(event) {
     event.preventDefault();
     console.log('Register form submitted');
@@ -203,27 +206,637 @@ async function handleRegister(event) {
         return;
     }
 
+    // Store registration data temporarily
+    tempRegistrationData = {
+        name: name,
+        email: email,
+        phone: phone,
+        password: password,
+        password_confirmation,
+        role: role
+    };
+
+    // Show role-specific onboarding
+    showOnboardingStep(role);
+}
+
+// Show onboarding step based on role
+function showOnboardingStep(role) {
+    console.log('Showing onboarding for role:', role);
+    
+    // Hide registration form
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.style.display = 'none';
+    }
+    
+    // Create and show onboarding modal
+    createOnboardingModal(role);
+}
+
+// Create onboarding modal based on role
+function createOnboardingModal(role) {
+    // Remove any existing onboarding modal
+    const existingModal = document.getElementById('onboardingModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'onboardingModal';
+    modal.className = 'modal active';
+    
+    let modalContent = '';
+    
+    switch (role) {
+        case 'farmer':
+            modalContent = createFarmerOnboarding();
+            break;
+        case 'retailer':
+            modalContent = createRetailerOnboarding();
+            break;
+        case 'logistics':
+            modalContent = createLogisticsOnboarding();
+            break;
+        case 'consumer':
+            // Consumer onboarding is simple - just complete registration
+            completeRegistration();
+            return;
+        default:
+            completeRegistration();
+            return;
+    }
+    
+    modal.innerHTML = modalContent;
+    document.body.appendChild(modal);
+    
+    // Set up event listeners for the onboarding form
+    setupOnboardingEventListeners(role);
+}
+
+// Create farmer onboarding content
+function createFarmerOnboarding() {
+    return `
+        <div class="modal-content max-w-3xl">
+            <div class="modal-header">
+                <h3>🌾 Complete Your Farmer Profile</h3>
+                <p class="text-gray-600 mt-2">Upload your first product or contact admin for assistance</p>
+            </div>
+            <div class="p-6">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <p class="text-sm text-blue-800">
+                        <strong>Welcome to AgriLink!</strong> To get started as a farmer, please upload at least one product 
+                        or contact our admin team if you need assistance setting up your products.
+                    </p>
+                </div>
+                
+                <div class="flex gap-4 mb-6">
+                    <button id="uploadProductBtn" class="btn-primary flex-1">
+                        📦 Upload First Product
+                    </button>
+                    <button id="contactAdminBtn" class="btn-secondary flex-1">
+                        💬 Contact Admin
+                    </button>
+                </div>
+                
+                <!-- Product Upload Form (initially hidden) -->
+                <div id="productUploadForm" class="hidden">
+                    <h4 class="text-lg font-semibold mb-4">Add Your First Product</h4>
+                    <form id="onboardingProductForm">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="form-group">
+                                <label for="onboardingProductName">Product Name</label>
+                                <input type="text" id="onboardingProductName" name="name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="onboardingProductCategory">Category</label>
+                                <select id="onboardingProductCategory" name="category" required>
+                                    <option value="">Select Category</option>
+                                    <option value="vegetables">Vegetables</option>
+                                    <option value="fruits">Fruits</option>
+                                    <option value="grains">Grains</option>
+                                    <option value="dairy">Dairy</option>
+                                    <option value="spices">Spices</option>
+                                    <option value="seafood">SeaFood</option>
+                                    <option value="poultry">Poultry</option>
+                                    <option value="livestock">Livestock</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="onboardingProductDescription">Description</label>
+                            <textarea id="onboardingProductDescription" name="description" rows="3" placeholder="Describe your product..."></textarea>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="form-group">
+                                <label for="onboardingProductStock">Stock Quantity</label>
+                                <input type="number" id="onboardingProductStock" name="quantity" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="onboardingProductUnit">Unit</label>
+                                <select id="onboardingProductUnit" name="unit" required>
+                                    <option value="kg">Kilograms (kg)</option>
+                                    <option value="g">Grams (g)</option>
+                                    <option value="L">Liters (L)</option>
+                                    <option value="pcs">Pieces (pcs)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="onboardingProductPrice">Price per Unit (Ksh)</label>
+                                <input type="number" id="onboardingProductPrice" name="price" min="0" step="0.01" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary w-full" id="submitProductBtn">Add Product & Complete Registration</button>
+                    </form>
+                </div>
+                
+                <!-- Contact Admin Form (initially hidden) -->
+                <div id="contactAdminForm" class="hidden">
+                    <h4 class="text-lg font-semibold mb-4">Contact Admin for Assistance</h4>
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                        <p class="text-sm text-yellow-800">
+                            Our admin team will help you set up your products and get started on AgriLink.
+                        </p>
+                    </div>
+                    <form id="onboardingContactForm">
+                        <div class="form-group">
+                            <label for="contactMessage">Message to Admin</label>
+                            <textarea id="contactMessage" rows="4" required 
+                                    placeholder="Please describe what products you want to sell and any assistance you need..."></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary w-full">Send Message & Complete Registration</button>
+                    </form>
+                </div>
+                
+                <div class="mt-6 pt-4 border-t border-gray-200">
+                    <button id="skipOnboardingBtn" class="text-gray-500 hover:text-gray-700 text-sm">
+                        Skip for now - I'll add products later
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Create retailer onboarding content
+function createRetailerOnboarding() {
+    return `
+        <div class="modal-content max-w-2xl">
+            <div class="modal-header">
+                <h3>🏪 Set Your Retailer Preferences</h3>
+                <p class="text-gray-600 mt-2">Configure your buying preferences to get better recommendations</p>
+            </div>
+            <div class="p-6">
+                <form id="onboardingRetailerForm">
+                    <div class="form-group">
+                        <label for="preferredCategories">Preferred Product Categories</label>
+                        <div class="grid grid-cols-2 gap-2 mt-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="categories" value="vegetables" class="mr-2">
+                                Vegetables
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="categories" value="fruits" class="mr-2">
+                                Fruits
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="categories" value="grains" class="mr-2">
+                                Grains
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="categories" value="dairy" class="mr-2">
+                                Dairy
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="categories" value="spices" class="mr-2">
+                                Spices
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="categories" value="seafood" class="mr-2">
+                                SeaFood
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="budgetRange">Typical Budget Range per Order</label>
+                        <select id="budgetRange" name="budget_range" required>
+                            <option value="">Select Budget Range</option>
+                            <option value="5000-10000">Ksh5,000 - Ksh10,000</option>
+                            <option value="10000-25000">Ksh10,000 - Ksh25,000</option>
+                            <option value="25000-50000">Ksh25,000 - Ksh50,000</option>
+                            <option value="50000+">Ksh50,000+</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="orderFrequency">How often do you plan to order?</label>
+                        <select id="orderFrequency" name="order_frequency" required>
+                            <option value="">Select Frequency</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="as_needed">As Needed</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="businessLocation">Primary Business Location</label>
+                        <input type="text" id="businessLocation" name="business_location" required 
+                               placeholder="e.g., Nairobi, Kisumu, Mombasa">
+                    </div>
+                    
+                    <button type="submit" class="btn-primary w-full">Save Preferences & Complete Registration</button>
+                </form>
+                
+                <div class="mt-6 pt-4 border-t border-gray-200">
+                    <button id="skipOnboardingBtn" class="text-gray-500 hover:text-gray-700 text-sm">
+                        Skip - I'll configure this later
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Create logistics onboarding content
+function createLogisticsOnboarding() {
+    return `
+        <div class="modal-content max-w-2xl">
+            <div class="modal-header">
+                <h3>🚛 Logistics Provider Setup</h3>
+                <p class="text-gray-600 mt-2">Provide your service capacity and verification documents</p>
+            </div>
+            <div class="p-6">
+                <form id="onboardingLogisticsForm">
+                    <div class="form-group">
+                        <label for="vehicleType">Vehicle Type</label>
+                        <select id="vehicleType" name="vehicle_type" required>
+                            <option value="">Select Vehicle Type</option>
+                            <option value="motorcycle">Motorcycle</option>
+                            <option value="pickup">Pickup Truck</option>
+                            <option value="van">Van</option>
+                            <option value="truck">Truck</option>
+                            <option value="multiple">Multiple Vehicles</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="serviceArea">Service Areas</label>
+                        <textarea id="serviceArea" name="service_area" rows="3" required
+                                placeholder="List the areas you can deliver to (e.g., Nairobi, Kiambu, Thika)"></textarea>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="form-group">
+                            <label for="maxCapacity">Maximum Load Capacity (kg)</label>
+                            <input type="number" id="maxCapacity" name="max_capacity" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="deliveryPrice">Price per km (Ksh)</label>
+                            <input type="number" id="deliveryPrice" name="delivery_price" min="1" step="0.50" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="businessLicense">Business/Driver's License Number</label>
+                        <input type="text" id="businessLicense" name="license_number" required
+                               placeholder="Enter your business license or driver's license number">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="experience">Years of Experience</label>
+                        <select id="experience" name="experience" required>
+                            <option value="">Select Experience</option>
+                            <option value="0-1">Less than 1 year</option>
+                            <option value="1-3">1-3 years</option>
+                            <option value="3-5">3-5 years</option>
+                            <option value="5+">5+ years</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary w-full">Submit Information & Complete Registration</button>
+                </form>
+                
+                <div class="mt-6 pt-4 border-t border-gray-200">
+                    <button id="skipOnboardingBtn" class="text-gray-500 hover:text-gray-700 text-sm">
+                        Complete basic registration - I'll add details later
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Setup event listeners for onboarding forms
+function setupOnboardingEventListeners(role) {
+    const skipBtn = document.getElementById('skipOnboardingBtn');
+    if (skipBtn) {
+        skipBtn.addEventListener('click', () => {
+            console.log('Skipping onboarding');
+            completeRegistration();
+        });
+    }
+
+    switch (role) {
+        case 'farmer':
+            setupFarmerOnboardingListeners();
+            break;
+        case 'retailer':
+            setupRetailerOnboardingListeners();
+            break;
+        case 'logistics':
+            setupLogisticsOnboardingListeners();
+            break;
+    }
+}
+
+// Setup farmer onboarding listeners
+function setupFarmerOnboardingListeners() {
+    const uploadProductBtn = document.getElementById('uploadProductBtn');
+    const contactAdminBtn = document.getElementById('contactAdminBtn');
+    const productUploadForm = document.getElementById('productUploadForm');
+    const contactAdminForm = document.getElementById('contactAdminForm');
+    const onboardingProductForm = document.getElementById('onboardingProductForm');
+    const onboardingContactForm = document.getElementById('onboardingContactForm');
+
+    if (uploadProductBtn) {
+        uploadProductBtn.addEventListener('click', () => {
+            productUploadForm.classList.remove('hidden');
+            contactAdminForm.classList.add('hidden');
+            uploadProductBtn.classList.add('bg-green-600', 'text-white');
+            contactAdminBtn.classList.remove('bg-green-600', 'text-white');
+        });
+    }
+
+    if (contactAdminBtn) {
+        contactAdminBtn.addEventListener('click', () => {
+            contactAdminForm.classList.remove('hidden');
+            productUploadForm.classList.add('hidden');
+            contactAdminBtn.classList.add('bg-green-600', 'text-white');
+            uploadProductBtn.classList.remove('bg-green-600', 'text-white');
+        });
+    }
+
+    if (onboardingProductForm) {
+        onboardingProductForm.addEventListener('submit', handleFarmerProductSubmission);
+    }
+
+    if (onboardingContactForm) {
+        onboardingContactForm.addEventListener('submit', handleFarmerContactSubmission);
+    }
+}
+
+// Handle farmer product submission during onboarding
+async function handleFarmerProductSubmission(event) {
+    event.preventDefault();
+    console.log('Farmer product submission during onboarding');
+
+    const submitBtn = document.getElementById('submitProductBtn');
+    const originalText = submitBtn.textContent;
+
+    try {
+        submitBtn.textContent = 'Creating account and adding product...';
+        submitBtn.disabled = true;
+
+        // First complete registration
+        const registrationResponse = await apiClient.register(tempRegistrationData);
+        console.log('Registration completed:', registrationResponse);
+
+        // Store user data
+        const userData = {
+            ...registrationResponse.user,
+            token: registrationResponse.token,
+            loginTime: new Date().toISOString()
+        };
+        localStorage.setItem('currentUser', JSON.stringify(userData));
+
+        // Get product data from form
+        const formData = new FormData(event.target);
+        const productData = {
+            name: formData.get('name'),
+            description: formData.get('description'),
+            price: parseFloat(formData.get('price')),
+            quantity: parseInt(formData.get('quantity')),
+            category: formData.get('category'),
+            unit: formData.get('unit') || 'kg',
+            status: 'active'
+        };
+
+        console.log('Adding product:', productData);
+
+        // Add the product using existing API
+        await apiClient.createProduct(productData);
+        console.log('Product added successfully during onboarding');
+
+        showNotification('Account created and product added successfully!', 'success');
+        
+        // Close modal and redirect
+        closeOnboardingModal();
+        setTimeout(() => {
+            redirectToDashboard(userData.role);
+        }, 1500);
+
+    } catch (error) {
+        console.error('Error during farmer onboarding:', error);
+        showNotification('Error: ' + error.message, 'error');
+        
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// Handle farmer contact submission during onboarding
+async function handleFarmerContactSubmission(event) {
+    event.preventDefault();
+    console.log('Farmer contact submission during onboarding');
+
     const submitBtn = event.target.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
-    
+
     try {
-        // Show loading state
-        submitBtn.textContent = 'Registering...';
+        submitBtn.textContent = 'Creating account...';
         submitBtn.disabled = true;
-        
-        // Call API
-        const response = await apiClient.register({
-            name: name,
-            email: email,
-            phone: phone,
-            password: password,
-            password_confirmation,
-            role: role
+
+        // Complete registration first
+        const registrationResponse = await apiClient.register(tempRegistrationData);
+        console.log('Registration completed:', registrationResponse);
+
+        // Store user data
+        const userData = {
+            ...registrationResponse.user,
+            token: registrationResponse.token,
+            loginTime: new Date().toISOString()
+        };
+        localStorage.setItem('currentUser', JSON.stringify(userData));
+
+        // Log the message (in a real app, this would send to admin)
+        const message = document.getElementById('contactMessage').value;
+        console.log('Farmer contact message:', {
+            user: userData.name,
+            email: userData.email,
+            message: message
         });
+
+        showNotification('Account created! Admin will contact you soon.', 'success');
         
+        // Close modal and redirect
+        closeOnboardingModal();
+        setTimeout(() => {
+            redirectToDashboard(userData.role);
+        }, 1500);
+
+    } catch (error) {
+        console.error('Error during farmer contact submission:', error);
+        showNotification('Error: ' + error.message, 'error');
+        
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// Setup retailer onboarding listeners
+function setupRetailerOnboardingListeners() {
+    const onboardingRetailerForm = document.getElementById('onboardingRetailerForm');
+    if (onboardingRetailerForm) {
+        onboardingRetailerForm.addEventListener('submit', handleRetailerOnboardingSubmission);
+    }
+}
+
+// Handle retailer onboarding submission
+async function handleRetailerOnboardingSubmission(event) {
+    event.preventDefault();
+    console.log('Retailer onboarding submission');
+
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+
+    try {
+        submitBtn.textContent = 'Creating account...';
+        submitBtn.disabled = true;
+
+        // Complete registration
+        const registrationResponse = await apiClient.register(tempRegistrationData);
+        console.log('Registration completed:', registrationResponse);
+
+        // Store user data
+        const userData = {
+            ...registrationResponse.user,
+            token: registrationResponse.token,
+            loginTime: new Date().toISOString()
+        };
+        localStorage.setItem('currentUser', JSON.stringify(userData));
+
+        // Get preferences from form
+        const formData = new FormData(event.target);
+        const categories = Array.from(event.target.querySelectorAll('input[name="categories"]:checked'))
+                               .map(input => input.value);
+        
+        const preferences = {
+            categories: categories,
+            budget_range: formData.get('budget_range'),
+            order_frequency: formData.get('order_frequency'),
+            business_location: formData.get('business_location')
+        };
+
+        // Store preferences in localStorage for now (in real app, would save to backend)
+        localStorage.setItem('retailerPreferences', JSON.stringify(preferences));
+        console.log('Retailer preferences saved:', preferences);
+
+        showNotification('Account created with your preferences!', 'success');
+        
+        // Close modal and redirect
+        closeOnboardingModal();
+        setTimeout(() => {
+            redirectToDashboard(userData.role);
+        }, 1500);
+
+    } catch (error) {
+        console.error('Error during retailer onboarding:', error);
+        showNotification('Error: ' + error.message, 'error');
+        
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// Setup logistics onboarding listeners
+function setupLogisticsOnboardingListeners() {
+    const onboardingLogisticsForm = document.getElementById('onboardingLogisticsForm');
+    if (onboardingLogisticsForm) {
+        onboardingLogisticsForm.addEventListener('submit', handleLogisticsOnboardingSubmission);
+    }
+}
+
+// Handle logistics onboarding submission
+async function handleLogisticsOnboardingSubmission(event) {
+    event.preventDefault();
+    console.log('Logistics onboarding submission');
+
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+
+    try {
+        submitBtn.textContent = 'Creating account...';
+        submitBtn.disabled = true;
+
+        // Complete registration
+        const registrationResponse = await apiClient.register(tempRegistrationData);
+        console.log('Registration completed:', registrationResponse);
+
+        // Store user data
+        const userData = {
+            ...registrationResponse.user,
+            token: registrationResponse.token,
+            loginTime: new Date().toISOString()
+        };
+        localStorage.setItem('currentUser', JSON.stringify(userData));
+
+        // Get logistics info from form
+        const formData = new FormData(event.target);
+        const logisticsInfo = {
+            vehicle_type: formData.get('vehicle_type'),
+            service_area: formData.get('service_area'),
+            max_capacity: formData.get('max_capacity'),
+            delivery_price: formData.get('delivery_price'),
+            license_number: formData.get('license_number'),
+            experience: formData.get('experience')
+        };
+
+        // Store logistics info in localStorage for now (in real app, would save to backend)
+        localStorage.setItem('logisticsInfo', JSON.stringify(logisticsInfo));
+        console.log('Logistics info saved:', logisticsInfo);
+
+        showNotification('Account created with your logistics information!', 'success');
+        
+        // Close modal and redirect
+        closeOnboardingModal();
+        setTimeout(() => {
+            redirectToDashboard(userData.role);
+        }, 1500);
+
+    } catch (error) {
+        console.error('Error during logistics onboarding:', error);
+        showNotification('Error: ' + error.message, 'error');
+        
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// Complete registration without onboarding
+async function completeRegistration() {
+    console.log('Completing registration without onboarding');
+    
+    if (!tempRegistrationData) {
+        showNotification('Registration data not found', 'error');
+        return;
+    }
+
+    try {
+        const response = await apiClient.register(tempRegistrationData);
         console.log('Registration successful:', response);
         
-        // Store user info with token
         const userData = {
             ...response.user,
             token: response.token,
@@ -235,7 +848,7 @@ async function handleRegister(event) {
         
         showNotification('Registration successful! Redirecting to dashboard...', 'success');
         
-        // Redirect based on role
+        closeOnboardingModal();
         setTimeout(() => {
             redirectToDashboard(userData.role);
         }, 1000);
@@ -244,10 +857,30 @@ async function handleRegister(event) {
         console.error('Registration error:', error);
         showNotification('Registration failed: ' + error.message, 'error');
         
-        // Reset button state
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
+        // Show register form again
+        const registerForm = document.getElementById('registerForm');
+        if (registerForm) {
+            registerForm.style.display = 'block';
+        }
+        closeOnboardingModal();
     }
+}
+
+// Close onboarding modal and cleanup
+function closeOnboardingModal() {
+    const modal = document.getElementById('onboardingModal');
+    if (modal) {
+        modal.remove();
+    }
+    
+    // Show register form again if needed
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.style.display = 'block';
+    }
+    
+    // Clear temp data
+    tempRegistrationData = null;
 }
 
 // Redirect to appropriate dashboard
