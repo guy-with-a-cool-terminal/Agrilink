@@ -64,6 +64,12 @@ class Product extends Model
         return $this->belongsTo(User::class, 'farmer_id');
     }
 
+    // ADDED: Alias for farmer relationship (needed by ReviewController)
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'farmer_id');
+    }
+
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class);

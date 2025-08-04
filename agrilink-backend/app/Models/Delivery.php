@@ -66,6 +66,11 @@ class Delivery extends Model
         return $this->belongsTo(Order::class);
     }
 
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
     public function logisticsManager()
     {
         return $this->belongsTo(User::class, 'assigned_to');

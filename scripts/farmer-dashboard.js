@@ -244,7 +244,44 @@ async function loadFarmerOrders() {
     }
 }
 
-// FIXED: Display farmer orders with proper null checks
+// Helper function to format quantity with units
+function formatQuantityWithUnit(quantity, productId) {
+    if (!quantity) return '0';
+    
+    // Find the product to get its unit
+    const product = products.find(p => p.id == productId);
+    const unit = product?.unit || '';
+    
+    return unit ? `${quantity} ${unit}` : quantity.toString();
+}
+
+// Helper function to get product unit
+function getProductUnit(productId) {
+    const product = products.find(p => p.id == productId);
+    return product?.unit || '';
+}
+
+// Helper function to get singular form of unit for pricing display
+function getSingularUnit(unit) {
+    if (!unit) return 'unit';
+    
+    const singularUnits = {
+        'liters': 'liter',
+        'pieces': 'piece', 
+        'bags': 'bag',
+        'boxes': 'box',
+        'bunches': 'bunch',
+        'kg': 'kg',
+        'g': 'g',
+        'ml': 'ml',
+        'pcs': 'piece',
+        'L': 'liter'
+    };
+    
+    return singularUnits[unit] || unit;
+}
+
+// FIXED: Display farmer orders with proper null checks AND UNITS
 function displayFarmerOrdersTable(ordersToShow) {
     const ordersTableBody = document.querySelector('#farmerOrdersTable tbody');
     if (!ordersTableBody) {
@@ -351,13 +388,18 @@ function displayFarmerOrdersTable(ordersToShow) {
                             )
                         );
                         const itemPrice = parseFloat(item.unit_price || item.price || 0);
+                        const quantity = parseInt(item.quantity || 0);
+                        const unit = product?.unit || '';
+                        const quantityWithUnit = unit ? `${quantity} ${unit}` : quantity;
+                        const singularUnit = getSingularUnit(unit);
+                        
                         return `
                             <div class="flex justify-between items-center bg-gray-50 p-2 rounded">
                                 <div>
                                     <span class="font-medium">${product?.name || item.name || 'Unknown Product'}</span>
-                                    <br><small class="text-gray-500">Ksh${itemPrice.toFixed(2)} each</small>
+                                    <br><small class="text-gray-500">Ksh${itemPrice.toFixed(2)} per ${singularUnit}</small>
                                 </div>
-                                <span class="text-gray-600 font-medium">×${item.quantity || 0}</span>
+                                <span class="text-gray-600 font-medium">×${quantityWithUnit}</span>
                             </div>
                         `;
                     }).join('')}
@@ -583,7 +625,7 @@ async function loadFarmerStats() {
     }
 }
 
-// FIXED: View detailed order information with proper null checks
+// FIXED: View detailed order information with proper null checks AND UNITS
 function viewOrderDetails(orderId) {
     const order = farmerOrders.find(o => o.id === orderId);
     if (!order) {
@@ -660,12 +702,15 @@ function viewOrderDetails(orderId) {
                                 const product = products.find(p => p && p.id == item.product_id);
                                 const price = parseFloat(item.unit_price || item.price || 0);
                                 const quantity = parseInt(item.quantity || 0);
+                                const unit = product?.unit || '';
+                                const quantityWithUnit = unit ? `${quantity} ${unit}` : quantity;
+                                const pricePerUnit = unit ? `per ${unit}` : 'per unit';
                                 const itemTotal = price * quantity;
                                 return `
                                     <tr>
                                         <td class="border border-gray-300 px-3 py-2">${product?.name || item.name || 'Unknown Product'}</td>
-                                        <td class="border border-gray-300 px-3 py-2 text-center">${quantity}</td>
-                                        <td class="border border-gray-300 px-3 py-2 text-right">Ksh${price.toFixed(2)}</td>
+                                        <td class="border border-gray-300 px-3 py-2 text-center font-medium">${quantityWithUnit}</td>
+                                        <td class="border border-gray-300 px-3 py-2 text-right">Ksh${price.toFixed(2)} ${pricePerUnit}</td>
                                         <td class="border border-gray-300 px-3 py-2 text-right font-medium">Ksh${itemTotal.toFixed(2)}</td>
                                     </tr>
                                 `;
@@ -710,7 +755,7 @@ async function refreshOrdersData() {
     }
 }
 
-// Keep all existing functions unchanged
+// FIXED: Display products with UNITS shown
 function displayProducts(productsToShow) {
     const productsTableBody = document.querySelector('#productsTable tbody');
     if (!productsTableBody) return;
@@ -730,13 +775,18 @@ function displayProducts(productsToShow) {
     }
 
     productsToShow.forEach(product => {
+        const quantity = product.quantity || product.stock || 0;
+        const unit = product.unit || '';
+        const quantityWithUnit = unit ? `${quantity} ${unit}` : quantity;
+        const singularUnit = getSingularUnit(unit);
+        
         const row = document.createElement('tr');
         row.innerHTML = `
             <td class="text-center">📦</td>
             <td class="font-medium">${product.name || 'Unnamed Product'}</td>
             <td class="capitalize">${product.category || 'N/A'}</td>
-            <td>${product.quantity || product.stock || 0}</td>
-            <td class="font-medium">Ksh${parseFloat(product.price || 0).toFixed(2)}</td>
+            <td class="font-medium">${quantityWithUnit}</td>
+            <td class="font-medium">Ksh${parseFloat(product.price || 0).toFixed(2)}${unit ? ` per ${singularUnit}` : ''}</td>
             <td><span class="status-${product.status || 'active'}">${(product.status || 'active').replace('_', ' ')}</span></td>
             <td>
                 <div class="flex gap-2">
@@ -757,7 +807,7 @@ function updateStatCard(id, value) {
     }
 }
 
-// Keep all existing product management functions
+// UPDATED: Enhanced product creation with unit field
 async function handleAddProduct(event) {
     event.preventDefault();
     console.log('Adding new product...');
@@ -769,6 +819,7 @@ async function handleAddProduct(event) {
         price: parseFloat(formData.get('price') || document.getElementById('productPrice').value),
         quantity: parseInt(formData.get('quantity') || document.getElementById('productStock').value),
         category: formData.get('category') || document.getElementById('productCategory').value,
+        unit: formData.get('unit') || document.getElementById('productUnit')?.value || '', // Add unit field
         status: 'active'
     };
 
@@ -798,21 +849,83 @@ async function editProduct(productId) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
 
-    const newPrice = prompt('Enter new price:', product.price);
-    if (newPrice && !isNaN(newPrice)) {
+    // Create edit product modal
+    const modal = document.createElement('div');
+    modal.id = 'editProductModal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg p-6 w-full max-w-md">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-lg font-semibold">Edit Product</h3>
+                <button onclick="closeModal('editProductModal')" class="text-gray-500 hover:text-gray-700">
+                    <span class="text-2xl">&times;</span>
+                </button>
+            </div>
+            
+            <form id="editProductForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+                    <input type="text" id="editProductName" value="${product.name}" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Price (Ksh)</label>
+                    <input type="number" id="editProductPrice" value="${product.price}" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                    <input type="number" id="editProductQuantity" value="${product.quantity || product.stock || 0}" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                    <select id="editProductUnit" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        <option value="">Select unit...</option>
+                        <option value="kg" ${product.unit === 'kg' ? 'selected' : ''}>Kilograms (kg)</option>
+                        <option value="g" ${product.unit === 'g' ? 'selected' : ''}>Grams (g)</option>
+                        <option value="liters" ${product.unit === 'liters' ? 'selected' : ''}>Liters</option>
+                        <option value="ml" ${product.unit === 'ml' ? 'selected' : ''}>Milliliters (ml)</option>
+                        <option value="pieces" ${product.unit === 'pieces' ? 'selected' : ''}>Pieces</option>
+                        <option value="bags" ${product.unit === 'bags' ? 'selected' : ''}>Bags</option>
+                        <option value="boxes" ${product.unit === 'boxes' ? 'selected' : ''}>Boxes</option>
+                        <option value="bunches" ${product.unit === 'bunches' ? 'selected' : ''}>Bunches</option>
+                    </select>
+                </div>
+                
+                <div class="flex gap-2 justify-end">
+                    <button type="button" onclick="closeModal('editProductModal')" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-primary">Update Product</button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Handle form submission
+    document.getElementById('editProductForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const updatedData = {
+            ...product,
+            name: document.getElementById('editProductName').value,
+            price: parseFloat(document.getElementById('editProductPrice').value),
+            quantity: parseInt(document.getElementById('editProductQuantity').value),
+            unit: document.getElementById('editProductUnit').value
+        };
+        
         try {
-            await apiClient.updateProduct(productId, { 
-                ...product, 
-                price: parseFloat(newPrice) 
-            });
+            await apiClient.updateProduct(productId, updatedData);
             showNotification('Product updated successfully!', 'success');
+            closeModal('editProductModal');
             await loadProducts();
             await loadFarmerStats();
         } catch (error) {
             console.error('Error updating product:', error);
             showNotification('Failed to update product: ' + error.message, 'error');
         }
-    }
+    });
 }
 
 async function deleteProduct(productId) {
@@ -858,7 +971,7 @@ function addOrdersViewButton() {
     }
 }
 
-// FIXED: Show detailed orders view in a modal with proper null checks
+// FIXED: Show detailed orders view in a modal with proper null checks AND UNITS
 function showDetailedOrdersView() {
     if (!farmerOrders || farmerOrders.length === 0) {
         showNotification('No orders found for your products', 'info');
@@ -957,10 +1070,14 @@ function showDetailedOrdersView() {
                                                     if (!item) return '';
                                                     const product = products.find(p => p && p.id == item.product_id);
                                                     const price = parseFloat(item.unit_price || item.price || 0);
+                                                    const quantity = parseInt(item.quantity || 0);
+                                                    const unit = product?.unit || '';
+                                                    const quantityWithUnit = unit ? `${quantity} ${unit}` : quantity;
+                                                    const pricePerUnit = unit ? `per ${unit}` : 'per unit';
                                                     return `
                                                         <div class="text-xs bg-gray-50 p-1 rounded">
                                                             <div class="font-medium">${product?.name || item.name || 'Unknown Product'}</div>
-                                                            <div class="text-gray-600">${item.quantity || 0} × Ksh${price.toFixed(2)}</div>
+                                                            <div class="text-gray-600">${quantityWithUnit} × Ksh${price.toFixed(2)} ${pricePerUnit}</div>
                                                         </div>
                                                     `;
                                                 }).join('')}
@@ -1053,5 +1170,3 @@ window.debugOrdersData = debugOrdersData;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', initializeFarmerDashboard);
-
-console.log('Enhanced Farmer dashboard script setup complete');

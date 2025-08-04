@@ -117,6 +117,45 @@ let products = [];
 let cart = [];
 let orders = [];
 
+// ============= UNIT DISPLAY HELPER FUNCTIONS (FROM FARMER.JS) =============
+
+// Helper function to format quantity with units
+function formatQuantityWithUnit(quantity, productId) {
+    if (!quantity) return '0';
+    
+    // Find the product to get its unit
+    const product = products.find(p => p.id == productId);
+    const unit = product?.unit || '';
+    
+    return unit ? `${quantity} ${unit}` : quantity.toString();
+}
+
+// Helper function to get product unit
+function getProductUnit(productId) {
+    const product = products.find(p => p.id == productId);
+    return product?.unit || '';
+}
+
+// Helper function to get singular form of unit for pricing display
+function getSingularUnit(unit) {
+    if (!unit) return 'unit';
+    
+    const singularUnits = {
+        'liters': 'liter',
+        'pieces': 'piece', 
+        'bags': 'bag',
+        'boxes': 'box',
+        'bunches': 'bunch',
+        'kg': 'kg',
+        'g': 'g',
+        'ml': 'ml',
+        'pcs': 'piece',
+        'L': 'liter'
+    };
+    
+    return singularUnits[unit] || unit;
+}
+
 // Helper to define per-user cart key
 function getCartKey() {
   return currentUser?.email ? `cart_${currentUser.email}` : 'cart';
@@ -217,7 +256,7 @@ async function loadProducts() {
     }
 }
 
-// Display products in grid with enhanced stock visibility
+// UPDATED: Display products in grid with enhanced stock visibility AND UNITS
 function displayProducts(productsToShow) {
     const productGrid = document.getElementById('productGrid');
     if (!productGrid) return;
@@ -245,27 +284,35 @@ function displayProducts(productsToShow) {
         return;
     }
     
-    productGrid.innerHTML = availableProducts.map(product => `
-        <div class="product-card bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <div class="product-image text-center text-4xl mb-3">🥬</div>
-            <h3 class="font-semibold text-lg mb-2">${product.name || 'Unnamed Product'}</h3>
-            <p class="text-gray-600 text-sm mb-3">${product.description || 'No description available'}</p>
-            <div class="flex justify-between items-center mb-3">
-                <span class="font-bold text-lg text-green-600">Ksh${parseFloat(product.price || 0).toFixed(2)}</span>
-                <span class="text-sm ${product.quantity > 5 ? 'text-gray-500' : 'text-orange-500'}">
-                    Stock: ${product.quantity || 0}
-                </span>
+    productGrid.innerHTML = availableProducts.map(product => {
+        const quantity = product.quantity || product.stock || 0;
+        const unit = product.unit || '';
+        const quantityWithUnit = unit ? `${quantity} ${unit}` : quantity;
+        const singularUnit = getSingularUnit(unit);
+        const priceDisplay = unit ? `Ksh${parseFloat(product.price || 0).toFixed(2)} per ${singularUnit}` : `Ksh${parseFloat(product.price || 0).toFixed(2)}`;
+        
+        return `
+            <div class="product-card bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div class="product-image text-center text-4xl mb-3">🥬</div>
+                <h3 class="font-semibold text-lg mb-2">${product.name || 'Unnamed Product'}</h3>
+                <p class="text-gray-600 text-sm mb-3">${product.description || 'No description available'}</p>
+                <div class="flex justify-between items-center mb-3">
+                    <span class="font-bold text-lg text-green-600">${priceDisplay}</span>
+                    <span class="text-sm ${quantity > 5 ? 'text-gray-500' : 'text-orange-500'}">
+                        Stock: ${quantityWithUnit}
+                    </span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-500 capitalize">${product.category || 'Uncategorized'}</span>
+                    <button class="btn-primary text-sm" onclick="addToCart(${product.id})">
+                        Add to Cart
+                    </button>
+                </div>
+                ${quantity <= 5 && quantity > 0 ? 
+                    `<div class="mt-2 text-xs text-orange-600 bg-orange-50 p-2 rounded">⚠️ Only ${quantityWithUnit} left!</div>` : ''}
             </div>
-            <div class="flex justify-between items-center">
-                <span class="text-xs text-gray-500 capitalize">${product.category || 'Uncategorized'}</span>
-                <button class="btn-primary text-sm" onclick="addToCart(${product.id})">
-                    Add to Cart
-                </button>
-            </div>
-            ${product.quantity <= 5 && product.quantity > 0 ? 
-                `<div class="mt-2 text-xs text-orange-600 bg-orange-50 p-2 rounded">⚠️ Only ${product.quantity} left!</div>` : ''}
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // Load consumer-specific statistics (no admin analytics)
@@ -346,7 +393,7 @@ function searchProducts() {
     displayProducts(filteredProducts);
 }
 
-// Add to cart with stock validation
+// UPDATED: Add to cart with stock validation AND UNITS
 function addToCart(productId) {
   const product = products.find(p => p.id === productId);
   if (!product) return showNotification('Product not found','error');
@@ -359,7 +406,9 @@ function addToCart(productId) {
   const currentQty = existing ? existing.quantity : 0;
   
   if (currentQty >= product.quantity) {
-    return showNotification(`Only ${product.quantity} units available in stock`, 'error');
+    const unit = product.unit || '';
+    const quantityWithUnit = unit ? `${product.quantity} ${unit}` : `${product.quantity} units`;
+    return showNotification(`Only ${quantityWithUnit} available in stock`, 'error');
   }
 
   if (existing) existing.quantity += 1;
@@ -369,7 +418,8 @@ function addToCart(productId) {
     price: parseFloat(product.price), 
     quantity: 1,
     product_id: product.id,
-    max_stock: product.quantity
+    max_stock: product.quantity,
+    unit: product.unit || '' // Store unit in cart
   });
 
   localStorage.setItem(getCartKey(), JSON.stringify(cart));
@@ -382,7 +432,7 @@ function updateCartCount() {
   if (countEl) countEl.textContent = cart.reduce((sum,i)=>sum+i.quantity, 0);
 }
 
-// Show cart modal
+// UPDATED: Show cart modal WITH UNITS
 function showCart() {
     const modal = document.getElementById('cartModal');
     const cartItems = document.getElementById('cartItems');
@@ -394,30 +444,38 @@ function showCart() {
             </div>
         `;
     } else {
-        cartItems.innerHTML = cart.map(item => `
-            <div class="flex justify-between items-center p-4 border-b">
-                <div>
-                    <h4 class="font-medium">${item.name}</h4>
-                    <p class="text-sm text-gray-600">Ksh${parseFloat(item.price).toFixed(2)} x ${item.quantity}</p>
-                    ${item.max_stock ? `<p class="text-xs text-gray-500">Stock: ${item.max_stock}</p>` : ''}
+        cartItems.innerHTML = cart.map(item => {
+            const unit = item.unit || '';
+            const quantityWithUnit = unit ? `${item.quantity} ${unit}` : item.quantity;
+            const maxStockWithUnit = unit && item.max_stock ? `${item.max_stock} ${unit}` : item.max_stock;
+            const singularUnit = getSingularUnit(unit);
+            const priceDisplay = unit ? `Ksh${parseFloat(item.price).toFixed(2)} per ${singularUnit}` : `Ksh${parseFloat(item.price).toFixed(2)}`;
+            
+            return `
+                <div class="flex justify-between items-center p-4 border-b">
+                    <div>
+                        <h4 class="font-medium">${item.name}</h4>
+                        <p class="text-sm text-gray-600">${priceDisplay} × ${quantityWithUnit}</p>
+                        ${item.max_stock ? `<p class="text-xs text-gray-500">Stock: ${maxStockWithUnit}</p>` : ''}
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button class="btn-secondary text-sm" onclick="updateCartQuantity(${item.id}, -1)">-</button>
+                        <span>${quantityWithUnit}</span>
+                        <button class="btn-secondary text-sm ${item.quantity >= (item.max_stock || 999) ? 'opacity-50 cursor-not-allowed' : ''}" 
+                                onclick="updateCartQuantity(${item.id}, 1)"
+                                ${item.quantity >= (item.max_stock || 999) ? 'disabled' : ''}>+</button>
+                        <button class="btn-danger text-sm ml-2" onclick="removeFromCart(${item.id})">Remove</button>
+                    </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button class="btn-secondary text-sm" onclick="updateCartQuantity(${item.id}, -1)">-</button>
-                    <span>${item.quantity}</span>
-                    <button class="btn-secondary text-sm ${item.quantity >= (item.max_stock || 999) ? 'opacity-50 cursor-not-allowed' : ''}" 
-                            onclick="updateCartQuantity(${item.id}, 1)"
-                            ${item.quantity >= (item.max_stock || 999) ? 'disabled' : ''}>+</button>
-                    <button class="btn-danger text-sm ml-2" onclick="removeFromCart(${item.id})">Remove</button>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
     
     updateCartSummary();
     modal.classList.add('active');
 }
 
-// Update cart quantity with stock validation
+// UPDATED: Update cart quantity with stock validation AND UNITS
 function updateCartQuantity(productId, change) {
   const item = cart.find(i => i.id === productId);
   if (item) {
@@ -429,7 +487,9 @@ function updateCartQuantity(productId, change) {
     }
     
     if (item.max_stock && newQuantity > item.max_stock) {
-      showNotification(`Only ${item.max_stock} units available in stock`, 'error');
+      const unit = item.unit || '';
+      const maxStockWithUnit = unit ? `${item.max_stock} ${unit}` : `${item.max_stock} units`;
+      showNotification(`Only ${maxStockWithUnit} available in stock`, 'error');
       return;
     }
     
@@ -548,7 +608,7 @@ function showPaymentForm(paymentMethod) {
     checkoutForm.appendChild(formContainer);
 }
 
-// Place order with enhanced payment processing and stock management
+// UPDATED: Place order with enhanced payment processing and stock management AND UNITS
 async function placeOrder(event) {
     event.preventDefault();
     if (cart.length === 0) return showNotification('Your cart is empty','error');
@@ -566,7 +626,10 @@ async function placeOrder(event) {
         for (const item of cart) {
             const product = products.find(p => p.id === item.id);
             if (!product || product.quantity < item.quantity) {
-                throw new Error(`Insufficient stock for ${item.name}. Available: ${product?.quantity || 0}, Requested: ${item.quantity}`);
+                const unit = product?.unit || '';
+                const availableWithUnit = unit ? `${product?.quantity || 0} ${unit}` : `${product?.quantity || 0} units`;
+                const requestedWithUnit = unit ? `${item.quantity} ${unit}` : `${item.quantity} units`;
+                throw new Error(`Insufficient stock for ${item.name}. Available: ${availableWithUnit}, Requested: ${requestedWithUnit}`);
             }
         }
 
@@ -654,7 +717,7 @@ async function loadOrderHistory() {
     }
 }
 
-// Display order history - UPDATED WITH FIXES
+// UPDATED: Display order history WITH UNITS
 function displayOrderHistory(userOrders) {
     const orderHistoryTable = document.getElementById('orderHistoryTable');
     if (!orderHistoryTable) return;
@@ -679,12 +742,21 @@ function displayOrderHistory(userOrders) {
             <tr>
                 <td class="font-mono">#${order.id}</td>
                 <td>
-                    ${orderInfo.items.length > 0 ? orderInfo.items.map(item => `
-                        <div class="text-sm mb-1">
-                            <div class="font-medium">${item.name}</div>
-                            <div class="text-gray-600">Qty: ${item.quantity} @ Ksh${item.unit_price.toFixed(2)}</div>
-                        </div>
-                    `).join('') : `
+                    ${orderInfo.items.length > 0 ? orderInfo.items.map(item => {
+                        // Get product details to show units
+                        const product = products.find(p => p.name === item.name || p.id === item.product_id);
+                        const unit = product?.unit || '';
+                        const quantityWithUnit = unit ? `${item.quantity} ${unit}` : item.quantity;
+                        const singularUnit = getSingularUnit(unit);
+                        const priceDisplay = unit ? `Ksh${item.unit_price.toFixed(2)} per ${singularUnit}` : `Ksh${item.unit_price.toFixed(2)}`;
+                        
+                        return `
+                            <div class="text-sm mb-1">
+                                <div class="font-medium">${item.name}</div>
+                                <div class="text-gray-600">Qty: ${quantityWithUnit} @ ${priceDisplay}</div>
+                            </div>
+                        `;
+                    }).join('') : `
                         <div class="text-sm text-gray-500">
                             ${orderInfo.productName}
                         </div>
@@ -704,7 +776,7 @@ function displayOrderHistory(userOrders) {
                     }
                 </td>
                 <td>
-                    ${ReviewUtils.getReviewButtonForOrder(order, currentUser)}
+                    ${ReviewUtils.getReviewButtonForOrder ? ReviewUtils.getReviewButtonForOrder(order, currentUser) : ''}
                 </td>
             </tr>
         `;
@@ -871,3 +943,6 @@ window.closeModal = closeModal;
 window.logout = logout;
 window.refreshOrders = refreshOrders;
 window.cancelOrder = cancelOrder;
+window.formatQuantityWithUnit = formatQuantityWithUnit;
+window.getProductUnit = getProductUnit;
+window.getSingularUnit = getSingularUnit;

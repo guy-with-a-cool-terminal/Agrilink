@@ -178,7 +178,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/reviews', [ReviewController::class, 'store']);
     Route::get('/reviews/{review}', [ReviewController::class, 'show']);
     Route::get('/users/{user}/reviews', [ReviewController::class, 'getUserReviews']);
-    Route::get('/orders/{order}/reviewees', [ReviewController::class, 'getOrderReviewees']);
+    // FIXED: Changed {order} to {orderId} to match controller parameter
+    Route::get('/orders/{orderId}/reviewees', [ReviewController::class, 'getOrderReviewees']);
     
     // Review moderation (admin only)
     Route::middleware('role:admin')->group(function () {

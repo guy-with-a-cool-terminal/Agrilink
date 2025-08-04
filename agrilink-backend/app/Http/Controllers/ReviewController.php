@@ -261,14 +261,14 @@ class ReviewController extends Controller
             ], 400);
         }
 
-        $reviewees = [];
+        $reviewees = collect([]); // Initialize as Collection instead of array
 
         // Consumer can review farmers and retailers
         if ($user->isConsumer() && $order->user_id === $user->id) {
             // Get farmers from order items
             foreach ($order->orderItems as $item) {
                 if ($item->product && $item->product->user && $item->product->user->isFarmer()) {
-                    $reviewees[] = $item->product->user;
+                    $reviewees->push($item->product->user);
                 }
             }
             
@@ -283,7 +283,7 @@ class ReviewController extends Controller
             });
             
             if ($farmerHasProducts) {
-                $reviewees[] = $order->user;
+                $reviewees->push($order->user);
             }
         }
 
@@ -297,18 +297,18 @@ class ReviewController extends Controller
         if ($order->delivery && $order->delivery->assigned_to) {
             $logisticsUser = $order->delivery->user;
             if ($logisticsUser && !$reviewees->contains('id', $logisticsUser->id) && $logisticsUser->id !== $user->id) {
-                $reviewees[] = $logisticsUser;
+                $reviewees->push($logisticsUser);
             }
         }
 
         if ($user->isLogistics() && $order->delivery && $order->delivery->assigned_to === $user->id) {
             if (!$reviewees->contains('id', $order->user_id)) {
-                $reviewees[] = $order->user;
+                $reviewees->push($order->user);
             }
         }
 
         // Remove duplicates and current user
-        $reviewees = collect($reviewees)->unique('id')->reject(function ($reviewee) use ($user) {
+        $reviewees = $reviewees->unique('id')->reject(function ($reviewee) use ($user) {
             return $reviewee->id === $user->id;
         });
 
