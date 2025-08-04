@@ -44,7 +44,13 @@ class ApiClient {
             // Promotions
             PROMOTIONS: '/promotions',
             PROMOTION: (id) => `/promotions/${id}`,
-            PROMOTIONS_CALCULATE_DISCOUNT: '/promotions/calculate-discount'
+            PROMOTIONS_CALCULATE_DISCOUNT: '/promotions/calculate-discount',
+            
+            // Reviews
+            REVIEWS: '/reviews',
+            REVIEW: (id) => `/reviews/${id}`,
+            USER_REVIEWS: (userId) => `/users/${userId}/reviews`,
+            ORDER_REVIEWEES: (orderId) => `/orders/${orderId}/reviewees`
         };
     }
 
@@ -560,6 +566,99 @@ class ApiClient {
             method: 'PUT',
             body: JSON.stringify(inventoryData)
         });
+    }
+
+    // Reviews
+    async getReviews() {
+        try {
+            console.log('Fetching reviews...');
+            const response = await this.request(this.endpoints.REVIEWS);
+            console.log('Reviews fetched successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching reviews:', error);
+            throw error;
+        }
+    }
+
+    async createReview(reviewData) {
+        try {
+            console.log('Creating review with data:', reviewData);
+            const response = await this.request(this.endpoints.REVIEWS, {
+                method: 'POST',
+                body: JSON.stringify(reviewData)
+            });
+            console.log('Review created successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error creating review:', error);
+            throw error;
+        }
+    }
+
+    async getReview(reviewId) {
+        try {
+            console.log('Fetching review:', reviewId);
+            const response = await this.request(this.endpoints.REVIEW(reviewId));
+            console.log('Review fetched successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching review:', error);
+            throw error;
+        }
+    }
+
+    async updateReview(reviewId, reviewData) {
+        try {
+            console.log('Updating review:', reviewId, 'with data:', reviewData);
+            const response = await this.request(this.endpoints.REVIEW(reviewId), {
+                method: 'PUT',
+                body: JSON.stringify(reviewData)
+            });
+            console.log('Review updated successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error updating review:', error);
+            throw error;
+        }
+    }
+
+    async deleteReview(reviewId) {
+        try {
+            console.log('Deleting review:', reviewId);
+            const response = await this.request(this.endpoints.REVIEW(reviewId), {
+                method: 'DELETE'
+            });
+            console.log('Review deleted successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error deleting review:', error);
+            throw error;
+        }
+    }
+
+    async getUserReviews(userId) {
+        try {
+            console.log('Fetching reviews for user:', userId);
+            const response = await this.request(this.endpoints.USER_REVIEWS(userId));
+            console.log('User reviews fetched successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching user reviews:', error);
+            throw error;
+        }
+    }
+
+    async getOrderReviewees(orderId) {
+        try {
+            console.log('Fetching reviewees for order:', orderId);
+            const response = await this.request(this.endpoints.ORDER_REVIEWEES(orderId));
+            console.log('Order reviewees fetched successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching order reviewees:', error);
+            throw error;
+        }
     }
 
     // Remove token helper method

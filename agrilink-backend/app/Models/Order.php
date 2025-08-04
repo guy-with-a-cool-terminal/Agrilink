@@ -65,6 +65,11 @@ class Order extends Model
         return $this->hasOne(Delivery::class);
     }
 
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
+
     // Generate order number
    public static function generateUniqueOrderNumber()
 {

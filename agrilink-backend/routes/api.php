@@ -11,6 +11,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\PromotionController;
+use App\Http\Controllers\ReviewController;
 
 /*
 |--------------------------------------------------------------------------
@@ -170,6 +171,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/promotions', [PromotionController::class, 'store']);
         Route::put('/promotions/{promotion}', [PromotionController::class, 'update']);
         Route::delete('/promotions/{promotion}', [PromotionController::class, 'destroy']);
+    });
+
+    // Review routes (all authenticated users can manage reviews)
+    Route::get('/reviews', [ReviewController::class, 'index']);
+    Route::post('/reviews', [ReviewController::class, 'store']);
+    Route::get('/reviews/{review}', [ReviewController::class, 'show']);
+    Route::get('/users/{user}/reviews', [ReviewController::class, 'getUserReviews']);
+    Route::get('/orders/{order}/reviewees', [ReviewController::class, 'getOrderReviewees']);
+    
+    // Review moderation (admin only)
+    Route::middleware('role:admin')->group(function () {
+        Route::put('/reviews/{review}', [ReviewController::class, 'update']);
+        Route::delete('/reviews/{review}', [ReviewController::class, 'destroy']);
     });
 
     // Admin routes

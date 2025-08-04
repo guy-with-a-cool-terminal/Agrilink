@@ -703,6 +703,9 @@ function displayOrderHistory(userOrders) {
                         '<span class="text-gray-400 text-sm">No actions</span>'
                     }
                 </td>
+                <td>
+                    ${ReviewUtils.getReviewButtonForOrder(order, currentUser)}
+                </td>
             </tr>
         `;
     }).join('');
