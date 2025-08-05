@@ -280,28 +280,38 @@ function createFarmerOnboarding() {
         <div class="modal-content max-w-3xl">
             <div class="modal-header">
                 <h3>🌾 Complete Your Farmer Profile</h3>
-                <p class="text-gray-600 mt-2">Upload your first product or contact admin for assistance</p>
+                <p class="text-gray-600 mt-2">Upload at least 5 products to complete registration</p>
             </div>
             <div class="p-6">
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                     <p class="text-sm text-blue-800">
-                        <strong>Welcome to AgriLink!</strong> To get started as a farmer, please upload at least one product 
-                        or contact our admin team if you need assistance setting up your products.
+                        <strong>Welcome to AgriLink!</strong> To complete your farmer registration, you must upload at least 5 products. 
+                        If you need assistance or want to discuss terms, you can contact our admin team.
                     </p>
+                </div>
+                
+                <!-- Product Counter -->
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium">Products Added: <span id="productCounter">0</span>/5</span>
+                        <div class="w-32 h-2 bg-gray-200 rounded-full">
+                            <div id="progressBar" class="h-2 bg-green-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="flex gap-4 mb-6">
                     <button id="uploadProductBtn" class="btn-primary flex-1">
-                        📦 Upload First Product
+                        📦 Add Products (Required)
                     </button>
                     <button id="contactAdminBtn" class="btn-secondary flex-1">
-                        💬 Contact Admin
+                        💬 Contact Admin for Help
                     </button>
                 </div>
                 
-                <!-- Product Upload Form (initially hidden) -->
-                <div id="productUploadForm" class="hidden">
-                    <h4 class="text-lg font-semibold mb-4">Add Your First Product</h4>
+                <!-- Product Upload Form -->
+                <div id="productUploadForm">
+                    <h4 class="text-lg font-semibold mb-4">Add Your Products</h4>
                     <form id="onboardingProductForm">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="form-group">
@@ -346,8 +356,19 @@ function createFarmerOnboarding() {
                                 <input type="number" id="onboardingProductPrice" name="price" min="0" step="0.01" required>
                             </div>
                         </div>
-                        <button type="submit" class="btn-primary w-full" id="submitProductBtn">Add Product & Complete Registration</button>
+                        <div class="flex gap-4">
+                            <button type="submit" class="btn-secondary flex-1" id="addProductBtn">Add Product</button>
+                            <button type="button" class="btn-primary flex-1" id="completeRegistrationBtn" disabled>
+                                Complete Registration (Need 5 products)
+                            </button>
+                        </div>
                     </form>
+                    
+                    <!-- Added Products List -->
+                    <div id="addedProductsList" class="mt-6 hidden">
+                        <h5 class="font-medium mb-3">Added Products:</h5>
+                        <div id="productsList" class="space-y-2"></div>
+                    </div>
                 </div>
                 
                 <!-- Contact Admin Form (initially hidden) -->
@@ -355,16 +376,17 @@ function createFarmerOnboarding() {
                     <h4 class="text-lg font-semibold mb-4">Contact Admin for Assistance</h4>
                     <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                         <p class="text-sm text-yellow-800">
-                            Our admin team will help you set up your products and get started on AgriLink.
+                            <strong>Note:</strong> This will send an email to our admin team for assistance. 
+                            You will still need to upload 5 products to complete registration.
                         </p>
                     </div>
                     <form id="onboardingContactForm">
                         <div class="form-group">
                             <label for="contactMessage">Message to Admin</label>
                             <textarea id="contactMessage" rows="4" required 
-                                    placeholder="Please describe what products you want to sell and any assistance you need..."></textarea>
+                                    placeholder="Please describe what products you want to sell, any assistance you need, or terms you'd like to discuss..."></textarea>
                         </div>
-                        <button type="submit" class="btn-primary w-full">Send Message & Complete Registration</button>
+                        <button type="submit" class="btn-primary w-full">Send Email to Admin</button>
                     </form>
                 </div>
             </div>
@@ -534,6 +556,30 @@ function setupFarmerOnboardingListeners() {
     const onboardingProductForm = document.getElementById('onboardingProductForm');
     const onboardingContactForm = document.getElementById('onboardingContactForm');
 
+    // Track added products
+    let addedProducts = [];
+    
+    function updateProductCounter() {
+        const counter = document.getElementById('productCounter');
+        const progressBar = document.getElementById('progressBar');
+        const completeBtn = document.getElementById('completeRegistrationBtn');
+        
+        if (counter) counter.textContent = addedProducts.length;
+        if (progressBar) progressBar.style.width = `${(addedProducts.length / 5) * 100}%`;
+        
+        if (completeBtn) {
+            if (addedProducts.length >= 5) {
+                completeBtn.disabled = false;
+                completeBtn.textContent = 'Complete Registration';
+                completeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                completeBtn.disabled = true;
+                completeBtn.textContent = `Complete Registration (Need ${5 - addedProducts.length} more)`;
+                completeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+    }
+
     if (uploadProductBtn) {
         uploadProductBtn.addEventListener('click', () => {
             productUploadForm.classList.remove('hidden');
@@ -553,25 +599,113 @@ function setupFarmerOnboardingListeners() {
     }
 
     if (onboardingProductForm) {
-        onboardingProductForm.addEventListener('submit', handleFarmerProductSubmission);
+        onboardingProductForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            
+            const addBtn = document.getElementById('addProductBtn');
+            const originalText = addBtn.textContent;
+            
+            try {
+                addBtn.textContent = 'Adding...';
+                addBtn.disabled = true;
+                
+                // Get product data
+                const formData = new FormData(event.target);
+                const productData = {
+                    name: formData.get('name'),
+                    description: formData.get('description'),
+                    price: parseFloat(formData.get('price')),
+                    quantity: parseInt(formData.get('quantity')),
+                    category: formData.get('category'),
+                    unit: formData.get('unit') || 'kg',
+                    status: 'active'
+                };
+                
+                // Add to temporary list
+                addedProducts.push(productData);
+                
+                // Update UI
+                updateProductCounter();
+                displayAddedProducts();
+                
+                // Clear form
+                event.target.reset();
+                
+                showNotification(`Product added! (${addedProducts.length}/5)`, 'success');
+                
+            } catch (error) {
+                console.error('Error adding product:', error);
+                showNotification('Error adding product: ' + error.message, 'error');
+            } finally {
+                addBtn.textContent = originalText;
+                addBtn.disabled = false;
+            }
+        });
+    }
+
+    // Complete registration button
+    const completeBtn = document.getElementById('completeRegistrationBtn');
+    if (completeBtn) {
+        completeBtn.addEventListener('click', async () => {
+            if (addedProducts.length < 5) {
+                showNotification('You need at least 5 products to complete registration', 'error');
+                return;
+            }
+            
+            await handleFarmerCompleteRegistration(addedProducts);
+        });
     }
 
     if (onboardingContactForm) {
         onboardingContactForm.addEventListener('submit', handleFarmerContactSubmission);
     }
+    
+    function displayAddedProducts() {
+        const productsList = document.getElementById('productsList');
+        const addedProductsList = document.getElementById('addedProductsList');
+        
+        if (!productsList) return;
+        
+        if (addedProducts.length > 0) {
+            addedProductsList.classList.remove('hidden');
+            productsList.innerHTML = addedProducts.map((product, index) => `
+                <div class="flex items-center justify-between bg-gray-50 p-3 rounded">
+                    <div>
+                        <strong>${product.name}</strong> - ${product.category}
+                        <span class="text-sm text-gray-600">(${product.quantity} ${product.unit} @ Ksh${product.price})</span>
+                    </div>
+                    <button onclick="removeProduct(${index})" class="text-red-500 hover:text-red-700">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m18 6-12 12M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+        } else {
+            addedProductsList.classList.add('hidden');
+        }
+    }
+    
+    // Make remove function globally available for this context
+    window.removeProduct = (index) => {
+        addedProducts.splice(index, 1);
+        updateProductCounter();
+        displayAddedProducts();
+        showNotification('Product removed', 'info');
+    };
+    
+    // Initialize counter
+    updateProductCounter();
 }
 
 // Handle farmer product submission during onboarding
-async function handleFarmerProductSubmission(event) {
-    event.preventDefault();
-    console.log('Farmer product submission during onboarding');
-
-    const submitBtn = document.getElementById('submitProductBtn');
-    const originalText = submitBtn.textContent;
+async function handleFarmerCompleteRegistration(products) {
+    const completeBtn = document.getElementById('completeRegistrationBtn');
+    const originalText = completeBtn.textContent;
 
     try {
-        submitBtn.textContent = 'Creating account and adding product...';
-        submitBtn.disabled = true;
+        completeBtn.textContent = 'Creating account and adding products...';
+        completeBtn.disabled = true;
 
         // First complete registration
         const registrationResponse = await apiClient.register(tempRegistrationData);
@@ -585,25 +719,14 @@ async function handleFarmerProductSubmission(event) {
         };
         localStorage.setItem('currentUser', JSON.stringify(userData));
 
-        // Get product data from form
-        const formData = new FormData(event.target);
-        const productData = {
-            name: formData.get('name'),
-            description: formData.get('description'),
-            price: parseFloat(formData.get('price')),
-            quantity: parseInt(formData.get('quantity')),
-            category: formData.get('category'),
-            unit: formData.get('unit') || 'kg',
-            status: 'active'
-        };
+        // Add all products
+        for (const productData of products) {
+            await apiClient.createProduct(productData);
+        }
+        
+        console.log(`Added ${products.length} products successfully during onboarding`);
 
-        console.log('Adding product:', productData);
-
-        // Add the product using existing API
-        await apiClient.createProduct(productData);
-        console.log('Product added successfully during onboarding');
-
-        showNotification('Account created and product added successfully!', 'success');
+        showNotification(`Account created with ${products.length} products successfully!`, 'success');
         
         // Close modal and redirect
         closeOnboardingModal();
@@ -612,11 +735,11 @@ async function handleFarmerProductSubmission(event) {
         }, 1500);
 
     } catch (error) {
-        console.error('Error during farmer onboarding:', error);
+        console.error('Error during farmer registration completion:', error);
         showNotification('Error: ' + error.message, 'error');
         
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
+        completeBtn.textContent = originalText;
+        completeBtn.disabled = false;
     }
 }
 
@@ -629,41 +752,36 @@ async function handleFarmerContactSubmission(event) {
     const originalText = submitBtn.textContent;
 
     try {
-        submitBtn.textContent = 'Creating account...';
+        submitBtn.textContent = 'Sending email...';
         submitBtn.disabled = true;
 
-        // Complete registration first
-        const registrationResponse = await apiClient.register(tempRegistrationData);
-        console.log('Registration completed:', registrationResponse);
+        // Initialize EmailJS
+        emailjs.init("aW3CSorS208n9Sw8R");
 
-        // Store user data
-        const userData = {
-            ...registrationResponse.user,
-            token: registrationResponse.token,
-            loginTime: new Date().toISOString()
-        };
-        localStorage.setItem('currentUser', JSON.stringify(userData));
-
-        // Log the message (in a real app, this would send to admin)
         const message = document.getElementById('contactMessage').value;
-        console.log('Farmer contact message:', {
-            user: userData.name,
-            email: userData.email,
+        
+        // Send email using EmailJS
+        await emailjs.send("service_byyqwv6", "template_dqe1mac", {
+            from_name: tempRegistrationData.name,
+            from_email: tempRegistrationData.email,
+            phone: tempRegistrationData.phone,
             message: message
         });
 
-        showNotification('Account created! Admin will contact you soon.', 'success');
+        console.log('Email sent successfully to admin');
+
+        showNotification('Email sent to admin successfully! You still need to upload 5 products to complete registration.', 'success');
         
-        // Close modal and redirect
-        closeOnboardingModal();
-        setTimeout(() => {
-            redirectToDashboard(userData.role);
-        }, 1500);
+        // Switch back to product upload form
+        document.getElementById('contactAdminForm').classList.add('hidden');
+        document.getElementById('productUploadForm').classList.remove('hidden');
+        document.getElementById('uploadProductBtn').classList.add('bg-green-600', 'text-white');
+        document.getElementById('contactAdminBtn').classList.remove('bg-green-600', 'text-white');
 
     } catch (error) {
-        console.error('Error during farmer contact submission:', error);
-        showNotification('Error: ' + error.message, 'error');
-        
+        console.error('Error sending email:', error);
+        showNotification('Error sending email: ' + error.message, 'error');
+    } finally {
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
     }
