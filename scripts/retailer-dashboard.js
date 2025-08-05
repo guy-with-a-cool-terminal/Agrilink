@@ -468,8 +468,8 @@ async function placeBulkOrder(event) {
     }
     
     // Validate minimum quantity
-    if (quantity < 10) {
-        showNotification('Minimum bulk order quantity is 10 units', 'error');
+    if (quantity < 5) {
+        showNotification('Minimum bulk order quantity is 5 units', 'error');
         return;
     }
     
@@ -485,16 +485,6 @@ async function placeBulkOrder(event) {
     // Show payment modal based on selected payment method
     if (bulkPaymentMethod === 'mpesa') {
         showMpesaPaymentModal(totalAmount, {
-            productId,
-            quantity,
-            deliveryDate,
-            deliveryAddress, 
-            budgetRange,
-            specialRequirements,
-            selectedProduct
-        });
-    } else if (bulkPaymentMethod === 'card') {
-        showCardPaymentModal(totalAmount, {
             productId,
             quantity,
             deliveryDate,
@@ -738,11 +728,13 @@ async function processBulkOrder(orderDetails) {
         console.log('Bulk order created:', response);
         
         if (orderDetails.paymentMethod === 'mobile_money') {
-            showNotification('Bulk order placed successfully! STK push sent to your phone for payment.', 'success');
+            showNotification('Bulk order placed successfully! Payment confirmation sent to admin for verification.', 'success');
+            // Send email to admin with payment details
+            await sendBulkOrderConfirmationEmail(orderDetails, response);
         } else if (orderDetails.paymentMethod === 'cash_on_delivery') {
             showNotification('Bulk order placed successfully! You will pay on delivery.', 'success');
-        } else if (orderDetails.paymentMethod === 'card') {
-            showNotification('Bulk order placed successfully! Payment processed.', 'success');
+            // Send email to admin for COD order
+            await sendBulkOrderConfirmationEmail(orderDetails, response);
         } else {
             showNotification('Bulk order placed successfully!', 'success');
         }
@@ -781,6 +773,37 @@ async function processBulkOrder(orderDetails) {
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
         }
+    }
+}
+async function sendBulkOrderConfirmationEmail(orderDetails, orderResponse) {
+    try {
+        // Use existing EmailJS setup (same as auth.js)
+        emailjs.init("4ux51G9S90vEMJC99"); // Replace with your actual key
+        
+        const orderItemsText = `${orderDetails.selectedProduct.name} - ${orderDetails.quantity} units x Ksh${orderDetails.selectedProduct.price} = Ksh${orderDetails.totalAmount.toLocaleString()}`;
+        
+        await emailjs.send("service_0dhyppz", "template_vkltfu9", {
+            order_id: orderResponse.order?.id || orderResponse.id || 'N/A',
+            order_type: 'Bulk Order',
+            customer_name: currentUser.name,
+            customer_email: currentUser.email,
+            customer_phone: orderDetails.mpesaPhone || currentUser.phone,
+            delivery_address: orderDetails.deliveryAddress,
+            delivery_date: orderDetails.deliveryDate,
+            payment_method: orderDetails.paymentMethod === 'mobile_money' ? 'M-Pesa' : orderDetails.paymentMethod,
+            mpesa_confirmation: orderDetails.mpesaConfirmation || '',
+            mpesa_phone: orderDetails.mpesaPhone || '',
+            total_amount: orderDetails.totalAmount,
+            order_items: orderItemsText,
+            budget_range: orderDetails.budgetRange,
+            special_requirements: orderDetails.specialRequirements || 'None',
+            payment_status: orderDetails.paymentMethod === 'mobile_money' ? 'Pending Verification' : 'Confirmed'
+        });
+        
+        console.log('Bulk order confirmation email sent to admin');
+    } catch (error) {
+        console.error('Error sending bulk order confirmation email:', error);
+        // Don't show error to user as order was already placed successfully
     }
 }
 
@@ -917,4 +940,5 @@ window.showCardPaymentModal = showCardPaymentModal;
 window.closePaymentModal = closePaymentModal;
 window.scheduleDelivery = scheduleDelivery;
 window.viewOrderDetails = viewOrderDetails;
+window.sendBulkOrderConfirmationEmail = sendBulkOrderConfirmationEmail;
 window.logout = logout;
