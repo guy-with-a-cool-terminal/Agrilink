@@ -550,55 +550,64 @@ function showPaymentForm(paymentMethod) {
     const existingForm = document.getElementById('paymentForm');
     if (existingForm) existingForm.remove();
     
-    if (!paymentMethod) return;
+    if (!paymentMethod || paymentMethod === 'cod') return;
     
     const checkoutForm = document.querySelector('#checkoutModal form');
     const formContainer = document.createElement('div');
     formContainer.id = 'paymentForm';
     formContainer.className = 'mt-4 p-4 bg-gray-50 rounded-lg';
     
-    if (paymentMethod === 'card') {
+    if (paymentMethod === 'mpesa') {
+        const total = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0) + 50;
         formContainer.innerHTML = `
-            <h4 class="font-semibold mb-3">Card Payment</h4>
-            <div class="grid grid-cols-2 gap-4">
-                <div class="form-group">
-                    <label for="cardNumber">Card Number</label>
-                    <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19">
-                </div>
-                <div class="form-group">
-                    <label for="expiryDate">Expiry Date</label>
-                    <input type="text" id="expiryDate" placeholder="MM/YY" maxlength="5">
-                </div>
-                <div class="form-group">
-                    <label for="cvv">CVV</label>
-                    <input type="text" id="cvv" placeholder="123" maxlength="3">
-                </div>
-                <div class="form-group">
-                    <label for="cardName">Cardholder Name</label>
-                    <input type="text" id="cardName" placeholder="John Doe">
-                </div>
-            </div>
-        `;
-    } else if (paymentMethod === 'mpesa') {
-        formContainer.innerHTML = `
-            <h4 class="font-semibold mb-3">M-Pesa Payment</h4>
-            <div class="space-y-4">
-                <div class="form-group">
-                    <label for="mpesaPhone">M-Pesa Phone Number</label>
-                    <input type="tel" id="mpesaPhone" placeholder="254712345678" required>
-                </div>
-                <div class="bg-green-50 p-4 rounded-lg">
-                    <h5 class="font-medium text-green-800 mb-2">Payment Instructions:</h5>
-                    <ol class="text-sm text-green-700 list-decimal list-inside space-y-1">
-                        <li>Enter your M-Pesa registered phone number above</li>
-                        <li>You will receive an STK push notification on your phone</li>
-                        <li>Enter your M-Pesa PIN to complete the payment</li>
-                        <li>You will receive a confirmation SMS from M-Pesa</li>
-                    </ol>
-                    <div class="mt-3 p-3 bg-green-100 rounded border-l-4 border-green-500">
-                        <p class="text-sm font-medium text-green-800">
-                            Total Amount: Ksh${cart.reduce((sum, i) => sum + (i.price * i.quantity), 0) + 50}
-                        </p>
+            <div class="bg-green-50 border border-green-200 rounded-lg p-6">
+                <h4 class="font-semibold text-green-800 mb-4 flex items-center">
+                    <span class="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm mr-3">1</span>
+                    M-Pesa Payment Instructions
+                </h4>
+                
+                <div class="space-y-4">
+                    <div class="bg-white p-4 rounded border-l-4 border-green-500">
+                        <h5 class="font-medium text-gray-800 mb-2">Step 1: Make Payment</h5>
+                        <div class="text-sm text-gray-700 space-y-1">
+                            <p><strong>Paybill Number:</strong> <span class="font-mono bg-gray-100 px-2 py-1 rounded">123456</span></p>
+                            <p><strong>Account Number:</strong> <span class="font-mono bg-gray-100 px-2 py-1 rounded">ORDER${Date.now()}</span></p>
+                            <p><strong>Amount:</strong> <span class="font-mono bg-gray-100 px-2 py-1 rounded text-green-600">Ksh ${total.toLocaleString()}</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-4 rounded border-l-4 border-blue-500">
+                        <h5 class="font-medium text-gray-800 mb-2">Step 2: Enter Payment Details</h5>
+                        <div class="form-group">
+                            <label for="mpesaConfirmation" class="block text-sm font-medium text-gray-700 mb-2">
+                                M-Pesa Confirmation Code (e.g., QCG2H5X9XX)
+                            </label>
+                            <input type="text" id="mpesaConfirmation" required 
+                                   class="w-full p-3 border border-gray-300 rounded-lg font-mono"
+                                   placeholder="Enter M-Pesa confirmation code">
+                        </div>
+                        
+                        <div class="form-group mt-3">
+                            <label for="mpesaPhone" class="block text-sm font-medium text-gray-700 mb-2">
+                                Phone Number Used for Payment
+                            </label>
+                            <input type="tel" id="mpesaPhone" required 
+                                   class="w-full p-3 border border-gray-300 rounded-lg"
+                                   placeholder="254712345678" value="${currentUser.phone || ''}">
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-50 p-3 rounded text-sm text-blue-800">
+                        <p class="font-medium mb-1">📱 How to pay via M-Pesa:</p>
+                        <ol class="list-decimal list-inside space-y-1 text-xs">
+                            <li>Go to M-Pesa menu on your phone</li>
+                            <li>Select "Lipa na M-Pesa" then "Pay Bill"</li>
+                            <li>Enter Business Number: <strong>123456</strong></li>
+                            <li>Enter Account Number: <strong>ORDER${Date.now()}</strong></li>
+                            <li>Enter Amount: <strong>Ksh ${total.toLocaleString()}</strong></li>
+                            <li>Enter your M-Pesa PIN and confirm</li>
+                            <li>Copy the confirmation code and paste it above</li>
+                        </ol>
                     </div>
                 </div>
             </div>
@@ -648,28 +657,30 @@ async function placeOrder(event) {
             total_amount: cart.reduce((sum, i) => sum + (i.price * i.quantity), 0) + 50
         };
 
-        // Add payment-specific data
-        if (paymentMethod === 'card') {
-            orderData.card_details = {
-                card_number: document.getElementById('cardNumber')?.value,
-                expiry_date: document.getElementById('expiryDate')?.value,
-                cardholder_name: document.getElementById('cardName')?.value
-            };
-        } else if (paymentMethod === 'mpesa') {
-            orderData.mpesa_phone = document.getElementById('mpesaPhone')?.value;
-        }
-        
-        const response = await apiClient.createOrder(orderData);
-        console.log('Order created:', response);
-        
-        // Handle M-Pesa STK push
-        if (paymentMethod === 'mpesa') {
-            showNotification('STK push sent to your phone. Please complete payment on your device.', 'info');
-        } else if (paymentMethod === 'cod') {
-            showNotification('Order placed successfully! You will pay on delivery.', 'success');
-        } else {
-            showNotification('Order placed successfully!', 'success');
-        }
+    if (paymentMethod === 'mpesa') {
+    const confirmationCode = document.getElementById('mpesaConfirmation')?.value;
+    const mpesaPhone = document.getElementById('mpesaPhone')?.value;
+    
+    if (!confirmationCode || !mpesaPhone) {
+        throw new Error('Please enter M-Pesa confirmation code and phone number');
+    }
+    
+    orderData.mpesa_confirmation = confirmationCode;
+    orderData.mpesa_phone = mpesaPhone;
+    orderData.payment_details = `M-Pesa Confirmation: ${confirmationCode}`;
+}
+
+const response = await apiClient.createOrder(orderData);
+
+// Handle different payment methods
+if (paymentMethod === 'mpesa') {
+    showNotification('Order placed successfully! Payment confirmation sent to admin for verification.', 'success');
+    
+    // Send email to admin with payment details
+    await sendPaymentConfirmationEmail(orderData, response);
+} else if (paymentMethod === 'cod') {
+    showNotification('Order placed successfully! You will pay on delivery.', 'success');
+}
         
         // Clear cart and refresh data
         cart = [];
@@ -696,8 +707,37 @@ async function placeOrder(event) {
         submitBtn.disabled = false;
     }
 }
+async function sendPaymentConfirmationEmail(orderData, orderResponse) {
+    try {
+        // Use existing EmailJS setup
+        emailjs.init("YOUR_PUBLIC_KEY");
+        
+        const orderDetails = cart.map(item => 
+            `${item.name} - ${item.quantity} x Ksh${item.price} = Ksh${(item.quantity * item.price).toFixed(2)}`
+        ).join('\n');
+        
+        await emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", {
+            order_id: orderResponse.id || 'N/A',
+            customer_name: currentUser.name,
+            customer_email: currentUser.email,
+            customer_phone: orderData.phone,
+            delivery_address: orderData.delivery_address,
+            payment_method: 'M-Pesa',
+            mpesa_confirmation: orderData.mpesa_confirmation,
+            mpesa_phone: orderData.mpesa_phone,
+            total_amount: orderData.total_amount,
+            order_items: orderDetails,
+            payment_status: 'Pending Verification'
+        });
+        
+        console.log('Payment confirmation email sent to admin');
+    } catch (error) {
+        console.error('Error sending payment confirmation email:', error);
+        // Don't show error to user as order was already placed successfully
+    }
+}
 
-// Load order history for consumer - UPDATED WITH FIXES
+// Load order history for consumer
 async function loadOrderHistory() {
     try {
         const response = await apiClient.getOrders();
@@ -946,3 +986,4 @@ window.cancelOrder = cancelOrder;
 window.formatQuantityWithUnit = formatQuantityWithUnit;
 window.getProductUnit = getProductUnit;
 window.getSingularUnit = getSingularUnit;
+window.sendPaymentConfirmationEmail = sendPaymentConfirmationEmail;

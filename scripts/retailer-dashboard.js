@@ -523,24 +523,33 @@ async function placeBulkOrder(event) {
 function showMpesaPaymentModal(amount, orderData) {
     const modalHtml = `
         <div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white rounded-lg p-6 w-full max-w-md">
-                <h3 class="text-lg font-semibold mb-4">M-Pesa Payment</h3>
-                <div class="mb-4">
-                    <p class="text-gray-600 mb-2">Amount: <span class="font-semibold">Ksh${amount.toLocaleString()}</span></p>
-                    <p class="text-gray-600 mb-2">Product: <span class="font-semibold">${orderData.selectedProduct.name}</span></p>
-                    <p class="text-gray-600 mb-2">Quantity: <span class="font-semibold">${orderData.quantity} units</span></p>
-                    <p class="text-gray-600 mb-4">Delivery: <span class="font-semibold">${orderData.deliveryAddress}</span></p>
-                    <p class="text-sm text-gray-500 mb-4">You will receive an STK push on your phone to complete the payment.</p>
+            <div class="bg-white rounded-lg p-6 w-full max-w-lg">
+                <h3 class="text-lg font-semibold mb-4">M-Pesa Payment - Ksh${amount.toLocaleString()}</h3>
+                
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                    <h4 class="font-medium text-green-800 mb-3">Payment Instructions:</h4>
+                    <div class="bg-white p-3 rounded border-l-4 border-green-500 mb-3">
+                        <div class="text-sm space-y-1">
+                            <p><strong>Paybill:</strong> <span class="font-mono bg-gray-100 px-2 py-1 rounded">123456</span></p>
+                            <p><strong>Account:</strong> <span class="font-mono bg-gray-100 px-2 py-1 rounded">BULK${Date.now()}</span></p>
+                            <p><strong>Amount:</strong> <span class="font-mono bg-gray-100 px-2 py-1 rounded text-green-600">Ksh${amount.toLocaleString()}</span></p>
+                        </div>
+                    </div>
                 </div>
+                
                 <form id="mpesaPaymentForm">
                     <div class="form-group mb-4">
-                        <label for="mpesaPhone">M-Pesa Phone Number</label>
+                        <label for="mpesaConfirmation">M-Pesa Confirmation Code</label>
+                        <input type="text" id="mpesaConfirmation" required class="w-full p-2 border rounded font-mono" 
+                               placeholder="e.g., QCG2H5X9XX">
+                    </div>
+                    <div class="form-group mb-4">
+                        <label for="mpesaPhone">Phone Number Used</label>
                         <input type="tel" id="mpesaPhone" required class="w-full p-2 border rounded" 
                                placeholder="254712345678" value="${currentUser.phone || ''}">
-                        <small class="text-gray-500">Format: 254XXXXXXXXX</small>
                     </div>
                     <div class="flex space-x-2">
-                        <button type="submit" class="btn-primary flex-1">Pay with M-Pesa</button>
+                        <button type="submit" class="btn-primary flex-1">Confirm Payment</button>
                         <button type="button" onclick="closePaymentModal()" class="btn-secondary flex-1">Cancel</button>
                     </div>
                 </form>
@@ -553,9 +562,11 @@ function showMpesaPaymentModal(amount, orderData) {
     document.getElementById('mpesaPaymentForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
+        const confirmationCode = document.getElementById('mpesaConfirmation').value;
         const phone = document.getElementById('mpesaPhone').value;
-        if (!phone.match(/^254\d{9}$/)) {
-            showNotification('Please enter a valid M-Pesa number (254XXXXXXXXX)', 'error');
+        
+        if (!confirmationCode || !phone) {
+            showNotification('Please enter both confirmation code and phone number', 'error');
             return;
         }
         
@@ -563,7 +574,8 @@ function showMpesaPaymentModal(amount, orderData) {
             ...orderData,
             paymentMethod: 'mobile_money',
             totalAmount: amount,
-            mpesaPhone: phone
+            mpesaPhone: phone,
+            mpesaConfirmation: confirmationCode
         });
         
         closePaymentModal();
