@@ -710,13 +710,13 @@ if (paymentMethod === 'mpesa') {
 async function sendPaymentConfirmationEmail(orderData, orderResponse) {
     try {
         // Use existing EmailJS setup
-        emailjs.init("YOUR_PUBLIC_KEY");
+        emailjs.init("aW3CSorS208n9Sw8R");
         
         const orderDetails = cart.map(item => 
             `${item.name} - ${item.quantity} x Ksh${item.price} = Ksh${(item.quantity * item.price).toFixed(2)}`
         ).join('\n');
         
-        await emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", {
+        await emailjs.send("service_byyqwv6", "template_obw1ma8", {
             order_id: orderResponse.id || 'N/A',
             customer_name: currentUser.name,
             customer_email: currentUser.email,
