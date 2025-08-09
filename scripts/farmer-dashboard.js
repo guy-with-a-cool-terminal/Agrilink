@@ -1,5 +1,3 @@
-console.log('Enhanced Farmer dashboard script loaded');
-
 let currentUser = null;
 let products = [];
 let farmerOrders = [];
@@ -116,7 +114,6 @@ async function loadDashboardData() {
     }
 }
 
-// FIXED: Enhanced order loading with proper null checks
 async function loadFarmerOrders() {
     try {
         console.log('Loading farmer orders...');
@@ -294,7 +291,7 @@ function displayFarmerOrdersTable(ordersToShow) {
     if (!Array.isArray(ordersToShow) || ordersToShow.length === 0) {
         ordersTableBody.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center py-8">
+                <td colspan="9" class="text-center py-8">
                     <div class="text-gray-400 text-4xl mb-4">📋</div>
                     <p class="text-gray-500">No orders found for your products yet.</p>
                     <p class="text-gray-400 text-sm mt-2">Orders will appear here when customers purchase your products.</p>
@@ -415,6 +412,9 @@ function displayFarmerOrdersTable(ordersToShow) {
             <td class="text-sm text-gray-600">
                 <div>${formattedDate}</div>
                 <div class="text-xs text-gray-500">${formattedTime}</div>
+            </td>
+            <td class="text-center">
+                ${ReviewUtils.getReviewButtonForOrder(order, currentUser)}
             </td>
             <td>
                 <div class="flex gap-1">
