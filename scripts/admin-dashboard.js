@@ -21,6 +21,10 @@ class AdminDashboard {
         await this.checkMaintenanceStatus();
         await this.loadAllData();
         this.setupEventListeners();
+        
+        // Initialize review manager
+        this.reviewManager = new AdminReviewManager();
+        await this.reviewManager.init();
     }
 
     checkAuth() {
@@ -97,6 +101,11 @@ class AdminDashboard {
             this.updateUsersTable();
             this.updateOrdersTable();
             this.updateProductAnalytics();
+            
+            // Load reviews if manager is initialized
+            if (this.reviewManager) {
+                await this.reviewManager.loadReviews();
+            }
 
             this.showNotification('Dashboard loaded successfully!', 'success');
 
@@ -1079,6 +1088,263 @@ window.logout = function() {
         window.dashboard.logout();
     }
 };
+
+// AdminReviewManager class for comprehensive review management
+class AdminReviewManager {
+    constructor() {
+        this.reviews = [];
+        this.currentFilter = '';
+    }
+
+    async init() {
+        console.log('AdminReviewManager initializing...');
+        await this.loadReviews();
+    }
+
+    async loadReviews() {
+        try {
+            console.log('Loading reviews for admin dashboard...');
+            const response = await apiClient.getReviews();
+            this.reviews = apiClient.extractArrayData(response) || [];
+            console.log('Reviews loaded:', this.reviews);
+            this.updateReviewsTable();
+        } catch (error) {
+            console.error('Error loading reviews:', error);
+            this.showNotification('Failed to load reviews', 'error');
+        }
+    }
+
+    updateReviewsTable() {
+        const tableBody = document.querySelector('#reviewsTable tbody');
+        if (!tableBody) return;
+
+        let filteredReviews = this.reviews;
+        if (this.currentFilter) {
+            filteredReviews = this.reviews.filter(review => 
+                review.status === this.currentFilter
+            );
+        }
+
+        if (filteredReviews.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-8">
+                        <div class="text-gray-400 text-4xl mb-4">📝</div>
+                        <p class="text-gray-600">No reviews found</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        const sortedReviews = filteredReviews
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .slice(0, 50); // Limit to 50 most recent
+
+        tableBody.innerHTML = sortedReviews.map(review => `
+            <tr>
+                <td class="font-medium">#${review.id}</td>
+                <td>#${review.order_id}</td>
+                <td>${review.reviewer?.name || 'N/A'}</td>
+                <td>${review.reviewee?.name || 'N/A'}</td>
+                <td>
+                    <div class="flex items-center">
+                        <span class="text-lg">${ReviewUtils.getStarDisplay(review.rating)}</span>
+                        <span class="ml-2 text-sm text-gray-600">(${review.rating}/5)</span>
+                    </div>
+                </td>
+                <td>${ReviewUtils.getStatusBadge(review.status)}</td>
+                <td class="text-sm text-gray-500">${ReviewUtils.formatReviewDate(review.created_at)}</td>
+                <td>${this.getReviewActions(review)}</td>
+            </tr>
+        `).join('');
+    }
+
+    getReviewActions(review) {
+        const actions = [`<button class="btn-secondary text-sm" onclick="AdminReviewManager.viewReview('${review.id}')">View</button>`];
+        
+        if (review.status === 'pending') {
+            actions.push(`<button class="btn-primary text-sm" onclick="AdminReviewManager.approveReview('${review.id}')">Approve</button>`);
+            actions.push(`<button class="btn-danger text-sm" onclick="AdminReviewManager.rejectReview('${review.id}')">Reject</button>`);
+        } else if (review.status === 'flagged') {
+            actions.push(`<button class="btn-primary text-sm" onclick="AdminReviewManager.approveReview('${review.id}')">Approve</button>`);
+            actions.push(`<button class="btn-danger text-sm" onclick="AdminReviewManager.deleteReview('${review.id}')">Delete</button>`);
+        } else if (review.status === 'approved') {
+            actions.push(`<button class="btn-warning text-sm" onclick="AdminReviewManager.flagReview('${review.id}')">Flag</button>`);
+        }
+        
+        return `<div class="flex space-x-1">${actions.join(' ')}</div>`;
+    }
+
+    static async viewReview(reviewId) {
+        const manager = window.dashboard?.reviewManager;
+        if (!manager) return;
+        
+        const review = manager.reviews.find(r => r.id == reviewId);
+        if (!review) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'viewReviewModal';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg p-6 w-full max-w-lg max-h-screen overflow-y-auto">
+                <h3 class="text-lg font-semibold mb-4">Review Details</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-sm font-medium text-gray-700">Review ID:</label>
+                        <p class="text-sm">#${review.id}</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-700">Order ID:</label>
+                        <p class="text-sm">#${review.order_id}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-sm font-medium text-gray-700">Reviewer:</label>
+                            <p class="text-sm">${review.reviewer?.name || 'N/A'} (${review.reviewer?.role || 'N/A'})</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-gray-700">Reviewee:</label>
+                            <p class="text-sm">${review.reviewee?.name || 'N/A'} (${review.reviewee?.role || 'N/A'})</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-700">Rating:</label>
+                        <p class="text-lg">${ReviewUtils.getStarDisplay(review.rating)} (${review.rating}/5)</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-700">Status:</label>
+                        <p class="text-sm">${ReviewUtils.getStatusBadge(review.status)}</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-700">Date:</label>
+                        <p class="text-sm">${ReviewUtils.formatReviewDate(review.created_at)}</p>
+                    </div>
+                    ${review.comment ? `
+                        <div>
+                            <label class="text-sm font-medium text-gray-700">Comment:</label>
+                            <p class="text-sm bg-gray-50 p-3 rounded">${review.comment}</p>
+                        </div>
+                    ` : ''}
+                    ${review.admin_notes ? `
+                        <div>
+                            <label class="text-sm font-medium text-gray-700">Admin Notes:</label>
+                            <p class="text-sm bg-yellow-50 p-3 rounded">${review.admin_notes}</p>
+                        </div>
+                    ` : ''}
+                    <div class="flex space-x-2 mt-6">
+                        <button class="btn-secondary flex-1" onclick="AdminReviewManager.closeModal('viewReviewModal')">Close</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+
+    static async approveReview(reviewId) {
+        const manager = window.dashboard?.reviewManager;
+        if (!manager) return;
+        
+        try {
+            await apiClient.updateReview(reviewId, { 
+                status: 'approved',
+                approved_at: new Date().toISOString(),
+                approved_by: JSON.parse(localStorage.getItem('currentUser')).id
+            });
+            
+            manager.showNotification('Review approved successfully', 'success');
+            await manager.loadReviews();
+        } catch (error) {
+            console.error('Error approving review:', error);
+            manager.showNotification('Failed to approve review', 'error');
+        }
+    }
+
+    static async rejectReview(reviewId) {
+        const manager = window.dashboard?.reviewManager;
+        if (!manager) return;
+        
+        const notes = prompt('Enter reason for rejection (optional):');
+        
+        try {
+            await apiClient.updateReview(reviewId, { 
+                status: 'rejected',
+                admin_notes: notes || null
+            });
+            
+            manager.showNotification('Review rejected successfully', 'success');
+            await manager.loadReviews();
+        } catch (error) {
+            console.error('Error rejecting review:', error);
+            manager.showNotification('Failed to reject review', 'error');
+        }
+    }
+
+    static async flagReview(reviewId) {
+        const manager = window.dashboard?.reviewManager;
+        if (!manager) return;
+        
+        const reason = prompt('Enter reason for flagging this review:');
+        if (!reason) return;
+        
+        try {
+            await apiClient.updateReview(reviewId, { 
+                status: 'flagged',
+                admin_notes: reason
+            });
+            
+            manager.showNotification('Review flagged successfully', 'success');
+            await manager.loadReviews();
+        } catch (error) {
+            console.error('Error flagging review:', error);
+            manager.showNotification('Failed to flag review', 'error');
+        }
+    }
+
+    static async deleteReview(reviewId) {
+        const manager = window.dashboard?.reviewManager;
+        if (!manager) return;
+        
+        if (!confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
+            return;
+        }
+        
+        try {
+            await apiClient.deleteReview(reviewId);
+            manager.showNotification('Review deleted successfully', 'success');
+            await manager.loadReviews();
+        } catch (error) {
+            console.error('Error deleting review:', error);
+            manager.showNotification('Failed to delete review', 'error');
+        }
+    }
+
+    static filterReviews(status) {
+        const manager = window.dashboard?.reviewManager;
+        if (!manager) return;
+        
+        manager.currentFilter = status;
+        manager.updateReviewsTable();
+    }
+
+    static closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    showNotification(message, type) {
+        if (window.dashboard) {
+            window.dashboard.showNotification(message, type);
+        }
+    }
+}
+
+// Make AdminReviewManager globally available
+window.AdminReviewManager = AdminReviewManager;
 
 // Add the missing showCreateUserModal function
 window.showCreateUserModal = function() {
