@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -129,6 +128,7 @@
                                 <th>Amount</th>
                                 <th>Status</th>
                                 <th>Date</th>
+                                <th>Reviews</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -138,10 +138,42 @@
                     </table>
                 </div>
             </div>
+
+            <!-- Review Management Section -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>Review Management</h3>
+                    <div class="flex space-x-2">
+                        <button class="btn-secondary" onclick="AdminReviewManager.filterReviews('pending')">Pending Reviews</button>
+                        <button class="btn-secondary" onclick="AdminReviewManager.filterReviews('flagged')">Flagged Reviews</button>
+                        <button class="btn-secondary" onclick="AdminReviewManager.filterReviews('')">All Reviews</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="reviewsTable">
+                        <thead>
+                            <tr>
+                                <th>Review ID</th>
+                                <th>Order</th>
+                                <th>Reviewer</th>
+                                <th>Reviewee</th>
+                                <th>Rating</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Reviews will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
     <script src="scripts/api-client.js"></script>
+    <script src="scripts/review-utils.js"></script>
     <script src="scripts/auth.js"></script>
     <script src="scripts/admin-dashboard.js"></script>
 </body>

@@ -1,6 +1,3 @@
-// Fixed Logistics Dashboard Logic - Complete Solution
-console.log('Logistics dashboard script loaded');
-
 let currentUser = null;
 let deliveries = [];
 
@@ -305,7 +302,7 @@ function displayDeliveries(deliveriesList) {
     if (!Array.isArray(deliveriesList) || deliveriesList.length === 0) {
         deliveriesTable.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center py-8">
+                <td colspan="7" class="text-center py-8">
                     <p class="text-gray-500">No deliveries assigned</p>
                 </td>
             </tr>
@@ -345,6 +342,9 @@ function displayDeliveries(deliveriesList) {
                 </td>
                 <td>
                     <span class="priority-badge priority-${delivery.priority || 'medium'}">${delivery.priority || 'medium'}</span>
+                </td>
+                <td class="text-center">
+                    ${delivery.order ? ReviewUtils.getReviewButtonForOrder(delivery.order, currentUser) : 'N/A'}
                 </td>
                 <td>
                     <div class="flex gap-2">

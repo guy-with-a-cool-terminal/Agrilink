@@ -1,5 +1,3 @@
-// Retailer Dashboard JavaScript - Enhanced for Bulk Orders and Real-time Data
-
 let currentUser = null;
 let products = [];
 let orders = [];
@@ -10,6 +8,10 @@ document.addEventListener('DOMContentLoaded', function() {
     initDashboard();
     loadUserData();  
     loadRetailerData();
+     const deliveryDateInput = document.getElementById('deliveryDate');
+    if (deliveryDateInput) {
+        deliveryDateInput.min = new Date().toISOString().split('T')[0];
+    }
 });
 
 // Initialize dashboard with user authentication
@@ -275,7 +277,7 @@ function displayOrderHistory() {
     if (userOrders.length === 0) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center py-8 text-gray-500">
+                <td colspan="8" class="text-center py-8 text-gray-500">
                     No bulk orders found. Place your first order above!
                 </td>
             </tr>
@@ -317,7 +319,6 @@ function displayOrderHistory() {
             totalQuantity = parseInt(order.quantity) || 0;
         }
         
-        // FIXED: Only show cancel button for pending orders
         const canCancel = order.status.toLowerCase() === 'pending';
         
         return `
@@ -328,6 +329,9 @@ function displayOrderHistory() {
                 <td>Ksh${parseFloat(order.total_amount || 0).toFixed(2)}</td>
                 <td><span class="status-badge ${statusClass}">${order.status}</span></td>
                 <td>${orderDate}</td>
+                <td class="text-center">
+                    ${ReviewUtils.getReviewButtonForOrder(order, currentUser)}
+                </td>
                 <td>
                     <button class="btn-secondary text-sm" onclick="viewOrderDetails(${order.id})">
                         View Details
