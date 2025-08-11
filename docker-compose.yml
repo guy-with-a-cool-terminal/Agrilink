@@ -1,0 +1,37 @@
+services:
+  database:
+    image: mysql:8.0
+    container_name: agrilink-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: agrilink
+      MYSQL_USER: agrilink_user
+      MYSQL_PASSWORD: supersecurepass
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./agrilink-backend/agrilink_dump.sql:/docker-entrypoint-initdb.d/dump.sql
+    ports:
+      - "3307:3306"
+
+  backend:
+    build:
+      context: ./agrilink-backend
+      dockerfile: Dockerfile
+    container_name: agrilink-backend
+    volumes:
+      - ./agrilink-backend:/var/www/html
+    ports:
+      - "8000:80"
+    depends_on:
+      - database
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agrilink-frontend
+    ports:
+      - "80:80"
+
+volumes:
+  mysql-data:
