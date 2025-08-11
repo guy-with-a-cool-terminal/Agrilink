@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initDashboard();
     loadUserData();  
     loadRetailerData();
-     const deliveryDateInput = document.getElementById('deliveryDate');
+    const deliveryDateInput = document.getElementById('deliveryDate');
     if (deliveryDateInput) {
         deliveryDateInput.min = new Date().toISOString().split('T')[0];
     }
